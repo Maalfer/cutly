@@ -53,6 +53,7 @@ Todas aceptan `orient` (`wide` 1600×900 | `tall` 900×1600), `accent` (#RRGGBB)
 | `url_anatomy` | Resalta esquema, dominio, puerto, ruta, parámetros y fragmento de una URL | `url` |
 | `recap_cards` | Título + 1-6 tarjetas con icono que aparecen en secuencia | `title`, `items` `[{icon,title,body,color?}]` |
 | `title_card` | Título cinematográfico con icono, línea de acento y subtítulo | `title`, `subtitle`, `icon` |
+| `race_condition` | Condición de carrera: N peticiones simultáneas se cuelan antes de que el servidor compruebe «¿ya usado?» (doble canje, doble gasto, TOCTOU…) | `requests`, `client_label`, `server_label`, `resource_label`, `check_label`, `before_value`, `after_value`, `result_label` |
 
 `captions` = subtítulos explicativos propios de la escena; se reparten en el tiempo. Marca énfasis con `**palabra**`.
 

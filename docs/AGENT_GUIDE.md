@@ -97,7 +97,8 @@ flujo cliente→servidor, un resumen en tarjetas…) usa una capa `scene`: el se
 (nodos, enlaces, paquetes con estela, cámara que sigue la acción, textos que se escriben) y la compone sobre el vídeo.
 
 1. `GET /scenes/templates` → plantillas con parámetros y `example_layer`: `packet_network`, `flow_steps`, `dns_lookup`,
-   `tls_handshake`, `url_anatomy`, `recap_cards`, `title_card`.
+   `tls_handshake`, `url_anatomy`, `recap_cards`, `title_card`, `race_condition` (bugs de concurrencia: N peticiones
+   simultáneas burlan una comprobación de un solo uso).
 2. **Míralas antes de montarlas**: `POST /scenes/preview` `{"template":"dns_lookup","params":{"domain":"cogny.es"},"duration":16,"times":[1,4,7,10,13,15]}`
    → PNG con esos fotogramas.
 3. Añádela: `{"op":"add_layer","layer":{"type":"scene","template":"dns_lookup","params":{"domain":"cogny.es"},"start":6,"end":22,"box":{"x":0.5,"y":0.3,"w":1.0}}}`.
