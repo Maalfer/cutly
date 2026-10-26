@@ -1,0 +1,19 @@
+{
+  "name": "mi_efecto",
+  "title": "Título corto que verá el usuario",
+  "category": "cámara",
+  "tags": ["etiqueta1", "etiqueta2"],
+  "description": "Qué hace y cuándo usarlo (1-2 frases). Esto lo lee Claude para decidir si aplicarlo.",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "intensity": {"type": "number", "minimum": 0.0, "maximum": 1.0, "default": 0.5, "description": "Intensidad máxima del efecto"},
+      "envelope": {"type": "string", "enum": ["pulse", "in_out", "decay", "hold", "ramp"], "default": "in_out", "description": "Forma de la intensidad en el tiempo"},
+      "attack": {"type": "number", "minimum": 0.02, "maximum": 3, "default": 0.15, "description": "Segundos de subida (in_out)"},
+      "release": {"type": "number", "minimum": 0.02, "maximum": 3, "default": 0.35, "description": "Segundos de bajada (in_out)"}
+    }
+  }
+}

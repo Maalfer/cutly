@@ -1,0 +1,19 @@
+{
+  "name": "negative_flash",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Negativo",
+  "category": "color",
+  "tags": [
+    "negativo",
+    "invertir",
+    "destello",
+    "sorpresa"
+  ],
+  "description": "Invierte los colores durante la layer (úsalo en fracciones de segundo como golpe de sorpresa).",
+  "params_schema": {
+    "type": "object",
+    "properties": {}
+  }
+}

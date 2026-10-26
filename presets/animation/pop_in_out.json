@@ -1,0 +1,14 @@
+{
+ "name": "pop_in_out",
+ "description": "Entra con rebote y sale con fundido.",
+ "data": {
+  "enter": {
+   "name": "pop",
+   "dur": 0.35
+  },
+  "exit": {
+   "name": "fade",
+   "dur": 0.25
+  }
+ }
+}

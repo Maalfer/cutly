@@ -1,0 +1,17 @@
+{
+ "name": "reel_white_clean",
+ "description": "Blanco limpio sin resaltado de palabra: sobrio, para contenido serio o educativo.",
+ "data": {
+  "font": "Poppins",
+  "size": 0.044,
+  "color": "#FFFFFF",
+  "outline_color": "#000000",
+  "outline_width": 0.006,
+  "highlight_color": null,
+  "bold": true,
+  "max_words_per_cue": 4,
+  "max_lines": 2,
+  "animation": "none",
+  "position_y": 0.74
+ }
+}

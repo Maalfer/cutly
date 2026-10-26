@@ -1,0 +1,31 @@
+{
+ "name": "lower_third",
+ "description": "Cartel de tercio inferior (nombre/dato) azul que entra deslizando desde la izquierda.",
+ "data": {
+  "style": {
+   "font": "Poppins ExtraBold",
+   "size": 0.034,
+   "color": "#FFFFFF",
+   "bg_color": "#0A84FFE6",
+   "bold": false,
+   "outline_width": 0,
+   "align": "left"
+  },
+  "box": {
+   "x": 0.05,
+   "y": 0.66,
+   "w": 0.6,
+   "anchor": "bottom_left"
+  },
+  "animations": {
+   "enter": {
+    "name": "slide_right",
+    "dur": 0.35
+   },
+   "exit": {
+    "name": "fade",
+    "dur": 0.25
+   }
+  }
+ }
+}

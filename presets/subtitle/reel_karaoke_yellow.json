@@ -1,0 +1,18 @@
+{
+ "name": "reel_karaoke_yellow",
+ "description": "El clásico de reels: Poppins blanca con contorno negro y la palabra activa en amarillo que «salta». Funciona sobre casi cualquier fondo.",
+ "data": {
+  "font": "Poppins",
+  "size": 0.045,
+  "color": "#FFFFFF",
+  "outline_color": "#000000",
+  "outline_width": 0.007,
+  "highlight_color": "#FFD400",
+  "bold": true,
+  "uppercase": false,
+  "max_words_per_cue": 3,
+  "max_lines": 2,
+  "animation": "pop",
+  "position_y": 0.72
+ }
+}

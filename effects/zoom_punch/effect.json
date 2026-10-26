@@ -1,0 +1,67 @@
+{
+  "name": "zoom_punch",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Zoom de impacto",
+  "category": "cámara",
+  "tags": [
+    "zoom",
+    "énfasis",
+    "golpe",
+    "punch-in"
+  ],
+  "description": "Acercamiento rápido al metraje para dar énfasis a una palabra o frase, y vuelta suave. Es el recurso más usado en reels.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "scale": {
+        "type": "number",
+        "minimum": 1.03,
+        "maximum": 2.0,
+        "default": 1.25,
+        "description": "Factor de zoom máximo (1.2–1.35 suele ser natural)"
+      },
+      "focus_x": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "default": 0.5,
+        "description": "Punto de enfoque horizontal (0 izquierda, 1 derecha)"
+      },
+      "focus_y": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "default": 0.5,
+        "description": "Punto de enfoque vertical (0 arriba, 1 abajo)"
+      },
+      "envelope": {
+        "type": "string",
+        "enum": [
+          "pulse",
+          "in_out",
+          "decay",
+          "hold",
+          "ramp"
+        ],
+        "default": "in_out",
+        "description": "Forma de la intensidad en el tiempo: pulse (sube y baja suave), in_out (rampas), decay (golpe que se apaga), hold (constante), ramp (crece)"
+      },
+      "attack": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.12,
+        "description": "Segundos de subida (in_out)"
+      },
+      "release": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.45,
+        "description": "Segundos de bajada (in_out)"
+      }
+    }
+  }
+}

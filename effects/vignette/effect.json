@@ -1,0 +1,27 @@
+{
+  "name": "vignette",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Viñeta",
+  "category": "color",
+  "tags": [
+    "viñeta",
+    "oscurecer",
+    "foco",
+    "cine"
+  ],
+  "description": "Oscurece los bordes para centrar la atención. Constante mientras dura la layer.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "strength": {
+        "type": "number",
+        "minimum": 0.1,
+        "maximum": 1.0,
+        "default": 0.6,
+        "description": "Intensidad (0.4 sutil, 0.8 marcada)"
+      }
+    }
+  }
+}

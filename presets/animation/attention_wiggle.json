@@ -1,0 +1,19 @@
+{
+ "name": "attention_wiggle",
+ "description": "Se balancea para señalar algo.",
+ "data": {
+  "enter": {
+   "name": "pop",
+   "dur": 0.3
+  },
+  "loop": {
+   "name": "wiggle",
+   "period": 0.7,
+   "amount": 0.12
+  },
+  "exit": {
+   "name": "fade",
+   "dur": 0.2
+  }
+ }
+}

@@ -1,0 +1,49 @@
+{
+  "name": "progress_bar",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Barra de progreso",
+  "category": "rótulos",
+  "tags": [
+    "progreso",
+    "barra",
+    "retención",
+    "tiempo"
+  ],
+  "description": "Barra fina que se llena a lo largo de la layer; mantiene la atención en vídeos de cuenta atrás o por pasos.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "position": {
+        "type": "string",
+        "enum": [
+          "top",
+          "bottom"
+        ],
+        "default": "bottom",
+        "description": "Arriba o abajo"
+      },
+      "thickness": {
+        "type": "number",
+        "minimum": 0.003,
+        "maximum": 0.03,
+        "default": 0.008,
+        "description": "Grosor (fracción del alto)"
+      },
+      "color": {
+        "type": "string",
+        "pattern": "^#[0-9A-Fa-f]{6}$",
+        "default": "#FFD400",
+        "description": "Color #RRGGBB"
+      },
+      "opacity": {
+        "type": "number",
+        "minimum": 0.1,
+        "maximum": 1,
+        "default": 0.9,
+        "description": "Opacidad"
+      }
+    }
+  }
+}

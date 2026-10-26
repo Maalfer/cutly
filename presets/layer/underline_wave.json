@@ -1,0 +1,23 @@
+{
+ "name": "underline_wave",
+ "description": "Subrayado ondulado rojo (colócalo bajo el texto que quieras resaltar).",
+ "data": {
+  "type": "icon",
+  "asset": "icons/squiggle",
+  "box": {
+   "x": 0.5,
+   "y": 0.5,
+   "w": 0.35
+  },
+  "animations": {
+   "enter": {
+    "name": "slide_right",
+    "dur": 0.3
+   },
+   "exit": {
+    "name": "fade",
+    "dur": 0.2
+   }
+  }
+ }
+}

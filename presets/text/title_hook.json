@@ -1,0 +1,30 @@
+{
+ "name": "title_hook",
+ "description": "Titular de apertura: Anton amarillo en mayúsculas sobre caja oscura, entra con «pop». Úsalo los primeros 3 s.",
+ "data": {
+  "style": {
+   "font": "Anton",
+   "size": 0.047,
+   "color": "#FFD400",
+   "bg_color": "#000000C4",
+   "bold": false,
+   "uppercase": true,
+   "outline_width": 0
+  },
+  "box": {
+   "x": 0.5,
+   "y": 0.06,
+   "w": 0.94
+  },
+  "animations": {
+   "enter": {
+    "name": "pop",
+    "dur": 0.35
+   },
+   "exit": {
+    "name": "fade",
+    "dur": 0.3
+   }
+  }
+ }
+}

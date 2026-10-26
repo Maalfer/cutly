@@ -1,0 +1,14 @@
+{
+ "name": "zoom_in_fade",
+ "description": "Aparece creciendo y se desvanece.",
+ "data": {
+  "enter": {
+   "name": "zoom_in",
+   "dur": 0.4
+  },
+  "exit": {
+   "name": "fade",
+   "dur": 0.3
+  }
+ }
+}

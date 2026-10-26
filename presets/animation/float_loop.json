@@ -1,0 +1,19 @@
+{
+ "name": "float_loop",
+ "description": "Flota arriba y abajo de forma continua.",
+ "data": {
+  "enter": {
+   "name": "fade",
+   "dur": 0.3
+  },
+  "loop": {
+   "name": "float",
+   "period": 1.4,
+   "amount": 0.2
+  },
+  "exit": {
+   "name": "fade",
+   "dur": 0.25
+  }
+ }
+}

@@ -1,0 +1,60 @@
+{
+  "name": "color_pulse",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Pulso de color",
+  "category": "color",
+  "tags": [
+    "color",
+    "saturación",
+    "contraste",
+    "énfasis"
+  ],
+  "description": "Sube saturación y contraste un momento para dar vida a un fragmento y marcar énfasis.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "saturation": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 3,
+        "default": 1.5,
+        "description": "Saturación máxima (1 = sin cambio)"
+      },
+      "contrast": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 1.6,
+        "default": 1.1,
+        "description": "Contraste máximo"
+      },
+      "envelope": {
+        "type": "string",
+        "enum": [
+          "pulse",
+          "in_out",
+          "decay",
+          "hold",
+          "ramp"
+        ],
+        "default": "in_out",
+        "description": "Forma de la intensidad en el tiempo: pulse (sube y baja suave), in_out (rampas), decay (golpe que se apaga), hold (constante), ramp (crece)"
+      },
+      "attack": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.2,
+        "description": "Segundos de subida (in_out)"
+      },
+      "release": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.4,
+        "description": "Segundos de bajada (in_out)"
+      }
+    }
+  }
+}

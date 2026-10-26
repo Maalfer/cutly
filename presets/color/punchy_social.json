@@ -1,0 +1,10 @@
+{
+ "name": "punchy_social",
+ "description": "Colores vivos y algo más de contraste: el look «reel» estándar.",
+ "data": {
+  "saturation": 1.15,
+  "contrast": 1.08,
+  "brightness": 0.02,
+  "gamma": 1.0
+ }
+}

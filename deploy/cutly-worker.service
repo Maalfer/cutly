@@ -1,0 +1,22 @@
+[Unit]
+Description=Cutly worker (FFmpeg / Whisper)
+After=network.target redis-server.service
+
+[Service]
+User=mario
+WorkingDirectory=/home/mario/cutly
+EnvironmentFile=/home/mario/cutly/.env
+ExecStart=/home/mario/cutly/.venv/bin/python -m cutly.worker.rq_worker
+Restart=on-failure
+# Servidor compartido con el correo: prioridad baja y techos de recursos.
+Nice=12
+IOSchedulingClass=idle
+CPUQuota=150%
+MemoryHigh=700M
+MemoryMax=900M
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

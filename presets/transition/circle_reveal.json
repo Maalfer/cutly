@@ -1,0 +1,8 @@
+{
+ "name": "circle_reveal",
+ "description": "Revelado circular",
+ "data": {
+  "name": "circleopen",
+  "dur": 0.5
+ }
+}

@@ -1,0 +1,28 @@
+{
+ "name": "emphasis_arrow",
+ "description": "Flecha amarilla que entra deslizando y flota: señala algo a la derecha (ajusta box.x/y).",
+ "data": {
+  "type": "icon",
+  "asset": "icons/arrow-right",
+  "box": {
+   "x": 0.8,
+   "y": 0.5,
+   "w": 0.16
+  },
+  "animations": {
+   "enter": {
+    "name": "slide_left",
+    "dur": 0.35
+   },
+   "loop": {
+    "name": "float",
+    "period": 1.0,
+    "amount": 0.1
+   },
+   "exit": {
+    "name": "fade",
+    "dur": 0.2
+   }
+  }
+ }
+}

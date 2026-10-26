@@ -1,0 +1,28 @@
+{
+ "name": "tip_bulb",
+ "description": "Bombilla de «truco / consejo» que se balancea.",
+ "data": {
+  "type": "icon",
+  "asset": "icons/light-bulb",
+  "box": {
+   "x": 0.88,
+   "y": 0.15,
+   "w": 0.12
+  },
+  "animations": {
+   "enter": {
+    "name": "bounce",
+    "dur": 0.5
+   },
+   "loop": {
+    "name": "wiggle",
+    "period": 0.8,
+    "amount": 0.1
+   },
+   "exit": {
+    "name": "fade",
+    "dur": 0.2
+   }
+  }
+ }
+}

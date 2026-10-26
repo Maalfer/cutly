@@ -1,0 +1,8 @@
+{
+ "name": "flash_cut",
+ "description": "Destello blanco muy corto, para golpes de ritmo",
+ "data": {
+  "name": "fadewhite",
+  "dur": 0.2
+ }
+}

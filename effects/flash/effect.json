@@ -1,0 +1,62 @@
+{
+  "name": "flash",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Destello",
+  "category": "color",
+  "tags": [
+    "flash",
+    "destello",
+    "transición",
+    "impacto"
+  ],
+  "description": "Fogonazo blanco (o negro) que se apaga rápido. Funciona como golpe de transición o para marcar un corte.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "color": {
+        "type": "string",
+        "enum": [
+          "white",
+          "black"
+        ],
+        "default": "white",
+        "description": "Color del destello"
+      },
+      "strength": {
+        "type": "number",
+        "minimum": 0.1,
+        "maximum": 1.0,
+        "default": 0.7,
+        "description": "Intensidad máxima"
+      },
+      "envelope": {
+        "type": "string",
+        "enum": [
+          "pulse",
+          "in_out",
+          "decay",
+          "hold",
+          "ramp"
+        ],
+        "default": "decay",
+        "description": "Forma de la intensidad en el tiempo: pulse (sube y baja suave), in_out (rampas), decay (golpe que se apaga), hold (constante), ramp (crece)"
+      },
+      "attack": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.15,
+        "description": "Segundos de subida (in_out)"
+      },
+      "release": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.35,
+        "description": "Segundos de bajada (in_out)"
+      }
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+ "name": "quick_fade",
+ "description": "Fundido rápido: el corte suave por defecto",
+ "data": {
+  "name": "fade",
+  "dur": 0.25
+ }
+}

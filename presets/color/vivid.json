@@ -1,0 +1,10 @@
+{
+ "name": "vivid",
+ "description": "Saturación alta para contenido colorido.",
+ "data": {
+  "saturation": 1.3,
+  "contrast": 1.05,
+  "brightness": 0.0,
+  "gamma": 1.0
+ }
+}

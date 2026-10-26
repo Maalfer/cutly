@@ -1,0 +1,14 @@
+{
+ "name": "spin_in_out",
+ "description": "Entra girando y sale con fundido.",
+ "data": {
+  "enter": {
+   "name": "spin_in",
+   "dur": 0.5
+  },
+  "exit": {
+   "name": "fade",
+   "dur": 0.25
+  }
+ }
+}

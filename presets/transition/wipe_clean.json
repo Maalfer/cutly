@@ -1,0 +1,8 @@
+{
+ "name": "wipe_clean",
+ "description": "Cortinilla limpia hacia la izquierda",
+ "data": {
+  "name": "wipeleft",
+  "dur": 0.35
+ }
+}

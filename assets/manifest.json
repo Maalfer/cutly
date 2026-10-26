@@ -1,0 +1,680 @@
+{
+ "assets": [
+  {
+   "id": "icons/arrow-right",
+   "kind": "icon",
+   "tags": [
+    "flecha",
+    "derecha",
+    "arrow",
+    "right",
+    "señalar"
+   ],
+   "description": "Flecha gruesa amarilla hacia la derecha",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/circle-emphasis",
+   "kind": "icon",
+   "tags": [
+    "círculo",
+    "énfasis",
+    "circle",
+    "resaltar",
+    "marcar"
+   ],
+   "description": "Elipse roja hecha a mano para rodear algo",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/star",
+   "kind": "icon",
+   "tags": [
+    "estrella",
+    "star",
+    "favorito",
+    "destacado",
+    "calidad"
+   ],
+   "description": "Estrella amarilla",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/exclamation",
+   "kind": "icon",
+   "tags": [
+    "exclamación",
+    "alerta",
+    "exclamation",
+    "importante",
+    "cuidado"
+   ],
+   "description": "Exclamación blanca sobre círculo rojo",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/check",
+   "kind": "icon",
+   "tags": [
+    "check",
+    "correcto",
+    "ok",
+    "hecho",
+    "verificado",
+    "instalado"
+   ],
+   "description": "Check blanco sobre círculo verde",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/arrow-left",
+   "kind": "icon",
+   "tags": [
+    "flecha",
+    "izquierda",
+    "arrow",
+    "left",
+    "señalar"
+   ],
+   "description": "Flecha gruesa amarilla hacia la izquierda",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/arrow-up",
+   "kind": "icon",
+   "tags": [
+    "flecha",
+    "arriba",
+    "arrow",
+    "up",
+    "subir"
+   ],
+   "description": "Flecha gruesa amarilla hacia arriba",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/arrow-down",
+   "kind": "icon",
+   "tags": [
+    "flecha",
+    "abajo",
+    "arrow",
+    "down",
+    "bajar",
+    "comentar"
+   ],
+   "description": "Flecha gruesa amarilla hacia abajo",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/arrow-curved",
+   "kind": "icon",
+   "tags": [
+    "flecha",
+    "curva",
+    "arrow",
+    "curved",
+    "señalar"
+   ],
+   "description": "Flecha curva hecha a mano",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/chevrons",
+   "kind": "icon",
+   "tags": [
+    "flecha",
+    "siguiente",
+    "chevron",
+    "avanzar",
+    "doble"
+   ],
+   "description": "Doble chevron hacia la derecha",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/cross",
+   "kind": "icon",
+   "tags": [
+    "x",
+    "error",
+    "no",
+    "cross",
+    "mal",
+    "incorrecto"
+   ],
+   "description": "Aspa blanca sobre círculo rojo",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/question",
+   "kind": "icon",
+   "tags": [
+    "pregunta",
+    "duda",
+    "question",
+    "qué",
+    "interrogación"
+   ],
+   "description": "Interrogación blanca sobre círculo azul",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/plus",
+   "kind": "icon",
+   "tags": [
+    "más",
+    "añadir",
+    "plus",
+    "suma"
+   ],
+   "description": "Signo más blanco sobre círculo verde",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/warning",
+   "kind": "icon",
+   "tags": [
+    "aviso",
+    "cuidado",
+    "warning",
+    "peligro",
+    "atención"
+   ],
+   "description": "Triángulo de advertencia amarillo",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/info",
+   "kind": "icon",
+   "tags": [
+    "info",
+    "información",
+    "dato",
+    "nota"
+   ],
+   "description": "Letra i blanca sobre círculo azul",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/heart",
+   "kind": "icon",
+   "tags": [
+    "corazón",
+    "me gusta",
+    "heart",
+    "amor",
+    "like"
+   ],
+   "description": "Corazón rojo",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/fire",
+   "kind": "icon",
+   "tags": [
+    "fuego",
+    "fire",
+    "caliente",
+    "trending",
+    "viral",
+    "top"
+   ],
+   "description": "Llama naranja",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/lightning",
+   "kind": "icon",
+   "tags": [
+    "rayo",
+    "lightning",
+    "rápido",
+    "energía",
+    "velocidad",
+    "bolt"
+   ],
+   "description": "Rayo amarillo",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/play",
+   "kind": "icon",
+   "tags": [
+    "play",
+    "reproducir",
+    "vídeo",
+    "video"
+   ],
+   "description": "Botón de reproducir",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/eye",
+   "kind": "icon",
+   "tags": [
+    "ojo",
+    "mirar",
+    "eye",
+    "atento",
+    "ver"
+   ],
+   "description": "Ojo abierto",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/lock",
+   "kind": "icon",
+   "tags": [
+    "candado",
+    "seguridad",
+    "lock",
+    "privado",
+    "cifrado",
+    "ciberseguridad"
+   ],
+   "description": "Candado cerrado",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/key",
+   "kind": "icon",
+   "tags": [
+    "llave",
+    "clave",
+    "key",
+    "contraseña",
+    "acceso"
+   ],
+   "description": "Llave dorada",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/gear",
+   "kind": "icon",
+   "tags": [
+    "engranaje",
+    "ajustes",
+    "gear",
+    "configuración",
+    "sistema"
+   ],
+   "description": "Engranaje gris",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/bug",
+   "kind": "icon",
+   "tags": [
+    "bug",
+    "insecto",
+    "error",
+    "fallo",
+    "hacking",
+    "vulnerabilidad"
+   ],
+   "description": "Bicho verde (bug)",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/shield",
+   "kind": "icon",
+   "tags": [
+    "escudo",
+    "seguridad",
+    "shield",
+    "protección",
+    "ciberseguridad",
+    "defensa"
+   ],
+   "description": "Escudo azul con check",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/magnifier",
+   "kind": "icon",
+   "tags": [
+    "lupa",
+    "buscar",
+    "magnifier",
+    "ver de cerca",
+    "detalle",
+    "zoom"
+   ],
+   "description": "Lupa",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/speech-bubble",
+   "kind": "icon",
+   "tags": [
+    "comentario",
+    "comentar",
+    "bocadillo",
+    "speech",
+    "chat",
+    "mensaje"
+   ],
+   "description": "Bocadillo de diálogo",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/light-bulb",
+   "kind": "icon",
+   "tags": [
+    "idea",
+    "bombilla",
+    "light bulb",
+    "truco",
+    "consejo",
+    "tip"
+   ],
+   "description": "Bombilla encendida",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/clock",
+   "kind": "icon",
+   "tags": [
+    "reloj",
+    "tiempo",
+    "clock",
+    "hora",
+    "rápido",
+    "minutos"
+   ],
+   "description": "Reloj",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/rocket",
+   "kind": "icon",
+   "tags": [
+    "cohete",
+    "rocket",
+    "lanzar",
+    "crecer",
+    "rápido",
+    "despegar"
+   ],
+   "description": "Cohete",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/trophy",
+   "kind": "icon",
+   "tags": [
+    "trofeo",
+    "campeón",
+    "trophy",
+    "ganar",
+    "premio",
+    "logro"
+   ],
+   "description": "Trofeo dorado",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/terminal",
+   "kind": "icon",
+   "tags": [
+    "terminal",
+    "consola",
+    "comando",
+    "linux",
+    "shell",
+    "cli",
+    "bash"
+   ],
+   "description": "Ventana de terminal con prompt verde",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/download",
+   "kind": "icon",
+   "tags": [
+    "descargar",
+    "download",
+    "instalar",
+    "bajar",
+    "obtener"
+   ],
+   "description": "Descargar",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/cloud",
+   "kind": "icon",
+   "tags": [
+    "nube",
+    "cloud",
+    "servidor",
+    "internet",
+    "almacenamiento"
+   ],
+   "description": "Nube",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/wifi",
+   "kind": "icon",
+   "tags": [
+    "wifi",
+    "red",
+    "conexión",
+    "internet",
+    "inalámbrico"
+   ],
+   "description": "Símbolo wifi azul",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/smile",
+   "kind": "icon",
+   "tags": [
+    "emoji",
+    "sonrisa",
+    "smile",
+    "feliz",
+    "cara",
+    "contento"
+   ],
+   "description": "Cara sonriente",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/laugh",
+   "kind": "icon",
+   "tags": [
+    "emoji",
+    "risa",
+    "laugh",
+    "gracioso",
+    "jaja",
+    "humor"
+   ],
+   "description": "Cara riéndose",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/wow",
+   "kind": "icon",
+   "tags": [
+    "emoji",
+    "sorpresa",
+    "wow",
+    "increíble",
+    "impacto",
+    "guau"
+   ],
+   "description": "Cara de sorpresa",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/cool",
+   "kind": "icon",
+   "tags": [
+    "emoji",
+    "guay",
+    "cool",
+    "gafas",
+    "genial",
+    "chulo"
+   ],
+   "description": "Cara con gafas de sol",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/thinking",
+   "kind": "icon",
+   "tags": [
+    "emoji",
+    "pensar",
+    "thinking",
+    "duda",
+    "hmm",
+    "reflexión"
+   ],
+   "description": "Cara pensativa (una ceja levantada)",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/skull",
+   "kind": "icon",
+   "tags": [
+    "calavera",
+    "skull",
+    "hacker",
+    "muerte",
+    "peligro",
+    "pirata"
+   ],
+   "description": "Calavera",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/sparkles",
+   "kind": "icon",
+   "tags": [
+    "destellos",
+    "sparkles",
+    "magia",
+    "brillo",
+    "nuevo",
+    "especial"
+   ],
+   "description": "Destellos",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/burst",
+   "kind": "icon",
+   "tags": [
+    "explosión",
+    "burst",
+    "énfasis",
+    "novedad",
+    "oferta",
+    "destacar"
+   ],
+   "description": "Estallido rojo para destacar",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/squiggle",
+   "kind": "icon",
+   "tags": [
+    "subrayado",
+    "onda",
+    "squiggle",
+    "underline",
+    "resaltar",
+    "énfasis"
+   ],
+   "description": "Subrayado ondulado rojo",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "icons/corners",
+   "kind": "icon",
+   "tags": [
+    "marco",
+    "esquinas",
+    "corners",
+    "enfocar",
+    "visor",
+    "selección"
+   ],
+   "description": "Esquinas de enfoque",
+   "license": "CC0 (creación propia)"
+  },
+  {
+   "id": "fonts/Poppins-Bold",
+   "kind": "font",
+   "family": "Poppins",
+   "tags": [
+    "moderna",
+    "limpia",
+    "redondeada",
+    "subtítulos",
+    "texto"
+   ],
+   "description": "Sans geométrica redonda; la mejor opción para subtítulos (usa style.bold=true)",
+   "license": "SIL OFL 1.1"
+  },
+  {
+   "id": "fonts/Poppins-ExtraBold",
+   "kind": "font",
+   "family": "Poppins ExtraBold",
+   "tags": [
+    "moderna",
+    "gruesa",
+    "rótulos",
+    "títulos",
+    "chips"
+   ],
+   "description": "Poppins extragruesa para rótulos y etiquetas (usa style.bold=false)",
+   "license": "SIL OFL 1.1"
+  },
+  {
+   "id": "fonts/Anton-Regular",
+   "kind": "font",
+   "family": "Anton",
+   "tags": [
+    "condensada",
+    "impacto",
+    "titular",
+    "alta",
+    "cartel"
+   ],
+   "description": "Condensada de impacto, ideal en MAYÚSCULAS para titulares (style.bold=false)",
+   "license": "SIL OFL 1.1"
+  },
+  {
+   "id": "fonts/BebasNeue-Regular",
+   "kind": "font",
+   "family": "Bebas Neue",
+   "tags": [
+    "condensada",
+    "elegante",
+    "mayúsculas",
+    "titular"
+   ],
+   "description": "Condensada de mayúsculas, aire editorial (style.bold=false)",
+   "license": "SIL OFL 1.1"
+  },
+  {
+   "id": "fonts/Bangers-Regular",
+   "kind": "font",
+   "family": "Bangers",
+   "tags": [
+    "cómic",
+    "divertida",
+    "gracioso",
+    "gamer"
+   ],
+   "description": "Estilo cómic, para contenido divertido o gamer (style.bold=false)",
+   "license": "SIL OFL 1.1"
+  }
+ ]
+}

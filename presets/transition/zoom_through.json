@@ -1,0 +1,8 @@
+{
+ "name": "zoom_through",
+ "description": "Zoom hacia dentro entre clips (energía)",
+ "data": {
+  "name": "zoomin",
+  "dur": 0.4
+ }
+}

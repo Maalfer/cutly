@@ -1,0 +1,28 @@
+{
+ "name": "circle_highlight",
+ "description": "Elipse roja dibujada que rodea algo (ajusta box y w).",
+ "data": {
+  "type": "icon",
+  "asset": "icons/circle-emphasis",
+  "box": {
+   "x": 0.5,
+   "y": 0.5,
+   "w": 0.3
+  },
+  "animations": {
+   "enter": {
+    "name": "pop",
+    "dur": 0.3
+   },
+   "loop": {
+    "name": "pulse",
+    "period": 1.2,
+    "amount": 0.04
+   },
+   "exit": {
+    "name": "fade",
+    "dur": 0.2
+   }
+  }
+ }
+}

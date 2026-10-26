@@ -1,0 +1,34 @@
+{
+  "name": "glitch",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Glitch",
+  "category": "color",
+  "tags": [
+    "glitch",
+    "aberración",
+    "digital",
+    "error"
+  ],
+  "description": "Aberración cromática intermitente tipo señal rota. Útil para hablar de hackeo, errores o tecnología.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "intensity": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 40,
+        "default": 12,
+        "description": "Desplazamiento de color en píxeles"
+      },
+      "rate": {
+        "type": "number",
+        "minimum": 4,
+        "maximum": 40,
+        "default": 18,
+        "description": "Parpadeos por segundo"
+      }
+    }
+  }
+}

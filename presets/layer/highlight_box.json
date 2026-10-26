@@ -1,0 +1,32 @@
+{
+ "name": "highlight_box",
+ "description": "Cuadro amarillo pulsante con relleno translúcido para marcar una zona (ajusta box x,y,w,h).",
+ "data": {
+  "type": "shape",
+  "shape": "rect",
+  "fill": "#FFD40026",
+  "stroke": "#FFD400",
+  "stroke_width": 0.0035,
+  "box": {
+   "x": 0.5,
+   "y": 0.55,
+   "w": 0.8,
+   "h": 0.046
+  },
+  "animations": {
+   "enter": {
+    "name": "pop",
+    "dur": 0.28
+   },
+   "exit": {
+    "name": "fade",
+    "dur": 0.2
+   },
+   "loop": {
+    "name": "pulse",
+    "period": 1.1,
+    "amount": 0.012
+   }
+  }
+ }
+}

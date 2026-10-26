@@ -1,0 +1,28 @@
+{
+ "name": "star_burst",
+ "description": "Estallido rojo con latido para destacar una novedad.",
+ "data": {
+  "type": "icon",
+  "asset": "icons/burst",
+  "box": {
+   "x": 0.8,
+   "y": 0.3,
+   "w": 0.2
+  },
+  "animations": {
+   "enter": {
+    "name": "spin_in",
+    "dur": 0.4
+   },
+   "loop": {
+    "name": "pulse",
+    "period": 0.8,
+    "amount": 0.06
+   },
+   "exit": {
+    "name": "fade",
+    "dur": 0.2
+   }
+  }
+ }
+}

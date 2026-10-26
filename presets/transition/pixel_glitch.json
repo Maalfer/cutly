@@ -1,0 +1,8 @@
+{
+ "name": "pixel_glitch",
+ "description": "Pixelado: estética glitch/tecnología",
+ "data": {
+  "name": "pixelize",
+  "dur": 0.3
+ }
+}

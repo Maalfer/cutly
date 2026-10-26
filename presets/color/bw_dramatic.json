@@ -1,0 +1,10 @@
+{
+ "name": "bw_dramatic",
+ "description": "Blanco y negro con mucho contraste.",
+ "data": {
+  "saturation": 0.0,
+  "contrast": 1.2,
+  "brightness": 0.0,
+  "gamma": 1.0
+ }
+}

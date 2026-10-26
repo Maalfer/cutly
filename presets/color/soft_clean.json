@@ -1,0 +1,10 @@
+{
+ "name": "soft_clean",
+ "description": "Imagen suave y luminosa, bueno para caras en interiores.",
+ "data": {
+  "saturation": 1.05,
+  "contrast": 0.97,
+  "brightness": 0.03,
+  "gamma": 1.05
+ }
+}

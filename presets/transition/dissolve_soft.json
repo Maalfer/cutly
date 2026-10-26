@@ -1,0 +1,8 @@
+{
+ "name": "dissolve_soft",
+ "description": "Disolvencia suave, para cambios de escena",
+ "data": {
+  "name": "dissolve",
+  "dur": 0.5
+ }
+}

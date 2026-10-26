@@ -1,0 +1,41 @@
+{
+  "name": "slow_zoom",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Zoom lento (Ken Burns)",
+  "category": "cámara",
+  "tags": [
+    "zoom",
+    "lento",
+    "cinematográfico",
+    "ken burns"
+  ],
+  "description": "Acercamiento continuo y suave durante toda la layer, para dar dinamismo a planos largos. Al terminar la layer vuelve a la escala normal: haz que la layer abarque el tramo completo.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "scale": {
+        "type": "number",
+        "minimum": 1.02,
+        "maximum": 1.5,
+        "default": 1.12,
+        "description": "Zoom final"
+      },
+      "focus_x": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "default": 0.5,
+        "description": "Punto de enfoque horizontal (0 izquierda, 1 derecha)"
+      },
+      "focus_y": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "default": 0.5,
+        "description": "Punto de enfoque vertical (0 arriba, 1 abajo)"
+      }
+    }
+  }
+}

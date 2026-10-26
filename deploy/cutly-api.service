@@ -1,0 +1,19 @@
+[Unit]
+Description=Cutly API
+After=network.target redis-server.service
+
+[Service]
+User=mario
+WorkingDirectory=/home/mario/cutly
+EnvironmentFile=/home/mario/cutly/.env
+ExecStart=/home/mario/cutly/.venv/bin/uvicorn cutly.api.app:app --host 127.0.0.1 --port 8321 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=on-failure
+Nice=5
+MemoryHigh=300M
+MemoryMax=450M
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

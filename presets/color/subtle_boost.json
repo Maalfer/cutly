@@ -1,0 +1,10 @@
+{
+ "name": "subtle_boost",
+ "description": "Ajuste discreto (+6 % saturación, +4 % contraste) que casi nunca sobra.",
+ "data": {
+  "saturation": 1.06,
+  "contrast": 1.04,
+  "brightness": 0.0,
+  "gamma": 1.0
+ }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "film_grain",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Grano de película",
+  "category": "color",
+  "tags": [
+    "grano",
+    "ruido",
+    "retro",
+    "película"
+  ],
+  "description": "Ruido fino animado que da textura analógica al metraje.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "strength": {
+        "type": "integer",
+        "minimum": 5,
+        "maximum": 60,
+        "default": 22,
+        "description": "Intensidad del grano"
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+ "name": "minimal_lower",
+ "description": "Pequeño y discreto en la parte baja: para vídeos donde el contenido ya llena la pantalla.",
+ "data": {
+  "font": "Poppins",
+  "size": 0.036,
+  "color": "#FFFFFF",
+  "outline_color": "#000000",
+  "outline_width": 0.005,
+  "highlight_color": null,
+  "bold": true,
+  "max_words_per_cue": 5,
+  "max_lines": 2,
+  "animation": "none",
+  "position_y": 0.84
+ }
+}

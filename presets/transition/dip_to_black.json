@@ -1,0 +1,8 @@
+{
+ "name": "dip_to_black",
+ "description": "Pasa por negro: cambio de tema o pausa dramática",
+ "data": {
+  "name": "fadeblack",
+  "dur": 0.4
+ }
+}

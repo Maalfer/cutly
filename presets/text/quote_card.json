@@ -1,0 +1,29 @@
+{
+ "name": "quote_card",
+ "description": "Cita centrada sobre caja oscura translúcida, entrada y salida suaves.",
+ "data": {
+  "style": {
+   "font": "Poppins",
+   "size": 0.04,
+   "color": "#FFFFFF",
+   "bg_color": "#000000B8",
+   "bold": true,
+   "outline_width": 0
+  },
+  "box": {
+   "x": 0.5,
+   "y": 0.5,
+   "w": 0.82
+  },
+  "animations": {
+   "enter": {
+    "name": "fade",
+    "dur": 0.4
+   },
+   "exit": {
+    "name": "fade",
+    "dur": 0.4
+   }
+  }
+ }
+}

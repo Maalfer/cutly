@@ -1,0 +1,35 @@
+{
+ "name": "big_number",
+ "description": "Cifra o palabra enorme en el centro con latido suave: estadísticas, cuentas atrás, «Nº 1».",
+ "data": {
+  "style": {
+   "font": "Anton",
+   "size": 0.13,
+   "color": "#FFD400",
+   "outline_color": "#000000",
+   "outline_width": 0.01,
+   "bold": false,
+   "uppercase": true
+  },
+  "box": {
+   "x": 0.5,
+   "y": 0.5,
+   "w": 0.9
+  },
+  "animations": {
+   "enter": {
+    "name": "zoom_in",
+    "dur": 0.4
+   },
+   "exit": {
+    "name": "fade",
+    "dur": 0.25
+   },
+   "loop": {
+    "name": "pulse",
+    "period": 1.2,
+    "amount": 0.03
+   }
+  }
+ }
+}

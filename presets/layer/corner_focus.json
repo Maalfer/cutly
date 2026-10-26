@@ -1,0 +1,23 @@
+{
+ "name": "corner_focus",
+ "description": "Esquinas de enfoque tipo visor alrededor de una zona.",
+ "data": {
+  "type": "icon",
+  "asset": "icons/corners",
+  "box": {
+   "x": 0.5,
+   "y": 0.5,
+   "w": 0.5
+  },
+  "animations": {
+   "enter": {
+    "name": "zoom_in",
+    "dur": 0.35
+   },
+   "exit": {
+    "name": "fade",
+    "dur": 0.2
+   }
+  }
+ }
+}

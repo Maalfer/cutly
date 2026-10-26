@@ -1,0 +1,35 @@
+{
+ "name": "cta_comment",
+ "description": "Llamada a la acción grande en dos líneas (p. ej. «COMENTA\\nLINUX»), amarilla sobre caja oscura, con latido.",
+ "data": {
+  "style": {
+   "font": "Anton",
+   "size": 0.078,
+   "color": "#FFD400",
+   "bg_color": "#000000D0",
+   "bold": false,
+   "uppercase": true,
+   "outline_width": 0
+  },
+  "box": {
+   "x": 0.5,
+   "y": 0.62,
+   "w": 0.8
+  },
+  "animations": {
+   "enter": {
+    "name": "pop",
+    "dur": 0.4
+   },
+   "exit": {
+    "name": "fade",
+    "dur": 0.3
+   },
+   "loop": {
+    "name": "pulse",
+    "period": 1.2,
+    "amount": 0.03
+   }
+  }
+ }
+}

@@ -1,0 +1,53 @@
+{
+  "name": "letterbox",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Barras cinematográficas",
+  "category": "rótulos",
+  "tags": [
+    "barras",
+    "cine",
+    "letterbox",
+    "dramático"
+  ],
+  "description": "Dos barras negras arriba y abajo que entran y salen suavemente para un aire de cine.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "amount": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 0.15,
+        "default": 0.08,
+        "description": "Alto de cada barra (fracción del alto)"
+      },
+      "envelope": {
+        "type": "string",
+        "enum": [
+          "pulse",
+          "in_out",
+          "decay",
+          "hold",
+          "ramp"
+        ],
+        "default": "in_out",
+        "description": "Forma de la intensidad en el tiempo: pulse (sube y baja suave), in_out (rampas), decay (golpe que se apaga), hold (constante), ramp (crece)"
+      },
+      "attack": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.4,
+        "description": "Segundos de subida (in_out)"
+      },
+      "release": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.4,
+        "description": "Segundos de bajada (in_out)"
+      }
+    }
+  }
+}

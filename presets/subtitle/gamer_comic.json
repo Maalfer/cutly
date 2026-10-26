@@ -1,0 +1,18 @@
+{
+ "name": "gamer_comic",
+ "description": "Bangers estilo cómic, blanco con contorno negro y palabra activa amarilla: humor y gaming.",
+ "data": {
+  "font": "Bangers",
+  "size": 0.065,
+  "color": "#FFFFFF",
+  "outline_color": "#000000",
+  "outline_width": 0.012,
+  "highlight_color": "#FFEA00",
+  "bold": false,
+  "uppercase": true,
+  "max_words_per_cue": 3,
+  "max_lines": 2,
+  "animation": "pop",
+  "position_y": 0.72
+ }
+}

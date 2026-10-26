@@ -1,0 +1,8 @@
+{
+ "name": "slide_left_fast",
+ "description": "El nuevo clip entra deslizando desde la derecha",
+ "data": {
+  "name": "slideleft",
+  "dur": 0.3
+ }
+}

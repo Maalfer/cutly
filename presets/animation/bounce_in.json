@@ -1,0 +1,14 @@
+{
+ "name": "bounce_in",
+ "description": "Cae desde arriba y rebota.",
+ "data": {
+  "enter": {
+   "name": "bounce",
+   "dur": 0.6
+  },
+  "exit": {
+   "name": "fade",
+   "dur": 0.25
+  }
+ }
+}

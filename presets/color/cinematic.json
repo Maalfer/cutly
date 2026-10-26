@@ -1,0 +1,10 @@
+{
+ "name": "cinematic",
+ "description": "Contraste marcado, colores algo apagados y sombras más densas.",
+ "data": {
+  "saturation": 0.92,
+  "contrast": 1.14,
+  "brightness": -0.02,
+  "gamma": 0.95
+ }
+}

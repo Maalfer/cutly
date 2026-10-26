@@ -1,0 +1,18 @@
+{
+ "name": "bold_caps_pop",
+ "description": "Mayúsculas gigantes Anton, palabra activa roja que salta: énfasis y ritmo rápido.",
+ "data": {
+  "font": "Anton",
+  "size": 0.068,
+  "color": "#FFFFFF",
+  "outline_color": "#000000",
+  "outline_width": 0.011,
+  "highlight_color": "#FF3B30",
+  "bold": false,
+  "uppercase": true,
+  "max_words_per_cue": 2,
+  "max_lines": 2,
+  "animation": "pop",
+  "position_y": 0.7
+ }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "cutly-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Pruebas de la interfaz con Chromium headless (puppeteer-core, sin descargar navegador)",
+  "devDependencies": { "puppeteer-core": "^23.0.0" }
+}

@@ -1,0 +1,28 @@
+{
+ "name": "arrow_down_cta",
+ "description": "Flecha hacia abajo que rebota (para «comenta abajo»).",
+ "data": {
+  "type": "icon",
+  "asset": "icons/arrow-down",
+  "box": {
+   "x": 0.5,
+   "y": 0.78,
+   "w": 0.12
+  },
+  "animations": {
+   "enter": {
+    "name": "pop",
+    "dur": 0.35
+   },
+   "loop": {
+    "name": "float",
+    "period": 0.9,
+    "amount": 0.15
+   },
+   "exit": {
+    "name": "fade",
+    "dur": 0.2
+   }
+  }
+ }
+}
