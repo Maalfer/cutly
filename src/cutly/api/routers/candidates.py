@@ -1,6 +1,5 @@
-"""Candidatos a clip: proponer (IA), listar, ajustar, aceptar y descartar."""
+"""Candidatos a clip: los elige el agente (o tú) y los registra aquí; luego se listan, ajustan, aceptan y descartan."""
 
-import os
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,27 +7,37 @@ from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from cutly.auth import Principal, require_read, require_write
-from cutly.config import get_settings
 from cutly.db.models import ClipCandidate, Media, Transcript
 from cutly.db.session import get_session
-from cutly.services.candidates.types import ALL_CRITERIA, Criterion
-from cutly.worker.queue import enqueue
+from cutly.services.candidates.snapping import flatten_words, overlap, snap_to_sentences
+from cutly.services.candidates.types import Candidate as Span
+from cutly.services.candidates.types import Criterion
 
 router = APIRouter(tags=["candidates"])
+MIN_SECONDS, MAX_SECONDS = 3.0, 600.0
 
 
-class ProposeIn(BaseModel):
+class CandidateIn(BaseModel):
+    start: float = Field(ge=0, description="Segundos del vídeo ORIGINAL")
+    end: float = Field(gt=0)
+    title: str = Field("", max_length=120, description="Título corto y atractivo (en el idioma del vídeo)")
+    reason: str = Field("", max_length=500, description="Por qué funciona como clip")
     criteria: list[Criterion] = Field(
-        default=list(ALL_CRITERIA),
+        default_factory=list,
         description="hook (gancho), complete_story (historia completa), strong_opinion (opinión fuerte), "
         "funny (gracioso), standalone_value (valor para quien no vio el directo)",
     )
-    min_seconds: float = Field(25, ge=10, le=120)
-    max_seconds: float = Field(90, ge=15, le=180, description="Duración típica máxima")
-    long_max_seconds: float = Field(300, ge=30, le=600, description="Tope para los pocos clips de varios minutos")
-    max_candidates: int = Field(20, ge=1, le=50)
-    per_chunk: int = Field(6, ge=1, le=12, description="Máximo de candidatos que se piden por bloque de ~25 min")
-    instructions: str = Field("", max_length=1000, description="Indicaciones extra (temas que interesan, tono…)")
+    score: float = Field(70, ge=0, le=100, description="90-100 excepcional · 70-89 muy bueno · 50-69 aceptable")
+
+
+class CandidatesIn(BaseModel):
+    candidates: list[CandidateIn] = Field(min_length=1, max_length=50)
+    snap: bool = Field(
+        True, description="Ajusta inicio/fin al límite de frase más cercano (±8 s) con los tiempos por palabra"
+    )
+    replace_proposed: bool = Field(
+        False, description="Borra antes los candidatos aún sin revisar (`proposed`) de este vídeo"
+    )
 
 
 class CandidatePatch(BaseModel):
@@ -55,26 +64,67 @@ def _view(session: Session, c: ClipCandidate, with_text: bool = True) -> dict:
     return d
 
 
-@router.post("/media/{media_id}/candidates/propose")
-def propose(
+@router.post("/media/{media_id}/candidates")
+def create_candidates(
     media_id: str,
-    body: ProposeIn | None = None,
+    body: CandidatesIn,
     _: Principal = Depends(require_write),
     session: Session = Depends(get_session),
 ):
-    """Lanza la búsqueda de clips con IA (job largo). Sustituye los candidatos aún no revisados
-    (`proposed`); conserva los aceptados y descartados."""
-    if session.get(Media, media_id) is None:
+    """Registra los clips que has elegido leyendo la transcripción (`GET /media/{id}/transcript?format=text`).
+
+    Todo o nada: si uno es inválido no se crea ninguno. Con `snap` (por defecto) cada clip se ajusta a límites de
+    frase. Si un clip se solapa mucho con otro ya existente (no descartado) se omite y aparece en `skipped`."""
+    media = session.get(Media, media_id)
+    if media is None:
         raise HTTPException(404, "Medio no encontrado")
-    if session.exec(select(Transcript.id).where(Transcript.media_id == media_id)).first() is None:
-        raise HTTPException(409, "Primero hay que transcribir el vídeo: POST /media/{id}/transcribe")
-    if get_settings().candidates_backend == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
-        raise HTTPException(503, "Falta ANTHROPIC_API_KEY en el servidor (.env); sin ella no se pueden proponer clips")
-    b = body or ProposeIn()
-    if b.max_seconds < b.min_seconds:
-        raise HTTPException(422, "max_seconds no puede ser menor que min_seconds")
-    params = b.model_dump()
-    return {"job_id": enqueue(session, "candidates.propose", {"media_id": media_id, "params": params}).id}
+    t = session.exec(select(Transcript).where(Transcript.media_id == media_id)).first()
+    segments = t.segments if t else []
+    spans: list[tuple[CandidateIn, float, float]] = []
+    for i, c in enumerate(body.candidates):
+        start, end = c.start, c.end
+        if body.snap and segments:
+            near = [x for x in segments if x["end"] > start - 12 and x["start"] < end + 12]
+            snapped = snap_to_sentences(flatten_words(near), start, end) if near else None
+            if snapped:
+                start, end = snapped
+        dur = end - start
+        if not MIN_SECONDS <= dur <= MAX_SECONDS:
+            raise HTTPException(
+                422, f"candidates[{i}] dura {dur:.1f} s: debe estar entre {MIN_SECONDS:.0f} y {MAX_SECONDS:.0f} s"
+            )
+        if media.duration and end > media.duration + 0.5:
+            raise HTTPException(
+                422, f"candidates[{i}]: el final ({end:.1f}) supera la duración del vídeo ({media.duration:.1f})"
+            )
+        spans.append((c, round(start, 3), round(end, 3)))
+    if body.replace_proposed:
+        for old in session.exec(
+            select(ClipCandidate).where(ClipCandidate.media_id == media_id, ClipCandidate.status == "proposed")
+        ).all():
+            session.delete(old)
+        session.flush()
+    existing = session.exec(
+        select(ClipCandidate).where(ClipCandidate.media_id == media_id, ClipCandidate.status != "discarded")
+    ).all()
+    keep: list[Span] = [Span(e.start, e.end, e.score, e.title, e.reason, list(e.criteria or [])) for e in existing]
+    created, skipped = [], []
+    for c, start, end in spans:
+        mine = Span(start, end, c.score, c.title, c.reason, list(c.criteria))
+        clash = next((k for k in keep if (lambda o: o[0] >= 0.3 or o[1] >= 0.6)(overlap(mine, k))), None)
+        if clash is not None:
+            skipped.append({"start": start, "end": end, "title": c.title, "reason": "se solapa con otro candidato",
+                            "overlaps": f"{clash.start:.1f}-{clash.end:.1f}"})  # fmt: skip
+            continue
+        row = ClipCandidate(media_id=media_id, start=start, end=end, score=c.score, title=c.title.strip(),
+                            reason=c.reason.strip(), criteria=list(c.criteria))  # fmt: skip
+        session.add(row)
+        keep.append(mine)
+        created.append(row)
+    session.commit()
+    for r in created:
+        session.refresh(r)
+    return {"created": [_view(session, r) for r in created], "skipped": skipped}
 
 
 @router.get("/media/{media_id}/candidates")
@@ -139,3 +189,10 @@ def accept(candidate_id: str, _: Principal = Depends(require_write), session: Se
 @router.post("/candidates/{candidate_id}/discard")
 def discard(candidate_id: str, _: Principal = Depends(require_write), session: Session = Depends(get_session)):
     return _set_status(session, candidate_id, "discarded")
+
+
+@router.delete("/candidates/{candidate_id}")
+def delete_candidate(candidate_id: str, _: Principal = Depends(require_write), session: Session = Depends(get_session)):
+    session.delete(_get(session, candidate_id))
+    session.commit()
+    return {"ok": True}

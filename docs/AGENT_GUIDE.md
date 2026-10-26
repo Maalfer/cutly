@@ -34,8 +34,25 @@ curl -s -H "Authorization: Bearer $CUTLY_API_KEY" $CUTLY_URL/api/v1/media
    `{"edits":[{"op":"merge","index":9,"to":10,"text":"Flatpak,"},{"op":"replace","index":18,"text":"apt."},{"op":"delete","index":3}]}`
    (índices del segmento antes de aplicar nada). Para frases enteras: `PATCH …/segments/{seg}` con `{"text":"…"}`.
    Si una frase importante no tiene sentido, vuelve a transcribir solo ese tramo con otra pista o pregunta al usuario.
-4. **Elegir clips** (si el vídeo es largo): `POST /media/{id}/candidates/propose` (criterios, duración, `instructions`) →
-   `GET /media/{id}/candidates`; `accept`/`discard`/`PATCH` para ajustar. Necesita `ANTHROPIC_API_KEY` en el servidor.
+4. **Elegir clips** (si el vídeo es largo) — **lo decides tú**, el servidor no usa ninguna IA externa. Lee la transcripción
+   por bloques de ~25 min: `GET /media/{id}/transcript?format=text&start=0&end=1500` (líneas `[HH:MM:SS] #id texto`), y
+   registra lo que elijas con `POST /media/{id}/candidates`:
+   `{"candidates":[{"start":812.4,"end":871.0,"title":"…","reason":"…","criteria":["hook","complete_story"],"score":85}]}`
+   (segundos del vídeo **original**; hasta 50 por llamada, todo o nada). El servidor **ajusta inicio y fin al límite de frase**
+   más cercano (`"snap":false` lo desactiva), **omite los que se solapan** con otros ya registrados (salen en `skipped`) y
+   con `"replace_proposed":true` sustituye los que aún no has revisado. Después: `GET /media/{id}/candidates`,
+   `PATCH /candidates/{id}` (ajustar `start`/`end`/`title`), `accept`, `discard` o `DELETE`. Para montar un clip:
+   `POST /projects {"candidate_id":"…"}`.
+   Criterio de selección (el mismo que usaría un editor humano):
+   - Un clip debe **entenderse solo**: empieza donde arranca una idea y acaba cuando se cierra; nunca a mitad de frase o razonamiento.
+   - Criterios (`criteria`): `hook` arranca con una frase que engancha en 3 s · `complete_story` planteamiento, desarrollo y cierre ·
+     `strong_opinion` opinión fuerte con argumentos · `funny` momento gracioso o reacción genuina · `standalone_value` enseña o
+     cuenta algo útil a quien no vio el directo.
+   - Duración: normalmente 25–90 s; solo si la historia lo pide, algún clip de hasta unos 5 min. Mínimo absoluto 3 s.
+   - `score` 0–100: 90–100 excepcional (lo compartirías sin dudar) · 70–89 muy bueno · 50–69 aceptable. Sé exigente: mejor pocos
+     clips buenos que muchos mediocres; si no hay nada que merezca la pena, no registres nada.
+   - En un bloque largo, los momentos cortados en el borde del bloque se ven completos al leer el siguiente: pide bloques con
+     3 min de solape y no dupliques (el servidor descarta los solapados).
 5. **Ver el original:** `GET /media/{id}/frame?t=30&grid=true` devuelve un JPEG con una **rejilla 0–1 etiquetada**: así lees
    directamente las coordenadas de la facecam, del juego, de la zona libre… Mira varios instantes.
 

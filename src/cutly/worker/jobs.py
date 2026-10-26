@@ -67,7 +67,6 @@ def _finish(job_id: str, **fields) -> None:
 
 def run_job(job_id: str) -> None:
     from cutly.worker import (  # noqa: F401
-        candidates_handler,
         handlers,
         render_handler,
         transcribe_handler,

@@ -11,7 +11,7 @@
 - [x] 1. Esqueleto, config, BD (SQLite WAL), auth (sesión + API keys), Compose, tests
 - [x] 2. Subida por trozos reanudable (+ simple), ffprobe, proxy 540p, peaks, worker RQ con progreso/cancelación/timeout, endpoints de media y jobs, 16 tests
 - [x] 3. Transcripción: interfaz `Transcriber`, faster-whisper por ventanas cortadas en silencios, API (lanzar, leer JSON/texto, editar segmento), 23 tests
-- [x] 4. Candidatos (Anthropic): bloques de 25 min con solape, salida estructurada, ajuste a frases, deduplicado, API; claves API en la web + guía para agentes + script de subida. 31 tests
+- [x] 4. Candidatos a clip elegidos por el agente (ajuste a frases, deduplicado, API); claves API en la web + guía para agentes + script de subida. 31 tests
 - [x] 5. Alembic + esquema de proyecto (6 tipos de layer), operaciones atómicas por lotes, historial deshacer/rehacer con control de concurrencia, API `/projects`. 58 tests
 - [x] 6. Render extremo a extremo (reencuadre, subtítulos ASS, texto/forma/icono, audio medido, borrador y final), 68 tests
 - [ ] 7. Registro de efectos, assets, presets
@@ -48,12 +48,7 @@
 
 ## Notas del paso 4
 - Integración principal = **API key + REST** (estilo SysReptor): el usuario crea la clave en la web (Claves API), se la pasa a Claude Code y este usa los mismos endpoints. `GET /api/v1/agent-guide` (Markdown con la URL real) y `web/tools/upload.py` (subida reanudable, solo stdlib). El servidor MCP del paso 9 queda como extra opcional.
-- Modelo por defecto `claude-opus-5-5` (effort `high`, pensamiento adaptativo, sin `temperature`/`tool_choice`/prefill). Si el clasificador de seguridad rechaza un bloque se reintenta con `CUTLY_CANDIDATES_FALLBACK_MODEL` (`claude-opus-4-8`); si también rechaza, el bloque se omite y se cuenta en `refusals`.
-- El modelo devuelve ids de segmento (no segundos); el servidor calcula tiempos y ajusta a frases con los tiempos por palabra.
-- Coste orientativo: un directo de 5 h son ~100k tokens de entrada en total → del orden de 1 USD con Opus 5.5.
-- **Sin validar contra la API real**: falta `ANTHROPIC_API_KEY` en `/home/mario/cutly/.env` (el endpoint responde 503 con el motivo). Probado con cliente simulado (forma de la petición, rechazo, fallback).
-- Los tests ya no leen `.env` (antes recogían el de producción).
-- **Pendiente importante**: Alembic. `create_all` no añade columnas a tablas existentes; antes de cambiar el modelo en producción hay que introducir migraciones.
+- **Decisión (2026-10-26): Cutly no usa ninguna API de IA externa.** Se eliminó el selector de clips con Anthropic (`ANTHROPIC_API_KEY`, `CUTLY_CANDIDATES_*`, extra `anthropic`, job `candidates.propose`). El agente lee la transcripción por bloques (`GET /media/{id}/transcript?format=text&start&end`) y registra los clips con `POST /media/{id}/candidates`; el servidor ajusta a frases, descarta solapes y valida duraciones. La transcripción sigue siendo local (faster-whisper).
 
 ## Notas del paso 5
 - **Alembic activo**: `init_db()` migra al arrancar (una BD previa sin `alembic_version` se marca como 0001). Migraciones en `src/cutly/db/migrations/versions/`; el test `test_fresh_db_matches_models` falla si cambias un modelo sin migración. Al generar migraciones fija SIEMPRE `CUTLY_DATABASE_URL` a una BD temporal (ver `alembic.ini`). Backup previo en `~/.cache/backups/`.

@@ -1,6 +1,6 @@
-"""Tipos del selector de clips."""
+"""Tipos de los candidatos a clip. Quién los elige es el agente (Claude Code u otro) a través de la API."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Literal
 
 Criterion = Literal["hook", "complete_story", "strong_opinion", "funny", "standalone_value"]
@@ -16,29 +16,6 @@ CRITERIA_HELP = {
 
 
 @dataclass
-class ProposeParams:
-    criteria: list[str] = field(default_factory=lambda: list(ALL_CRITERIA))
-    min_seconds: float = 25.0
-    max_seconds: float = 90.0  # duración típica
-    long_max_seconds: float = 300.0  # tope para los pocos clips de varios minutos
-    per_chunk: int = 6
-    max_candidates: int = 20
-    instructions: str = ""
-
-
-@dataclass
-class RawCandidate:
-    """Lo que devuelve el modelo: referencias a segmentos, no a segundos."""
-
-    start_segment: int
-    end_segment: int
-    title: str
-    reason: str
-    criteria: list[str]
-    score: int
-
-
-@dataclass
 class Candidate:
     start: float
     end: float
@@ -46,10 +23,3 @@ class Candidate:
     title: str
     reason: str
     criteria: list[str]
-
-
-@dataclass
-class Usage:
-    input_tokens: int = 0
-    output_tokens: int = 0
-    refusals: int = 0

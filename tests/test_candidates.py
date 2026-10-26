@@ -1,12 +1,5 @@
-import json
-from types import SimpleNamespace
-
-import pytest
-
-from cutly.services.candidates.chunking import make_chunks
-from cutly.services.candidates.llm import SCHEMA, AnthropicLLM
 from cutly.services.candidates.snapping import dedupe, flatten_words, snap_to_sentences
-from cutly.services.candidates.types import Candidate, ProposeParams
+from cutly.services.candidates.types import Candidate
 
 API = "/api/v1"
 
@@ -34,15 +27,6 @@ def make_segments(n=40, dur=5.0):
     return segs
 
 
-def test_chunks_overlap_and_cover():
-    segs = make_segments(600)  # 50 min
-    chunks = make_chunks(segs, size_s=1500, overlap_s=180)
-    assert len(chunks) == 3
-    assert chunks[0][0]["id"] == 0 and chunks[-1][-1]["id"] == 599
-    assert chunks[1][0]["start"] < chunks[0][-1]["end"]  # hay solape
-    assert make_chunks(make_segments(10), 1500, 180) == [make_segments(10)]
-
-
 def test_snap_moves_to_sentence_boundaries():
     words = flatten_words(make_segments(10))
     # frases terminan al final de los segmentos impares (id 1, 3, 5…): la 3ª frase abarca segs 4-5
@@ -60,97 +44,94 @@ def test_dedupe_keeps_best():
     assert [x.title for x in out] == ["b", "c"]
 
 
-class StubClient:
-    def __init__(self, texts, stop="end_turn"):
-        self.calls, self.texts, self.stop = [], list(texts), stop
-        self.messages = SimpleNamespace(create=self.create)
-
-    def create(self, **kw):
-        self.calls.append(kw)
-        stop = self.stop if not isinstance(self.stop, list) else self.stop[len(self.calls) - 1]
-        return SimpleNamespace(
-            stop_reason=stop, usage=SimpleNamespace(input_tokens=100, output_tokens=20),
-            content=[SimpleNamespace(type="text", text=self.texts[min(len(self.calls) - 1, len(self.texts) - 1)])],
-        )  # fmt: skip
-
-
-def test_anthropic_request_shape_and_parse():
-    good = json.dumps(
-        {
-            "candidates": [
-                {"start_segment": 2, "end_segment": 9, "title": "T", "reason": "R", "criteria": ["hook"], "score": 85}
-            ]
-        }
-    )
-    stub = StubClient([good])
-    raws, usage = AnthropicLLM(stub).propose("[2 @ 0:00:10] hola", (0, 20), ProposeParams())
-    kw = stub.calls[0]
-    assert kw["model"] == "claude-opus-5-5" and kw["output_config"]["format"]["schema"] == SCHEMA
-    assert kw["output_config"]["effort"] == "high"
-    for banned in ("temperature", "top_p", "top_k", "tool_choice", "budget_tokens"):
-        assert banned not in kw  # no admitidos en estos modelos
-    assert "<transcripcion>" in kw["messages"][0]["content"] and kw["messages"][-1]["role"] == "user"
-    assert raws[0].score == 85 and usage.input_tokens == 100
-
-
-def test_refusal_uses_fallback_then_gives_up():
-    good = json.dumps({"candidates": []})
-    stub = StubClient([good, good], stop=["refusal", "end_turn"])
-    raws, usage = AnthropicLLM(stub).propose("x", (0, 1), ProposeParams())
-    assert [c["model"] for c in stub.calls] == ["claude-opus-5-5", "claude-opus-4-8"] and usage.refusals == 1
-    stub2 = StubClient([good], stop="refusal")
-    raws, usage = AnthropicLLM(stub2).propose("x", (0, 1), ProposeParams())
-    assert raws == [] and usage.refusals == 2
-    with pytest.raises(RuntimeError, match="cortó"):
-        AnthropicLLM(StubClient([good], stop="max_tokens")).propose("x", (0, 1), ProposeParams())
-
-
-def test_candidates_api_flow(writer, sample_video, monkeypatch):
+def _media_with_transcript(writer, sample_video, segs):
     from sqlmodel import Session
 
-    from cutly.config import get_settings
     from cutly.db.models import Transcript
     from cutly.db.session import get_engine
 
-    monkeypatch.setenv("CUTLY_CANDIDATES_BACKEND", "fake")
-    get_settings.cache_clear()
     mid = writer.post(f"{API}/media/simple", params={"filename": "v.mp4"}, content=sample_video.read_bytes()).json()[
         "media_id"
     ]
-    assert writer.post(f"{API}/media/{mid}/candidates/propose").status_code == 409  # sin transcripción
-    with Session(get_engine()) as s:
-        s.add(Transcript(media_id=mid, segments=make_segments(60)))
-        s.commit()
-    r = writer.post(
-        f"{API}/media/{mid}/candidates/propose", json={"criteria": ["hook"], "min_seconds": 20, "max_seconds": 60}
+    if segs:
+        with Session(get_engine()) as s:
+            s.add(Transcript(media_id=mid, segments=segs))
+            s.commit()
+    return mid
+
+
+def test_agent_registers_candidates_and_reviews_them(writer, sample_video):
+    mid = _media_with_transcript(writer, sample_video, make_segments(0))
+    dur = writer.get(f"{API}/media/{mid}").json()["duration"]  # el vídeo de prueba dura 3 s
+    assert writer.post(f"{API}/media/{mid}/candidates", json={"candidates": []}).status_code == 422
+    assert writer.post(f"{API}/media/nope/candidates", json={"candidates": [{"start": 0, "end": 5}]}).status_code == 404
+    too_short = writer.post(f"{API}/media/{mid}/candidates", json={"candidates": [{"start": 0.0, "end": 1.0}]})
+    assert too_short.status_code == 422 and "candidates[0]" in too_short.json()["detail"]
+    beyond = writer.post(f"{API}/media/{mid}/candidates", json={"candidates": [{"start": 0.0, "end": dur + 30}]})
+    assert beyond.status_code == 422 and "supera" in beyond.json()["detail"]
+    ok = writer.post(
+        f"{API}/media/{mid}/candidates",
+        json={"candidates": [{"start": 0.0, "end": dur, "title": "Mi clip", "criteria": ["hook"], "score": 88}]},
     )
-    j = writer.get(f"{API}/jobs/{r.json()['job_id']}").json()
-    assert j["status"] == "done", j
-    cands = writer.get(f"{API}/media/{mid}/candidates").json()
-    assert len(cands) == 1 and cands[0]["status"] == "proposed" and cands[0]["text"].startswith("p")
-    cid = cands[0]["id"]
-    assert writer.patch(f"{API}/candidates/{cid}", json={"start": 5, "end": 6}).status_code == 422  # <3 s
+    assert ok.status_code == 200, ok.text
+    made = ok.json()["created"]
+    assert (
+        len(made) == 1 and made[0]["status"] == "proposed" and made[0]["title"] == "Mi clip" and made[0]["score"] == 88
+    )
+    cid = made[0]["id"]
+    # un clip que se solapa con uno existente se omite y se explica; criterios inválidos se rechazan
+    again = writer.post(
+        f"{API}/media/{mid}/candidates", json={"candidates": [{"start": 0.0, "end": dur, "title": "otro"}]}
+    ).json()
+    assert again["created"] == [] and again["skipped"][0]["reason"].startswith("se solapa")
+    assert (
+        writer.post(
+            f"{API}/media/{mid}/candidates", json={"candidates": [{"start": 0, "end": 3, "criteria": ["x"]}]}
+        ).status_code
+        == 422
+    )
+    assert writer.patch(f"{API}/candidates/{cid}", json={"start": 1, "end": 2}).status_code == 422  # <3 s
     assert writer.patch(f"{API}/candidates/{cid}", json={"title": "Nuevo"}).json()["title"] == "Nuevo"
     assert writer.post(f"{API}/candidates/{cid}/accept").json()["status"] == "accepted"
-    # volver a proponer conserva los aceptados
-    writer.post(f"{API}/media/{mid}/candidates/propose")
-    assert {c["status"] for c in writer.get(f"{API}/media/{mid}/candidates").json()} == {"accepted", "proposed"}
     assert len(writer.get(f"{API}/media/{mid}/candidates", params={"status": "accepted"}).json()) == 1
     assert writer.post(f"{API}/candidates/{cid}/discard").json()["status"] == "discarded"
+    assert writer.delete(f"{API}/candidates/{cid}").json() == {"ok": True}
+    assert writer.get(f"{API}/candidates/{cid}").status_code == 404
 
 
-def test_missing_api_key_is_actionable(writer, sample_video, monkeypatch):
+def test_candidates_snap_to_sentences_and_replace_proposed(writer, sample_video, monkeypatch):
+    segs = make_segments(10)  # 50 s de transcripción; las frases acaban al final de los segmentos impares
+    mid = _media_with_transcript(writer, sample_video, segs)
     from sqlmodel import Session
 
-    from cutly.db.models import Transcript
+    from cutly.db.models import Media
     from cutly.db.session import get_engine
 
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    mid = writer.post(f"{API}/media/simple", params={"filename": "v.mp4"}, content=sample_video.read_bytes()).json()[
-        "media_id"
-    ]
-    with Session(get_engine()) as s:
-        s.add(Transcript(media_id=mid, segments=make_segments(5)))
+    with Session(
+        get_engine()
+    ) as s:  # el vídeo de prueba dura 3 s; lo alargamos para poder probar tiempos de la transcripción
+        m = s.get(Media, mid)
+        m.duration = 120.0
+        s.add(m)
         s.commit()
-    r = writer.post(f"{API}/media/{mid}/candidates/propose")
-    assert r.status_code == 503 and "ANTHROPIC_API_KEY" in r.json()["detail"]
+    r = writer.post(
+        f"{API}/media/{mid}/candidates", json={"candidates": [{"start": 21.0, "end": 47.0, "title": "a"}]}
+    ).json()
+    c = r["created"][0]
+    assert 19.7 <= c["start"] <= 20.0 and c["end"] >= 49.0  # ajustado a inicio y fin de frase
+    raw = writer.post(
+        f"{API}/media/{mid}/candidates",
+        json={"snap": False, "candidates": [{"start": 21.0, "end": 47.0, "title": "b"}]},
+    )
+    assert raw.json()["created"] == []  # se solapa con el anterior
+    rep = writer.post(
+        f"{API}/media/{mid}/candidates",
+        json={"snap": False, "replace_proposed": True, "candidates": [{"start": 21.0, "end": 47.0, "title": "b"}]},
+    ).json()
+    assert rep["created"][0]["start"] == 21.0
+    assert [x["title"] for x in writer.get(f"{API}/media/{mid}/candidates").json()] == ["b"]
+
+
+def test_there_is_no_ai_proposal_endpoint(writer, sample_video):
+    mid = _media_with_transcript(writer, sample_video, make_segments(5))
+    assert writer.post(f"{API}/media/{mid}/candidates/propose").status_code in (404, 405)

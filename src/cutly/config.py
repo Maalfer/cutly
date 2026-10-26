@@ -25,13 +25,6 @@ class Settings(BaseSettings):
     # faster_whisper | remote | fake (fake solo para tests)
     transcriber_backend: str = "faster_whisper"
     transcriber_remote_url: str = ""
-    # Selección de clips (Anthropic). La clave va en ANTHROPIC_API_KEY (sin prefijo CUTLY_).
-    candidates_backend: str = "anthropic"  # anthropic | fake (tests)
-    candidates_model: str = "claude-opus-5-5"
-    candidates_fallback_model: str = "claude-opus-4-8"  # si el clasificador de seguridad rechaza un bloque
-    candidates_effort: str = "high"
-    candidates_chunk_s: int = 25 * 60
-    candidates_overlap_s: int = 3 * 60
     video_encoder: str = "libx264"
     retention_originals_days: int = 0
     retention_proxies_days: int = 0

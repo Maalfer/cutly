@@ -24,16 +24,14 @@ la clave en la web, «Claves API»); el servidor MCP es un extra opcional.
 - Producción: **https://editor.cogny.es**. Usuario web `mario`; la contraseña, pídesela al usuario.
 - Repositorio: `/home/mario/cutly` (git, rama `main`). Identidad git local ya configurada.
 - Secretos solo en `/home/mario/cutly/.env` (chmod 600; nunca en el repo, nunca en logs ni en el chat).
-- `ANTHROPIC_API_KEY` **aún no está configurada** (proponer clips con IA devuelve 503 con el motivo). Pídesela al usuario
-  y añádela al `.env`; luego `sudo systemctl restart cutly-api cutly-worker`.
+- La app **no usa ninguna API de IA externa**: la inteligencia (elegir clips, montar, verificar) la pone el agente que se conecta con una API key de Cutly.
 - Para probar la API crea una clave desde la web (Claves API) o con
   `uv run cutly create-key nombre --write` (con `.env` cargado). Revoca las claves de prueba al terminar.
 
 ## 3. Stack (decidido; no lo cambies sin avisar y justificar)
 
 Python 3.12/3.13, uv, ruff, pytest · FastAPI + SQLModel/SQLAlchemy 2 + SQLite WAL + **Alembic** · Pydantic v2 · cola RQ +
-Redis (local) · faster-whisper (modelo `small` en CPU, tras la interfaz `Transcriber`) · Anthropic API para elegir clips
-(`claude-opus-5-5` por defecto, salida estructurada, `CUTLY_CANDIDATES_*`) · FFmpeg/ffprobe (libass para ASS), resvg
+Redis (local) · faster-whisper (modelo `small` en CPU, tras la interfaz `Transcriber`) · FFmpeg/ffprobe (libass para ASS), resvg
 para SVG, Pillow para secuencias de iconos y contact sheets · frontend Preact + htm **vendorizados** (sin CDN, sin npm,
 sin build) servido por la propia API · Nginx existente del VPS + certbot (HTTP-01) · systemd.
 
@@ -69,7 +67,7 @@ src/cutly/
   schema/ops.py             operaciones atómicas por lote + merge-patch; schema/versioning.py (migraciones del JSON)
   services/ingest/          ffprobe, alta/baja de medios
   services/transcribe/      interfaz Transcriber, faster-whisper por ventanas en silencios, cleanup (edición de palabras)
-  services/candidates/      selector de clips (bloques 25 min, solape, ajuste a frases, dedupe, Anthropic)
+  services/candidates/      candidatos a clip (ajuste a frases y deduplicado; los elige el agente)
   services/projects/        store (historial/undo/redo/versión), check (avisos), hooks (valida efectos/assets/fuentes)
   services/render/          graph.py (filtergraph), ass.py (subtítulos/texto/formas), animation.py (curvas), sprite.py
                             (secuencias PNG de iconos animados), effects_api.py, fonts.py, rasterize.py (SVG→PNG)
@@ -92,8 +90,7 @@ Todo desplegado en producción y probado contra https://editor.cogny.es (≈165 
 
 - Auth (sesión web + claves API con permisos), subida por trozos reanudable (web con XHR/progreso real y script `web/tools/upload.py`),
   proxy (lado corto 540 px) y forma de onda.
-- Transcripción (`vocabulary`, `beam_size`, corrección palabra a palabra conservando tiempos), candidatos con IA (probado solo con
-  cliente simulado: falta `ANTHROPIC_API_KEY`).
+- Transcripción (`vocabulary`, `beam_size`, corrección palabra a palabra conservando tiempos), candidatos a clip elegidos por el agente.
 - Proyecto de edición: ops atómicas por lote, undo/redo, versión optimista, transiciones entre clips (xfade/acrossfade).
 - Render: reencuadre center/facecam/game/stack/custom, varios clips, velocidad, subtítulos ASS con palabra activa, texto, formas,
   iconos/imágenes animados, **motor de animación único** (enter/exit simétricos, loops, keyframes con easing), color, audio
@@ -116,7 +113,7 @@ Todo desplegado en producción y probado contra https://editor.cogny.es (≈165 
    fotogramas/checks. La API ya lo permite todo.
 2. **Servidor MCP** (opcional; envoltorio fino de la REST): list_effects, describe_effect, add_layer, update_layer, remove_layer,
    list_assets, search_assets, upload_asset, create_preset, apply_preset.
-3. `ANTHROPIC_API_KEY` en `.env` y prueba real de candidatos con la API (hoy solo cliente simulado).
+3. (hecho) Los candidatos ya no usan IA externa: los registra el agente con `POST /media/{id}/candidates`.
 4. Limpieza automática de originales/proxies/renders antiguos (los fotogramas ya se podan a las 24 h); validar `docker-compose.yml` y
    el Nginx del Compose (nunca probados: aquí no hay Docker).
 5. Efectos que FFmpeg no pueda hacer: renderer Chromium/Playwright (`render_backend: "browser"`, reservado; no viable en este VPS).

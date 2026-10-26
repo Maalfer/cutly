@@ -44,7 +44,7 @@ def snap_to_sentences(words: list[dict], start: float, end: float, tol: float = 
     return round(max(s, 0.0), 3), round(e, 3)
 
 
-def _overlap(a: Candidate, b: Candidate) -> tuple[float, float]:
+def overlap(a: Candidate, b: Candidate) -> tuple[float, float]:
     inter = max(0.0, min(a.end, b.end) - max(a.start, b.start))
     union = (a.end - a.start) + (b.end - b.start) - inter
     return (inter / union if union else 0.0), inter / max(min(a.end - a.start, b.end - b.start), 1e-6)
@@ -54,6 +54,6 @@ def dedupe(cands: list[Candidate], iou_max: float = 0.3, contain_max: float = 0.
     """Se queda con la mejor puntuación cuando dos candidatos (de bloques solapados) cuentan lo mismo."""
     kept: list[Candidate] = []
     for c in sorted(cands, key=lambda c: -c.score):
-        if all(_overlap(c, k)[0] < iou_max and _overlap(c, k)[1] < contain_max for k in kept):
+        if all(overlap(c, k)[0] < iou_max and overlap(c, k)[1] < contain_max for k in kept):
             kept.append(c)
     return sorted(kept, key=lambda c: c.start)
