@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Race condition</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#07090f}
+  canvas{display:block;width:100%;height:100%}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<script>
+// Animación: una petición enviada en paralelo N veces; el servidor las procesa "a la vez" y el saldo
+// se descuenta varias veces antes de que la primera actualización llegue a tiempo -> condición de carrera.
+const P = Object.assign({
+  accent: '#34e3ff', accent2: '#ff5c8a', title: 'Condición de carrera',
+  n: 6, caption: 'Todas las peticiones llegan a la vez: el servidor comprueba el saldo antes de descontarlo',
+}, window.CUTLY_PARAMS || {});
+const WORDS = window.CUTLY_WORDS || [];
+
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let u = 1, DPR = 1;
+function resize() { DPR = Math.min(devicePixelRatio || 1, 2); cv.width = innerWidth * DPR; cv.height = innerHeight * DPR; u = innerWidth / 1080; }
+resize(); addEventListener('resize', resize);
+
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const easeOut = t => 1 - Math.pow(1 - clamp(t), 3);
+const sub = (t, a, b) => clamp((t - a) / (b - a));
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
+function hexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; }
+const FONT = '"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif';
+const font = (px, w = 700) => `${w} ${px * u}px ${FONT}`;
+const norm = x => String(x).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ]/g, '');
+function saidAt(word, fallback, nth = 0) { const hit = WORDS.filter(x => word instanceof RegExp ? word.test(x.w) : norm(x.w) === norm(word)); return hit[nth] ? hit[nth].start : fallback; }
+
+function rnd(i) { const s = Math.sin(i * 12.9898) * 43758.5453; return s - Math.floor(s); }
+const motes = Array.from({ length: 30 }, (_, i) => ({ x: rnd(i), y: rnd(i + 99), r: 2 + rnd(i + 7) * 3, sp: .01 + rnd(i + 3) * .02, ph: rnd(i + 5) * 6.28 }));
+function bg(T) {
+  const W = innerWidth, H = innerHeight;
+  const g = ctx.createRadialGradient(W / 2, H * .4, 0, W / 2, H * .4, Math.max(W, H) * .8);
+  g.addColorStop(0, '#13182a'); g.addColorStop(1, '#05060b');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for (const m of motes) { const y = ((m.y - T * m.sp) % 1 + 1) % 1; ctx.fillStyle = hexA(P.accent, .07); ctx.beginPath(); ctx.arc(m.x * W, y * H, m.r * u, 0, 7); ctx.fill(); }
+}
+function wrap(text, maxW) { const out = []; let line = ''; for (const w of String(text).split(' ')) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; } if (line) out.push(line); return out; }
+function callout(text, T, tIn, tOut, color = P.accent) {
+  const a = Math.min(sub(T, tIn, tIn + .3), 1 - sub(T, tOut - .3, tOut));
+  if (a <= .01) return;
+  ctx.font = font(30, 700);
+  const maxW = innerWidth * .86 - 70 * u, lines = wrap(text, maxW);
+  const lh = 40 * u, padX = 30 * u, padY = 20 * u;
+  const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + padX * 2 + 20 * u;
+  const h = lines.length * lh + padY * 2;
+  const x = (innerWidth - w) / 2, y = innerHeight * .80 - h + (1 - easeOut(a)) * 24 * u;
+  ctx.save(); ctx.globalAlpha = a;
+  rr(x, y, w, h, Math.min(h / 2, 36 * u)); ctx.fillStyle = 'rgba(12,14,24,.85)'; ctx.fill();
+  ctx.strokeStyle = hexA(color, .6); ctx.lineWidth = 2 * u; ctx.stroke();
+  ctx.fillStyle = '#f2f5ff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  lines.forEach((l, i) => ctx.fillText(l, x + padX + 22 * u, y + padY + lh * (i + .5)));
+  ctx.restore();
+}
+function bigText(text, cx, cy, size, color, alpha = 1) {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.font = font(size, 800); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  wrap(text, innerWidth * .86).forEach((l, i, a) => ctx.fillText(l, cx, cy + (i - (a.length - 1) / 2) * size * 1.2 * u));
+  ctx.restore();
+}
+function serverBox(cx, cy, lit, balanceTxt) {
+  const w = 300 * u, h = 170 * u;
+  if (lit) { const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, w); g.addColorStop(0, hexA(P.accent2, .35)); g.addColorStop(1, hexA(P.accent2, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, w, 0, 7); ctx.fill(); }
+  rr(cx - w / 2, cy - h / 2, w, h, 24 * u); ctx.fillStyle = 'rgba(16,20,34,.95)'; ctx.fill();
+  ctx.strokeStyle = lit ? P.accent2 : hexA(P.accent2, .5); ctx.lineWidth = (lit ? 4 : 2.5) * u; ctx.stroke();
+  ctx.fillStyle = '#dfe6ff'; ctx.font = font(32, 700); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('Servidor', cx, cy - 46 * u);
+  ctx.fillStyle = P.accent2; ctx.font = font(46, 800);
+  ctx.fillText(balanceTxt, cx, cy + 20 * u);
+}
+function client(cx, cy, i, color) {
+  const r = 30 * u;
+  ctx.save(); rr(cx - r, cy - r, r * 2, r * 2, 10 * u); ctx.fillStyle = 'rgba(16,20,34,.95)'; ctx.fill();
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5 * u; ctx.stroke();
+  ctx.fillStyle = color; ctx.font = font(26, 800); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('' + (i + 1), cx, cy); ctx.restore();
+}
+
+const SCENES = [
+  { dur: 3.4, draw(t) {
+      bigText(P.title, innerWidth / 2, innerHeight * .34, 68, '#fff', easeOut(sub(t, 0, .5)));
+      ctx.fillStyle = P.accent; ctx.globalAlpha = easeOut(sub(t, .3, 1)); ctx.fillRect(innerWidth * .3, innerHeight * .42, innerWidth * .4 * easeOut(sub(t, .3, 1.2)), 6 * u); ctx.globalAlpha = 1;
+      callout('Una misma petición enviada muchas veces antes de que el servidor actualice el saldo', t, .9, 3.4);
+  } },
+  { dur: 6, draw(t) {
+      const cy0 = innerHeight * .26, cx0 = innerWidth * .5;
+      const cols = Math.min(P.n, 6), gap = innerWidth * .78 / (cols - 1 || 1), x0 = innerWidth * .11;
+      const srv = { x: cx0, y: innerHeight * .64 };
+      const appear = sub(t, .2, 1.4);
+      for (let i = 0; i < cols; i++) {
+        const cx = x0 + gap * i, a = easeOut(clamp(appear * cols - i * .5));
+        if (a <= 0) continue;
+        ctx.globalAlpha = a; client(cx, cy0, i, i % 2 ? P.accent2 : P.accent); ctx.globalAlpha = 1;
+      }
+      const send0 = 1.6, flight = 1.5;
+      let arrived = 0;
+      for (let i = 0; i < cols; i++) {
+        const p = sub(t, send0, send0 + flight);
+        if (p <= 0) continue;
+        const cx = x0 + gap * i;
+        const color = i % 2 ? P.accent2 : P.accent;
+        ctx.strokeStyle = hexA(color, .25); ctx.lineWidth = 2 * u; ctx.setLineDash([8 * u, 8 * u]);
+        ctx.beginPath(); ctx.moveTo(cx, cy0 + 30 * u); ctx.lineTo(srv.x, srv.y - 90 * u); ctx.stroke(); ctx.setLineDash([]);
+        const px = lerp(cx, srv.x, easeOut(p)), py = lerp(cy0 + 30 * u, srv.y - 90 * u, easeOut(p));
+        ctx.fillStyle = color; ctx.beginPath(); ctx.arc(px, py, 10 * u, 0, 7); ctx.fill();
+        if (p >= .98) arrived++;
+      }
+      const balance = Math.max(0, 1 - arrived); // "1 € disponible" baja a 0 aunque ya se haya canjeado varias veces
+      serverBox(srv.x, srv.y, arrived > 0, arrived >= cols ? `+${arrived}×` : '1,00 €');
+      callout(arrived >= cols ? 'El servidor las procesó todas antes de descontar el saldo: ' + cols + ' canjeos con un solo cupón'
+                               : 'Viajan en paralelo: ninguna espera a que la anterior termine', t, 2.6, 6);
+  } },
+  { dur: 4.2, draw(t) {
+      const a = easeOut(sub(t, 0, .6));
+      bigText('Dinero infinito', innerWidth / 2, innerHeight * .4, 70, P.accent2, a);
+      ctx.globalAlpha = a * .9;
+      ctx.strokeStyle = hexA('#ffffff', .3); ctx.lineWidth = 3 * u;
+      const r = 90 * u + 20 * u * Math.sin(t * 3);
+      ctx.beginPath(); ctx.arc(innerWidth / 2, innerHeight * .4, r, 0, 6.28 * easeOut(sub(t, .2, 1.4))); ctx.stroke();
+      ctx.globalAlpha = 1;
+      callout('Por no comprobar el saldo de forma atómica (con un bloqueo) al procesar cada petición', t, .7, 4.2);
+  } },
+];
+let acc = 0; for (const s of SCENES) { s.t0 = acc; acc += s.dur; }
+const TOTAL = acc;
+
+let T = 0, last = performance.now();
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, 0.05); last = now; T += dt;
+  let t = Math.min(T, TOTAL - 0.001), i = 0;
+  while (i < SCENES.length - 1 && t >= SCENES[i].dur) { t -= SCENES[i].dur; i++; }
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  bg(T);
+  const fade = Math.min(sub(t, 0, .25), 1 - sub(t, SCENES[i].dur - .25, SCENES[i].dur));
+  ctx.globalAlpha = i === SCENES.length - 1 ? sub(t, 0, .25) : fade;
+  SCENES[i].draw(t);
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

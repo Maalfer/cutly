@@ -1,5 +1,6 @@
 import io
 import subprocess
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -260,3 +261,85 @@ def test_text_measurement_uses_the_real_font_like_libass():
     assert many > 6  # un texto largo en una caja estrecha sí ocupa muchas líneas
     # sin fuente localizable se usa la estimación por factor, sin romper
     assert text_metrics("Hola", "Fuente Inexistente", 0.05, False, 0.8, 1080, 1920)[2] == 1
+
+
+# --- Palabras y escenas `code` dentro del proyecto -------------------------------------------------------------
+
+_SCENE = (
+    "<!doctype html><html><body style='margin:0'><canvas id=c></canvas><script>"
+    "const c=document.getElementById('c'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;"
+    "function f(n){x.fillStyle='#234';x.fillRect(0,0,c.width,c.height);x.fillStyle='#fff';"
+    "x.font=(c.width*.05)+'px sans-serif';x.fillText(String(CUTLY_WORDS.length)+' '+(CUTLY_PARAMS.t||''),20,200+n/50);"
+    "requestAnimationFrame(f)}requestAnimationFrame(f)</script></body></html>"
+)
+
+
+def test_words_search_in_output_time(writer, project):
+    pid = project["pid"]
+    r = writer.get(f"{API}/projects/{pid}/words", params={"q": "PALABRA2", "context": 1}).json()
+    assert r["count"] == 1 and r["matches"][0]["start"] == 1.0 and "palabra1" in r["matches"][0]["context"]
+    two = writer.get(f"{API}/projects/{pid}/words", params={"q": "palabra3 palabra4"}).json()
+    assert two["count"] == 1 and two["matches"][0]["start"] == 1.4
+    assert writer.get(f"{API}/projects/{pid}/words", params={"q": "nada"}).json()["count"] == 0
+
+
+def test_lint_and_preview_of_a_mounted_code_scene(writer, project):
+    pytest.importorskip("playwright.sync_api")
+    if not Path("/usr/bin/chromium").is_file():
+        pytest.skip("sin Chromium")
+    pid = project["pid"]
+    layer = {"type": "scene", "id": "sc1", "start": 0.5, "end": 2.5, "code": _SCENE, "params": {"t": "hola"}}
+    assert writer.post(f"{API}/projects/{pid}/layers", json={"layer": layer}).status_code == 200
+    lint = writer.post(f"{API}/projects/{pid}/layers/sc1/lint").json()
+    assert lint["layer_id"] == "sc1" and lint["words_in_layer"] >= 4
+    assert not [i for i in lint["issues"] if i["severity"] == "error"]
+    pv = writer.get(f"{API}/projects/{pid}/layers/sc1/scene-preview", params={"times": "0.5,1.5", "width": 270})
+    assert pv.status_code == 200 and pv.headers["content-type"] == "image/png"
+    assert writer.post(f"{API}/projects/{pid}/layers/t1/lint").status_code == 422
+    chk = writer.get(f"{API}/projects/{pid}/checks").json()
+    assert not any(i["code"].startswith("scene_code_") and i["severity"] == "error" for i in chk["issues"])
+
+
+def test_composite_puts_the_scene_over_the_video_with_one_simulation(writer, project):
+    pytest.importorskip("playwright.sync_api")
+    if not Path("/usr/bin/chromium").is_file():
+        pytest.skip("sin Chromium")
+    pid = project["pid"]
+    green = ("<!doctype html><html><body style='margin:0;background:#0f0'><script>"
+             "function f(){requestAnimationFrame(f)}requestAnimationFrame(f)</script></body></html>")  # fmt: skip
+    layer = {"type": "scene", "id": "g1", "start": 0.5, "end": 2.5, "code": green,
+             "box": {"x": 0.5, "y": 0.25, "w": 0.5, "h": 0.25}}  # fmt: skip
+    assert writer.post(f"{API}/projects/{pid}/layers", json={"layer": layer}).status_code == 200
+    r = writer.get(f"{API}/projects/{pid}/layers/g1/composite", params={"times": "0.5,1.0", "cols": 2})
+    assert r.status_code == 200 and r.headers["content-type"] == "image/png"
+    im = Image.open(io.BytesIO(r.content)).convert("RGB")
+    w = im.width // 2
+    px = im.getpixel((w // 2, round(im.height * 0.25)))  # centro de la caja en el primer fotograma
+    assert px[1] > 200 and px[0] < 60, px
+    corner = im.getpixel((5, im.height - 5))  # fuera de la caja: sigue el vídeo base
+    assert not (corner[1] > 200 and corner[0] < 60)
+    assert writer.get(f"{API}/projects/{pid}/layers/g1/composite", params={"times": "99"}).status_code == 422
+
+
+def test_words_batch_search_one_call_several_terms(writer, project):
+    pid = project["pid"]
+    r = writer.post(f"{API}/projects/{pid}/words", json={"queries": ["palabra2", "palabra3 palabra4", "nada"]}).json()
+    assert [x["query"] for x in r["results"]] == ["palabra2", "palabra3 palabra4", "nada"]
+    assert r["results"][0]["count"] == 1 and r["results"][0]["matches"][0]["start"] == 1.0
+    assert r["results"][1]["matches"][0]["start"] == 1.4
+    assert r["results"][2]["count"] == 0
+
+
+def test_safe_zones_reports_face_band_and_free_space(writer, project, monkeypatch):
+    from cutly.api.routers import verify as verify_mod
+
+    monkeypatch.setattr(verify_mod, "detect_faces", lambda path, t: [(0.3, 0.05, 0.7, 0.3)], raising=False)
+    import cutly.services.verify.faces as faces_mod
+
+    monkeypatch.setattr(faces_mod, "detect_faces", lambda path, t: [(0.3, 0.05, 0.7, 0.3)])
+    pid = project["pid"]
+    r = writer.get(f"{API}/projects/{pid}/safe-zones", params={"samples": 3}).json()
+    assert r["has_face"] is True
+    assert r["face_band_y"][0] == pytest.approx(0.05, abs=0.02) and r["face_band_y"][1] == pytest.approx(0.3, abs=0.02)
+    assert r["free_y_bands"] and any(b[1] - b[0] > 0.1 for b in r["free_y_bands"])
+    assert "advice" in r

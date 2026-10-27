@@ -1,0 +1,72 @@
+{
+  "name": "whip_pan",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Whip pan",
+  "category": "cámara",
+  "tags": [
+    "whip",
+    "paneo",
+    "swish",
+    "transición",
+    "movimiento"
+  ],
+  "description": "Barrido rápido de cámara con estela: la imagen se desplaza (y se acerca un poco) y se asienta. Ideal en un cambio de plano o para dar energía a un corte; combínalo con un sonido de whoosh.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "direction": {
+        "type": "string",
+        "enum": [
+          "left",
+          "right",
+          "up",
+          "down"
+        ],
+        "default": "right",
+        "description": "Hacia dónde barre la imagen"
+      },
+      "distance": {
+        "type": "number",
+        "minimum": 0.05,
+        "maximum": 0.5,
+        "default": 0.22,
+        "description": "Desplazamiento máximo (fracción del lado)"
+      },
+      "blur_frames": {
+        "type": "integer",
+        "minimum": 2,
+        "maximum": 5,
+        "default": 4,
+        "description": "Intensidad de la estela de movimiento (fotogramas mezclados: más = más estela)"
+      },
+      "envelope": {
+        "type": "string",
+        "enum": [
+          "pulse",
+          "in_out",
+          "decay",
+          "hold",
+          "ramp"
+        ],
+        "default": "in_out",
+        "description": "Forma de la intensidad en el tiempo: in_out (rampas), pulse (sube y baja), decay (golpe que se apaga), hold, ramp"
+      },
+      "attack": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.12,
+        "description": "Segundos de subida (in_out)"
+      },
+      "release": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.25,
+        "description": "Segundos de bajada (in_out)"
+      }
+    }
+  }
+}

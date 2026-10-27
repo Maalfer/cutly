@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from cutly.api.routers import (
+    analysis,
     assets,
     auth,
     candidates,
@@ -94,6 +95,7 @@ def create_app() -> FastAPI:
         uploads,
         media,
         transcripts,
+        analysis,
         candidates,
         projects,
         render,

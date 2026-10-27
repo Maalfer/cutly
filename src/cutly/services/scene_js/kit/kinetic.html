@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Título cinético Cutly</title>
+<style>
+  /* Fondo TRANSPARENTE (capa `transparent`): se ve el vídeo de detrás. Sin @keyframes: todo se anima en el bucle. */
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}
+  canvas{display:block;width:100%;height:100%}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<script>
+// ============================ TÍTULOS CINÉTICOS CUTLY (escena `code` transparente) ============================
+// Parámetros (window.CUTLY_PARAMS = layer.params), normalmente generados por POST /projects/{id}/title:
+//   duration  s de la capa (para programar la salida)       y      centro vertical del bloque (0-1)
+//   out       'fade' | 'rise' | 'blur' | 'none'              out_dur  s de la salida        scrim  0-0.8 velo oscuro tras el texto
+//   lines     [{ text, font, weight, size (px a 1080 de ancho), color, gradient 'c1 c2', tracking (em), tracking_from (em),
+//                opacity, in, at, say, dur, mark 'palabra otra', mark_color, case, gap (em), shadow }]
+//   in: 'blur_in' | 'rise' | 'pop' | 'tracking' | 'letters' | 'words' | 'mask'
+// Todo se mide con `u` (= innerWidth/1080). `say` sincroniza la entrada con la palabra hablada (window.CUTLY_WORDS).
+const P = Object.assign({ lines: [], y: .42, out: 'fade', out_dur: .35, scrim: 0, duration: 4 }, window.CUTLY_PARAMS || {});
+const WORDS = window.CUTLY_WORDS || [];
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let u = 1, DPR = 1;
+function resize() { DPR = Math.min(devicePixelRatio || 1, 2); cv.width = innerWidth * DPR; cv.height = innerHeight * DPR; u = innerWidth / 1080; }
+resize(); addEventListener('resize', resize);
+
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const sub = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = t => 1 - Math.pow(1 - clamp(t), 3);
+const easeOutBack = t => { t = clamp(t); const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+const norm = x => String(x).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ]/g, '');
+function saidAt(word, fallback) {
+  if (!word) return fallback;
+  const hit = WORDS.find(x => norm(x.w) === norm(word));
+  return hit ? hit.start : fallback;
+}
+
+// Las familias "Inter SemiBold", "Inter ExtraBold", "Montserrat Black"… son ficheros propios con peso 400: con otro peso
+// el navegador los engrosaría artificialmente.
+function fontStr(L, px) {
+  const w = /\s(SemiBold|ExtraBold|Black)$/.test(L.font) ? 400 : (L.weight || 800);
+  return `${w} ${px}px "${L.font}", "Inter", system-ui, sans-serif`;
+}
+
+// ---------- composición del texto de cada línea (palabras, ajuste de línea y tamaño) ----------
+const L0 = { font: 'Inter', weight: 800, size: 120, color: '#ffffff', tracking: 0, opacity: 1, in: 'blur_in', dur: .7, gap: .3, shadow: .45, case: 'none' };
+const lines = P.lines.map((raw, i) => Object.assign({}, L0, raw, { _i: i }));
+function layout(L) {
+  const maxW = innerWidth * .88;
+  const txt = L.case === 'upper' ? L.text.toUpperCase() : L.text;
+  const words = txt.split(/\s+/).filter(Boolean);
+  const marks = new Set((L.mark || '').split(/\s+/).filter(Boolean).map(norm));
+  let size = L.size * u;
+  for (let k = 0; k < 10; k++) {                       // reduce hasta que la palabra más larga quepa con margen
+    ctx.font = fontStr(L, size); ctx.letterSpacing = (L.tracking * size) + 'px';
+    if (Math.max(...words.map(w => ctx.measureText(w).width)) <= maxW) break;
+    size *= .9;
+  }
+  ctx.font = fontStr(L, size); ctx.letterSpacing = (L.tracking * size) + 'px';
+  const trackPx = L.tracking * size, space = ctx.measureText(' ').width;
+  const rows = []; let cur = { words: [], width: 0 };
+  words.forEach(w => {
+    const ww = ctx.measureText(w).width - trackPx;
+    if (cur.words.length && cur.width + space + ww > maxW) { rows.push(cur); cur = { words: [], width: 0 }; }
+    cur.words.push({ t: w, w: ww, mark: marks.has(norm(w)), x: cur.width ? cur.width + space : 0 });
+    cur.width += (cur.width ? space : 0) + ww;
+  });
+  if (cur.words.length) rows.push(cur);
+  return { size, rows, lh: size * 1.1, height: rows.length * size * 1.1, trackPx, n: words.reduce((a, w) => a + w.length, 0) };
+}
+function fillFor(L, size, y, mark) {
+  if (mark) return L.mark_color || '#ffd400';
+  if (L.gradient) {
+    const [c1, c2] = String(L.gradient).split(/\s+/);
+    const g = ctx.createLinearGradient(0, y - size * .5, 0, y + size * .5); g.addColorStop(0, c1); g.addColorStop(1, c2 || c1); return g;
+  }
+  return L.color;
+}
+
+// ---------- dibujo de una línea con su animación ----------
+function drawLine(L, lay, y0, T) {
+  const p = sub(T, L.t0, L.t0 + L.dur);
+  if (p <= 0) return;
+  const q = P.out === 'none' ? 0 : sub(T, P.duration - P.out_dur, P.duration), e = easeOut(p);
+  let a = 1, dy = 0, blur = 0, sc = 1, reveal = 1, trk = L.tracking;
+  switch (L.in) {
+    case 'blur_in': a = e; blur = (1 - e) * 18 * u; sc = lerp(1.12, 1, e); break;
+    case 'rise': a = e; dy = (1 - e) * 70 * u; break;
+    case 'pop': a = Math.min(1, p * 5); sc = lerp(.6, 1, easeOutBack(p)); break;
+    case 'tracking': a = e; trk = lerp(L.tracking_from == null ? 0 : L.tracking_from, L.tracking, e); break;
+    case 'mask': reveal = e; dy = (1 - e) * 16 * u; break;
+    default: break;   // letters / words: el estado va por elemento (abajo)
+  }
+  if (P.out === 'fade') a *= 1 - q; else if (P.out === 'rise') { a *= 1 - q; dy -= q * 50 * u; } else if (P.out === 'blur') { a *= 1 - q; blur += q * 16 * u; }
+  if (a <= .004) return;
+  const cx = innerWidth / 2, size = lay.size;
+  ctx.save();
+  ctx.translate(cx, y0 + lay.height / 2); ctx.scale(sc, sc); ctx.translate(-cx, -(y0 + lay.height / 2 - dy));
+  if (blur > .3) ctx.filter = `blur(${blur}px)`;
+  if (L.shadow > 0) { ctx.shadowColor = `rgba(0,0,0,${.55 * L.shadow})`; ctx.shadowBlur = 26 * u * L.shadow; ctx.shadowOffsetY = 6 * u * L.shadow; }
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.font = fontStr(L, size);
+  let wi = 0; const nw = lay.rows.reduce((s, r) => s + r.words.length, 0);
+  lay.rows.forEach((row, ri) => {
+    const y = y0 + (ri + .5) * lay.lh;
+    let left = cx - row.width / 2;
+    if (L.in === 'tracking') {                          // ancho de la fila con el espaciado actual
+      ctx.letterSpacing = '0px';
+      const nat = row.words.reduce((s, w) => s + [...w.t].reduce((t, c) => t + ctx.measureText(c).width, 0), 0);
+      const chars = row.words.reduce((s, w) => s + w.t.length, 0);
+      const spc = row.words.length - 1;
+      left = cx - (nat + (chars - spc - 1) * trk * size + spc * size * .3) / 2;
+    }
+    if (reveal < 1) { ctx.save(); ctx.beginPath(); ctx.rect(left - 40 * u, y - lay.lh, (row.width + 80 * u) * reveal, lay.lh * 2); ctx.clip(); }
+    let x = left, ci = 0;
+    row.words.forEach(w => {
+      const fill = fillFor(L, size, y, w.mark);
+      ctx.fillStyle = fill;
+      if (L.in === 'tracking' || L.in === 'letters') {   // letra a letra
+        ctx.letterSpacing = '0px';
+        [...w.t].forEach(ch => {
+          const cw = ctx.measureText(ch).width;
+          const lp = L.in === 'letters' ? easeOut(sub(p, (ci / Math.max(lay.n, 1)) * .6, (ci / Math.max(lay.n, 1)) * .6 + .4)) : e;
+          ctx.save(); ctx.globalAlpha = a * L.opacity * (L.in === 'letters' ? lp : 1);
+          ctx.fillText(ch, x, y + (L.in === 'letters' ? (1 - lp) * 40 * u : 0)); ctx.restore();
+          x += cw + (L.in === 'tracking' ? trk * size : lay.trackPx); ci++;
+        });
+        x += (L.in === 'tracking' ? size * .3 : 0) + (L.in === 'tracking' ? 0 : ctx.measureText(' ').width);
+      } else {
+        const wp = L.in === 'words' ? easeOutBack(sub(p, (wi / Math.max(nw, 1)) * .65, (wi / Math.max(nw, 1)) * .65 + .35)) : 1;
+        const wa = L.in === 'words' ? clamp(wp * 1.6) : 1;
+        ctx.save(); ctx.globalAlpha = a * L.opacity * wa; ctx.letterSpacing = lay.trackPx + 'px';
+        const mx = left + w.x + w.w / 2;
+        ctx.translate(mx, y); ctx.scale(L.in === 'words' ? lerp(.55, 1, wp) : 1, L.in === 'words' ? lerp(.55, 1, wp) : 1);
+        ctx.fillText(w.t, -w.w / 2, 0); ctx.restore();
+        wi++;
+      }
+    });
+    if (reveal < 1) ctx.restore();
+  });
+  ctx.restore();
+}
+
+// ---------- bucle (no cambies este patrón) ----------
+let T = 0, last = performance.now(), cache = null;
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, .05); last = now; T += dt;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+  if (!cache || cache.w !== innerWidth) {
+    const lays = lines.map(layout); let total = 0;
+    lays.forEach((l, i) => { total += l.height + (i ? lines[i].gap * l.size : 0); });
+    cache = { w: innerWidth, lays, total };
+    lines.forEach((L, i) => { L.t0 = saidAt(L.say, L.at == null ? i * .35 : L.at); });
+  }
+  const top = innerHeight * P.y - cache.total / 2;
+  if (P.scrim > 0) {
+    const a = P.scrim * Math.min(sub(T, 0, .4), 1 - sub(T, P.duration - .35, P.duration));
+    if (a > .003) {
+      const g = ctx.createLinearGradient(0, top - 260 * u, 0, top + cache.total + 260 * u);
+      g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.3, `rgba(0,0,0,${a})`); g.addColorStop(.7, `rgba(0,0,0,${a})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, innerWidth, innerHeight);
+    }
+  }
+  let y = top;
+  lines.forEach((L, i) => {
+    const lay = cache.lays[i]; if (i) y += L.gap * lay.size;
+    drawLine(L, lay, y, T); y += lay.height;
+  });
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

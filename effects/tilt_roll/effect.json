@@ -1,0 +1,54 @@
+{
+  "name": "tilt_roll",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Inclinación de cámara",
+  "category": "cámara",
+  "tags": [
+    "rotación",
+    "dutch",
+    "inclinar",
+    "roll",
+    "energía"
+  ],
+  "description": "Inclina la cámara unos grados (plano holandés) con un zoom que tapa las esquinas. Da tensión o energía en un golpe de idea; combínalo con zoom_blur.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "angle": {
+        "type": "number",
+        "minimum": -15,
+        "maximum": 15,
+        "default": 5,
+        "description": "Grados de inclinación máxima (negativo = antihorario)"
+      },
+      "envelope": {
+        "type": "string",
+        "enum": [
+          "pulse",
+          "in_out",
+          "decay",
+          "hold",
+          "ramp"
+        ],
+        "default": "in_out",
+        "description": "Forma de la intensidad en el tiempo: in_out (rampas), pulse (sube y baja), decay (golpe que se apaga), hold, ramp"
+      },
+      "attack": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.12,
+        "description": "Segundos de subida (in_out)"
+      },
+      "release": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.25,
+        "description": "Segundos de bajada (in_out)"
+      }
+    }
+  }
+}

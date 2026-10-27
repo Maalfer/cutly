@@ -10,7 +10,7 @@ from sqlmodel import Session, col, delete, select
 from cutly.config import get_settings
 from cutly.db.models import ClipCandidate, Media, Project, ProjectHistory, Transcript
 from cutly.schema.ops import OpError, apply_ops
-from cutly.schema.project import CURRENT_VERSION, ProjectDoc, SubtitleLayer, TimelineClip
+from cutly.schema.project import CURRENT_VERSION, Output, ProjectDoc, Rect, Reframe, SubtitleLayer, TimelineClip
 from cutly.schema.versioning import migrate_doc
 from cutly.services.projects.hooks import check_layer
 
@@ -47,6 +47,7 @@ def create_project(
     source_in: float | None,
     source_out: float | None,
     subtitles: bool,
+    layout: str = "vertical",
 ) -> Project:
     if candidate is not None:
         if candidate.media_id != media.id:
@@ -58,6 +59,9 @@ def create_project(
     doc = ProjectDoc(media_id=media.id, timeline=[TimelineClip(source_in=source_in, source_out=source_out)])
     if media.duration and source_out > media.duration + 0.5:
         raise OpError(f"source_out={source_out:g} supera la duración del vídeo ({media.duration:g} s)")
+    if layout == "horizontal":  # 16:9 a pantalla completa (YouTube): sin recorte vertical
+        doc.output = Output(width=1920, height=1080, fps=doc.output.fps)
+        doc.reframe = Reframe(mode="custom", game=Rect(x=0, y=0, w=1, h=1), game_fit="contain")
     if subtitles and has_transcript(session, media.id):
         doc.layers.append(SubtitleLayer(end=doc.duration))
     row = Project(

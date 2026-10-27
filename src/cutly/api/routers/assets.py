@@ -24,6 +24,15 @@ def _get(session: Session, asset_id: str) -> dict:
     return a
 
 
+@router.get("/sfx")
+def list_sfx(_: Principal = Depends(require_read)):
+    """Efectos de sonido disponibles para la capa `audio` (`sfx`), con su duración y cuándo usarlos."""
+    from cutly.services.audio.sfx import CATALOG
+
+    return {"sfx": [{"name": d.name, "duration": d.duration, "description": d.description, "use": d.use} for d in CATALOG.values()],
+            "layer_example": {"type": "audio", "sfx": "whoosh", "start": 2.9, "end": 3.6, "gain_db": -8}}
+
+
 @router.get("/assets")
 def list_assets(
     kind: str | None = Query(None, description="icon | font | image | overlay"),

@@ -25,6 +25,9 @@ dependencies = [
 [project.optional-dependencies]
 whisper = ["faster-whisper>=1.0"]
 mcp = ["mcp>=1.2"]
+scene-js = [
+    "playwright>=1.64.1",
+]
 
 [project.scripts]
 cutly = "cutly.cli:main"

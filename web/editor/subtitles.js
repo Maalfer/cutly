@@ -46,16 +46,23 @@ export function splitLines(/** @type {string[]} */ texts, /** @type {number} */ 
  * Subtítulo activo en `t`: {lines:[[{text,active}]]} o null. `words` ya en el reloj del clip.
  * Misma regla que el render: la palabra activa es la que se está diciendo (o la última dicha del cue).
  */
+/** Palabra sin tildes, mayúsculas ni puntuación (igual que `_norm_word` del render). */
+export const normWord = (/** @type {string} */ w) => w.normalize('NFD').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '').normalize('NFC').replace(/[\u0300-\u036f]/g, '');
+
 export function activeCue(/** @type {W[][]} */ cues, /** @type {number} */ t, /** @type {any} */ style) {
+  /** @type {Map<string, any>} */
+  const emph = new Map();
+  for (const e of style.emphasis || []) for (const w of e.words) if (!emph.has(normWord(w))) emph.set(normWord(w), e);
   for (const cue of cues) {
     const start = cue[0][0], end = cue[cue.length - 1][1] + 0.12;
     if (t < start || t >= end) continue;
     let active = 0;
     cue.forEach((w, i) => { if (t >= w[0]) active = i; });
-    const texts = cue.map((w) => (style.uppercase ? w[2].toUpperCase() : w[2]));
+    const emphs = cue.map((w) => emph.get(normWord(w[2])) || null);
+    const texts = cue.map((w, i) => ((emphs[i]?.uppercase ?? style.uppercase) ? w[2].toUpperCase() : w[2]));
     // Forzar siempre una sola línea
-    const lines = [[...Array(texts.length).keys()]].map((idxs) => idxs.map((j) => ({ text: texts[j], active: j === active })));
-    return { lines, progress: Math.min(1, (t - cue[active][0]) / 0.09) };
+    const lines = [[...Array(texts.length).keys()]].map((idxs) => idxs.map((j) => ({ text: texts[j], active: j === active, emph: emphs[j] })));
+    return { lines, progress: Math.min(1, (t - cue[active][0]) / 0.09), sinceStart: t - start };
   }
   return null;
 }

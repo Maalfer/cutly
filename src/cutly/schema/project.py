@@ -162,6 +162,21 @@ class TextStyle(Strict):
     uppercase: bool = False
 
 
+class WordEmphasis(Strict):
+    """Estilo propio para ciertas palabras del subtítulo (la comparación ignora mayúsculas, tildes y puntuación).
+
+    Una entrada por grupo de palabras con el mismo estilo; cada elemento de `words` es UNA palabra. El color de
+    énfasis prevalece sobre el de palabra activa (`highlight_color`).
+    """
+
+    words: list[Annotated[str, StringConstraints(min_length=1, max_length=40)]] = Field(min_length=1, max_length=40)
+    scale: float = Field(1, ge=0.5, le=3)  # múltiplo del tamaño base; se reduce solo si la línea no cabe
+    color: HexColor | None = None
+    font: FontName | None = None
+    bold: bool | None = None
+    uppercase: bool | None = None
+
+
 class SubtitleStyle(Strict):
     font: FontName = "default"
     size: float = Field(0.05, ge=0.015, le=0.2)
@@ -175,7 +190,12 @@ class SubtitleStyle(Strict):
     position_y: float = Field(0.72, ge=0.05, le=0.95)  # centro vertical de los subtítulos
     max_words_per_cue: int = Field(4, ge=1, le=12)
     max_lines: int = Field(2, ge=1, le=3)
-    animation: Literal["karaoke", "pop", "none"] = "karaoke"
+    animation: Literal["karaoke", "pop", "fade_pop", "none"] = "karaoke"
+    letter_spacing: float = Field(0, ge=-0.02, le=0.1)  # fracción del alto de salida (0,01 ≈ 19 px en 1920)
+    shadow: float = Field(0, ge=0, le=0.03)  # desplazamiento de la sombra, fracción del alto
+    shadow_color: HexColor = "#00000099"
+    shadow_blur: float = Field(0, ge=0, le=0.02)  # suaviza bordes (sombra y letra), fracción del alto
+    emphasis: list[WordEmphasis] = Field(default_factory=list, max_length=30)
 
 
 class SubtitleCue(Strict):
@@ -302,11 +322,36 @@ class EffectLayer(LayerBase):
         return validate_params(v)
 
 
-class SceneLayer(LayerBase):
-    """Animación/infografía 2D generada por el motor de escenas (ver `schema/scene.py` y `GET /scenes/templates`).
+SfxName = Literal["whoosh", "whoosh_fast", "hit", "pop", "click", "ding", "riser", "glitch"]
 
-    O bien `template` + `params` (la escena se regenera sola y se ajusta a la duración de la capa), o bien `scene`
-    escrita a mano. Se compone como una secuencia de fotogramas RGBA sobre el vídeo.
+
+class AudioLayer(LayerBase):
+    """Efecto de sonido sintetizado mezclado sobre la voz (después de normalizar: `gain_db` es relativo a la voz).
+
+    Se oye desde `start` hasta `end` (como mucho la duración natural del sonido; ver `GET /sfx`). No tiene imagen.
+    """
+
+    type: Literal["audio"] = "audio"
+    sfx: SfxName
+    gain_db: float = Field(-8, ge=-40, le=12)
+    fade_out: float = Field(0.04, ge=0, le=2)
+    z: int = Field(5, ge=-100, le=1000)
+
+
+MAX_CODE_LENGTH = 300_000
+
+
+class SceneLayer(LayerBase):
+    """Animación/infografía 2D compuesta como una secuencia de fotogramas sobre el vídeo. Tres fuentes,
+    exactamente una:
+
+    - `template` (+ `params`): motor declarativo propio (ver `schema/scene.py` y `GET /scenes/templates`);
+      la escena se regenera sola y se ajusta a la duración de la capa.
+    - `scene`: la misma escena declarativa, escrita a mano (JSON).
+    - `code`: HTML/JS completo y autocontenido (Canvas 2D), renderizado con un navegador aislado y sin red
+      (ver `docs/SCENES.md` §«Escenas con código»). Da libertad total de dibujo; usa `requestAnimationFrame`
+      y `performance.now()` con normalidad, el servidor controla el reloj para que el resultado sea
+      determinista. Sin acceso a red ni a almacenamiento: todo el contenido debe ir inline en el documento.
     """
 
     type: Literal["scene"] = "scene"
@@ -316,21 +361,40 @@ class SceneLayer(LayerBase):
     template: Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]{0,39}$")] | None = None
     params: dict[str, Any] = Field(default_factory=dict)
     scene: Scene | None = None
+    code: str | None = Field(None, max_length=MAX_CODE_LENGTH)
+    fps: int | None = Field(None, ge=5, le=60, description="Solo con `code`: por defecto, el fps del proyecto")
+    transparent: bool = Field(
+        False,
+        description="Solo con `code`: el fondo de la página es transparente y se ve el vídeo de detrás (títulos, rótulos, "
+        "iconos flotando). El documento NO debe pintar fondo opaco (ni `body{background}` ni un fillRect a pantalla completa).",
+    )
 
     @field_validator("params")
     @classmethod
     def _params(cls, v: dict[str, Any]) -> dict[str, Any]:
         return validate_params(v, max_str=400, newlines=True)
 
+    @field_validator("code")
+    @classmethod
+    def _code(cls, v: str | None) -> str | None:
+        if v is not None and "<" not in v:
+            raise ValueError("`code` debe ser un documento HTML (no se encontró ninguna etiqueta)")
+        return v
+
     @model_validator(mode="after")
     def _source(self):
-        if self.template is None and self.scene is None:
-            raise ValueError("una capa `scene` necesita `template` (+ `params`) o una `scene` completa")
+        n = sum(x is not None for x in (self.template, self.scene, self.code))
+        if n != 1:
+            raise ValueError("una capa `scene` necesita exactamente una de: `template` (+ `params`), `scene` o `code`")
+        if self.fps is not None and self.code is None:
+            raise ValueError("`fps` solo se usa con `code`")
+        if self.transparent and self.code is None:
+            raise ValueError("`transparent` solo se usa con `code` (las plantillas usan `params.background: \"transparent\"`)")
         return self
 
 
 Layer = Annotated[
-    TextLayer | IconLayer | ImageLayer | ShapeLayer | SubtitleLayer | EffectLayer | SceneLayer,
+    TextLayer | IconLayer | ImageLayer | ShapeLayer | SubtitleLayer | EffectLayer | SceneLayer | AudioLayer,
     Field(discriminator="type"),
 ]
 

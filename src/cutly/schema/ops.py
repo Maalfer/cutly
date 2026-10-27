@@ -99,6 +99,15 @@ class SetTransition(Strict):
     transition: Transition | None = Field(description="null la quita")
 
 
+class RippleDelete(Strict):
+    op: Literal["ripple_delete"]
+    start: float = Field(ge=0, description="Inicio del tramo a quitar, en segundos del clip RESULTANTE")
+    end: float = Field(gt=0, description="Fin del tramo a quitar (clip resultante)")
+    shift_layers: bool = Field(
+        True, description="Las capas posteriores se adelantan; las que cubren el tramo se acortan; las que caben dentro se borran"
+    )
+
+
 class AddLayer(Strict):
     op: Literal["add_layer"]
     layer: Layer
@@ -136,7 +145,7 @@ class SetOutput(Strict):
 
 
 Op = Annotated[
-    AddClip | SplitClip | DeleteClip | MoveClip | SetClipRange | SetClipSpeed | AddLayer
+    AddClip | SplitClip | DeleteClip | MoveClip | SetClipRange | SetClipSpeed | RippleDelete | AddLayer
     | SetTransition | UpdateLayer | RemoveLayer | SetReframe | SetAudio | SetColor | SetOutput,
     Field(discriminator="op"),
 ]  # fmt: skip
@@ -159,6 +168,68 @@ def _layer(doc: ProjectDoc, layer_id: str) -> tuple[int, Layer]:
             return i, layer
     have = ", ".join(f"{layer.id} ({layer.type})" for layer in doc.layers) or "ninguna"
     raise OpError(f"La layer '{layer_id}' no existe. Layers del proyecto: {have}")
+
+
+MIN_PIECE = 0.1  # un clip no puede durar menos (ver TimelineClip._order)
+
+
+def ripple_delete(doc: ProjectDoc, a: float, b: float, shift_layers: bool = True) -> None:
+    """Quita [a, b) del clip RESULTANTE y cierra el hueco: parte los clips que cruzan los bordes, descarta lo de dentro,
+    adelanta lo posterior (clips con `start_at` y capas) y recorta/borra las capas afectadas. Es la operación «quita
+    este tramo» de un editor: sin ella habría que dividir, borrar y recalcular a mano los tiempos de cada capa."""
+    dur = doc.duration
+    if not doc.timeline:
+        raise OpError("El proyecto no tiene clips")
+    a, b = max(0.0, a), min(b, dur)
+    if b - a < 0.02:
+        raise OpError(f"El tramo {a:g}–{b:g} s está vacío o fuera del clip (dura {dur:g} s)")
+    delta = b - a
+    starts = timeline_starts(doc.timeline)
+    out: list[TimelineClip] = []
+    for s0, c in zip(starts, doc.timeline, strict=True):
+        e0 = s0 + c.duration
+        if e0 <= a + 1e-6:
+            out.append(c)  # entero antes del tramo
+            continue
+        if s0 >= b - 1e-6:  # entero después: se adelanta (solo se nota si tiene posición absoluta)
+            if c.start_at is not None:
+                c.start_at = max(0.0, c.start_at - delta)
+            out.append(c)
+            continue
+        keep_head = a - s0 if a > s0 else 0.0  # segundos de salida que se conservan al principio
+        keep_tail = e0 - b if e0 > b else 0.0
+        tail_src_in = c.source_out - keep_tail * c.speed
+        head_src_out = c.source_in + keep_head * c.speed
+        head_ok, tail_ok = keep_head * c.speed >= MIN_PIECE, keep_tail * c.speed >= MIN_PIECE
+        if head_ok and tail_ok:  # el tramo cae dentro del clip: se parte en dos
+            second = TimelineClip(source_in=tail_src_in, source_out=c.source_out, speed=c.speed)
+            if c.start_at is not None:
+                second.start_at = c.start_at + keep_head
+            c.source_out = head_src_out
+            out += [c, second]
+        elif head_ok:
+            c.source_out = head_src_out
+            out.append(c)
+        elif tail_ok:
+            c.source_in = tail_src_in
+            c.transition_in = None  # la entrada original se ha cortado
+            if c.start_at is not None:
+                c.start_at = max(0.0, min(c.start_at, a))
+            out.append(c)
+        # si no queda nada de él, se descarta
+    doc.timeline[:] = out
+    if shift_layers:
+        def m(t: float) -> float:
+            return t if t <= a else a if t < b else t - delta
+
+        keep = []
+        for layer in doc.layers:
+            ns, ne = m(layer.start), m(layer.end)
+            if ne - ns < 0.05:
+                continue  # estaba entera dentro del tramo (o queda reducida a nada)
+            layer.start, layer.end = ns, ne
+            keep.append(layer)
+        doc.layers[:] = keep
 
 
 def _patched(model_cls, current, patch: dict, what: str):
@@ -230,6 +301,8 @@ def apply_op(doc: ProjectDoc, op: Any) -> None:
         case SetTransition():
             _, c = _clip(doc, op.clip_id)
             c.transition_in = op.transition
+        case RippleDelete():
+            ripple_delete(doc, op.start, op.end, op.shift_layers)
         case AddLayer():
             if any(layer.id == op.layer.id for layer in doc.layers):
                 raise OpError(f"Ya existe una layer con id '{op.layer.id}'; usa update_layer o elige otro id")

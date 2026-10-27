@@ -1,0 +1,45 @@
+{
+  "name": "blur_ramp",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Desenfoque progresivo",
+  "category": "cámara",
+  "tags": [
+    "desenfoque",
+    "blur",
+    "foco",
+    "rampa",
+    "fondo"
+  ],
+  "description": "Desenfoca el metraje de forma gradual (en pasos) para dejar paso a un título o a un cambio de plano: `in` va de nítido a desenfocado, `out` al revés, `in_out` hace las dos. Combínalo con un título cinético.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "sigma": {
+        "type": "number",
+        "minimum": 2,
+        "maximum": 40,
+        "default": 14,
+        "description": "Desenfoque máximo"
+      },
+      "mode": {
+        "type": "string",
+        "enum": [
+          "in",
+          "out",
+          "in_out"
+        ],
+        "default": "in",
+        "description": "in: nítido→desenfocado · out: desenfocado→nítido · in_out: sube y baja"
+      },
+      "steps": {
+        "type": "integer",
+        "minimum": 2,
+        "maximum": 8,
+        "default": 4,
+        "description": "Pasos de la rampa (más = más suave, más lento de renderizar)"
+      }
+    }
+  }
+}

@@ -212,3 +212,28 @@ def test_delete_project_and_media_with_history(writer, media_id):
     ops(writer, p2["id"], {"op": "set_color", "patch": {"contrast": 1.4}})
     assert writer.delete(f"{API}/media/{media_id}").status_code == 200
     assert writer.get(f"{API}/projects/{p2['id']}").status_code == 404
+
+
+def test_add_title_endpoint(writer, project):
+    pid = project["id"]
+    body = {"start": 0.2, "end": 1.8, "lines": [{"text": "11 Skills", "style": "title"}, {"text": "a la vez", "style": "kicker"}]}
+    dry = writer.post(f"{API}/projects/{pid}/title", json={**body, "dry_run": True})
+    assert dry.status_code == 200 and dry.json()["dry_run"] and dry.json()["layer_id"]
+    assert not writer.get(f"{API}/projects/{pid}").json()["project"]["layers"]  # dry_run no guarda
+    r = writer.post(f"{API}/projects/{pid}/title", json=body)
+    assert r.status_code == 200, r.text
+    layer = [x for x in r.json()["project"]["layers"] if x["id"] == r.json()["layer_id"]][0]
+    assert layer["type"] == "scene" and layer["transparent"] is True and layer["params"]["lines"][1]["in"] == "tracking"
+    assert writer.post(f"{API}/projects/{pid}/title", json={**body, "lines": []}).status_code == 422
+    assert writer.post(f"{API}/projects/{pid}/title", json={**body, "start": 2, "end": 1}).status_code == 422
+
+
+def test_horizontal_layout_keeps_the_full_16_9_frame(writer, media_id):
+    r = writer.post(f"{API}/projects", json={"media_id": media_id, "source_in": 0.5, "source_out": 2.5, "layout": "horizontal"})
+    assert r.status_code == 200, r.text
+    doc = r.json()["project"]
+    assert (doc["output"]["width"], doc["output"]["height"]) == (1920, 1080)
+    assert doc["reframe"]["mode"] == "custom" and doc["reframe"]["game"] == {"x": 0, "y": 0, "w": 1, "h": 1}
+    v = writer.post(f"{API}/projects", json={"media_id": media_id, "source_in": 0.5, "source_out": 2.5}).json()["project"]
+    assert (v["output"]["width"], v["output"]["height"]) == (1080, 1920)  # por defecto, vertical como siempre
+    assert writer.post(f"{API}/projects", json={"media_id": media_id, "source_in": 0, "source_out": 1, "layout": "cuadrado"}).status_code == 422

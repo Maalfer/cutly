@@ -83,6 +83,6 @@ export async function addClip(/** @type {number} */ sourceIn, /** @type {number}
   return r;
 }
 
-export const layerLabel = (/** @type {any} */ l) => l.name || (l.type === 'text' ? l.text.split('\n')[0].slice(0, 24) : l.type === 'effect' ? l.effect : l.type === 'scene' ? (l.template || 'Escena') : l.type === 'icon' || l.type === 'image' ? l.asset.split('/')[1] : l.type === 'subtitle' ? 'Subtítulos' : l.shape === 'ellipse' ? 'Elipse' : 'Rectángulo');
+export const layerLabel = (/** @type {any} */ l) => l.name || (l.type === 'text' ? l.text.split('\n')[0].slice(0, 24) : l.type === 'effect' ? l.effect : l.type === 'audio' ? '♪ ' + l.sfx : l.type === 'scene' ? (l.template || 'Escena') : l.type === 'icon' || l.type === 'image' ? l.asset.split('/')[1] : l.type === 'subtitle' ? 'Subtítulos' : l.shape === 'ellipse' ? 'Elipse' : 'Rectángulo');
 export const TYPE_ICON = /** @type {Record<string,string>} */ ({ text: 'T', icon: '★', image: '▣', shape: '▭', subtitle: '❝', effect: '✦', scene: '◈' });
 export { ed };

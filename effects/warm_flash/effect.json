@@ -1,0 +1,61 @@
+{
+  "name": "warm_flash",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Destello cálido",
+  "category": "color",
+  "tags": [
+    "flash",
+    "destello",
+    "light leak",
+    "cálido",
+    "transición"
+  ],
+  "description": "Fogonazo amarillo-naranja que se apaga (el «light leak» de los cambios de plano de reels de autor). Más cinematográfico que `flash`: ponlo justo en el corte.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "strength": {
+        "type": "number",
+        "minimum": 0.1,
+        "maximum": 1.0,
+        "default": 0.55,
+        "description": "Brillo máximo del destello"
+      },
+      "warmth": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "default": 0.85,
+        "description": "Cuánto vira a naranja (0 = blanco)"
+      },
+      "envelope": {
+        "type": "string",
+        "enum": [
+          "pulse",
+          "in_out",
+          "decay",
+          "hold",
+          "ramp"
+        ],
+        "default": "decay",
+        "description": "Forma de la intensidad en el tiempo: in_out (rampas), pulse (sube y baja), decay (golpe que se apaga), hold, ramp"
+      },
+      "attack": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.04,
+        "description": "Segundos de subida (in_out)"
+      },
+      "release": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.3,
+        "description": "Segundos de bajada (in_out)"
+      }
+    }
+  }
+}

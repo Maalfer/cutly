@@ -11,7 +11,7 @@ from dataclasses import dataclass
 ALLOWED_FILTERS = {
     "scale", "crop", "eq", "rgbashift", "vignette", "noise", "drawbox", "hue", "gblur", "boxblur", "colorbalance",
     "curves", "negate", "fade", "unsharp", "lutyuv", "lutrgb", "format", "setsar", "colorchannelmixer", "chromashift",
-    "pad", "hflip", "vflip", "colorlevels", "colortemperature", "tmix", "lenscorrection", "edgedetect",
+    "pad", "hflip", "vflip", "rotate", "colorlevels", "colortemperature", "tmix", "tblend", "lenscorrection", "edgedetect",
 }  # fmt: skip
 _FILTER = re.compile(r"^([a-z0-9_]+)(=([A-Za-z0-9_.,:'()+\-*/<>=!&|%@ ]*))?$")
 

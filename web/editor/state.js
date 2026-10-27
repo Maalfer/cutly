@@ -25,6 +25,8 @@ export const ed = createStore({
   checking: false,
   /** @type {any} */ render: null,
   left: 'layers',
+  mtab: 'timeline', // móvil: panel inferior visible (timeline | left | right)
+  stageBig: false, // móvil: vista previa ampliada
   loading: true,
   /** @type {string|null} */ error: null,
 });
@@ -184,6 +186,16 @@ export async function runChecks() {
   } catch (e) { toast(/** @type {Error} */ (e).message, 'error'); } finally { ed.set({ checking: false }); }
 }
 
+/** Dispara la descarga de un render sin salir de la SPA (mismo endpoint que el enlace «⬇ Descargar»). */
+function downloadRender(/** @type {string} */ jobId) {
+  const a = document.createElement('a');
+  a.href = `/api/v1/renders/${jobId}/download`;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 export async function startRender(/** @type {'draft'|'final'} */ quality, /** @type {{start?:number,end?:number}} */ range = {}) {
   const pj = get().project;
   if (!pj) return;
@@ -192,9 +204,14 @@ export async function startRender(/** @type {'draft'|'final'} */ quality, /** @t
     ed.set({ render: { job: job_id, quality, status: 'queued', progress: 0 } });
     for (;;) {
       await new Promise((r) => setTimeout(r, 2000));
+      // el proyecto pudo cambiar mientras tanto (otro render, otra pestaña): no pises un estado más reciente
+      if (get().render?.job !== job_id) return;
       const j = await api.get(`/jobs/${job_id}`);
       ed.set({ render: { job: job_id, quality, status: j.status, progress: j.progress, error: j.error, result: j.result } });
-      if (['done', 'failed', 'cancelled'].includes(j.status)) break;
+      if (['done', 'failed', 'cancelled'].includes(j.status)) {
+        if (j.status === 'done') { toast('Render listo: descargando…', 'ok'); downloadRender(job_id); }
+        break;
+      }
     }
   } catch (e) { toast(/** @type {Error} */ (e).message, 'error'); ed.set({ render: null }); }
 }

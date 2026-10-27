@@ -526,55 +526,7 @@ def _recap_cards(p: dict, b: B) -> None:
 
 
 # ---------------------------------------------------------------------------------------------------------------
-# 7. race_condition
-# ---------------------------------------------------------------------------------------------------------------
-
-
-def _race_condition(p: dict, b: B) -> None:
-    """Posiciones en la composición apaisada 1600x900 (`b.xy`/`b.pt` las giran si `orient=tall`)."""
-    n = max(3, min(int(p["requests"]), 10))
-    cx, sx, cy = 230, 1370, 480
-    b.add(type="text", text="Condición de carrera", x=b.W / 2, y=70, size=56, max_w=b.W * 0.9, weight="black",
-          at=0, enter="type", dur=0.7)  # fmt: skip
-    if p["resource_label"]:
-        b.add(type="text", text=_clip(p["resource_label"], 60), x=b.W / 2, y=130, size=28, color=MUTED,
-              max_w=b.W * 0.8, at=b.t(0.04), enter="fade", dur=0.5)  # fmt: skip
-    b.add(type="node", id="cli", kind="user", size=140, color=GREEN, label=_clip(p["client_label"], 20),
-          **b.xy(cx, cy), at=b.t(0.06), enter="pop", dur=0.4)  # fmt: skip
-    b.add(type="node", id="srv", kind="server", size=150, color=PINK, label=_clip(p["server_label"], 20),
-          **b.xy(sx, cy), at=b.t(0.1), enter="pop", dur=0.4)  # fmt: skip
-    b.add(type="link", a="cli", b="srv", color=b.accent, width=2.5, alpha=0.3, gap=95, at=b.t(0.14), enter="draw",
-          dur=0.4, z=-1)  # fmt: skip
-    # Momento en que falla la comprobación: depende de `n` (cuántas peticiones hay que lanzar), no de una
-    # fracción fija de la duración. Todo lo que sigue usa segundos ABSOLUTOS de la escena.
-    travel, stagger = 0.6, 0.05
-    burst_t = b.t(0.32)
-    fail_t = burst_t + travel + stagger * (n - 1) + 0.15
-    # El candado se coloca en la misma columna `sx` que el servidor (mismo que el nodo): así, en vertical,
-    # queda a su lado sin acercarse al borde (un offset en `x` ahí se convertiría en vecino al borde al girar).
-    lock_y = cy - 170
-    b.add(type="node", id="lock", kind="lock", size=70, color=AMBER, **b.xy(sx, lock_y), at=b.t(0.2),
-          enter="pop", dur=0.35, loop="pulse", loop_period=0.9,
-          keys=[{"t": fail_t, "opacity": 0.18, "easing": "ease_out"}])  # fmt: skip
-    b.add(type="text", text=_clip(p["check_label"], 40), **b.xy(sx, lock_y - 70), size=24, color=AMBER,
-          at=b.t(0.22), until=fail_t, enter="fade", exit="fade", dur=0.3)  # fmt: skip
-    b.add(type="dot", path=["cli", "srv"], at=burst_t, travel=travel, shape="packet", size=16, color=b.accent,
-          colors=PALETTE, count=n, stagger=stagger, trail=10, on_arrive="burst", halo=False)  # fmt: skip
-    b.add(type="node", kind="cross", size=46, color=PINK, **b.xy(sx + 26, lock_y - 26), at=fail_t, enter="pop",
-          dur=0.3)  # fmt: skip
-    if p["before_value"]:
-        b.add(type="text", text=_clip(p["before_value"], 30), **b.xy(sx, cy + 155), size=40, color=MUTED,
-              weight="black", at=b.t(0.06), until=fail_t, enter="fade", exit="fade", dur=0.3)  # fmt: skip
-    if p["after_value"]:
-        b.add(type="text", text=_clip(p["after_value"], 30), **b.xy(sx, cy + 155), size=48, color=GREEN,
-              weight="black", at=fail_t, enter="pop", dur=0.4, loop="pulse", loop_period=1.4)  # fmt: skip
-    fail_frac = fail_t / b.dur
-    b.captions([p["result_label"]], start=min(0.82, max(fail_frac + 0.04, 0.55)), end=0.98, size=34)
-    b.handheld = 0.3
-
-
-# ---------------------------------------------------------------------------------------------------------------
-# 8. title_card
+# 7. title_card
 # ---------------------------------------------------------------------------------------------------------------
 
 
@@ -695,19 +647,6 @@ _reg(Template(
      "items": {"type": "array", "default": [{"icon": "globe", "title": "DNS", "body": "Convierte nombres en IPs."}, {"icon": "packet", "title": "TCP/IP", "body": "Reparte y reensambla paquetes."}, {"icon": "lock", "title": "TLS", "body": "Cifra la conversación."}],
                "description": "[{icon, title, body, color?}]"}},
     _recap_cards, 5, 10, ["resumen", "lista"]))  # fmt: skip
-_reg(Template(
-    "race_condition", "Condición de carrera",
-    "Un cliente lanza N peticiones en paralelo contra un servidor con un recurso de un solo uso (cupón, voto, "
-    "canje…); todas llegan antes de que la comprobación «¿ya usado?» surta efecto, así que todas se cuelan. "
-    "Para bugs de concurrencia/TOCTOU en apps web (doble canje, doble gasto, likes duplicados…).",
-    {"requests": {"type": "integer", "default": 6, "minimum": 3, "maximum": 10, "description": "Peticiones simultáneas"},
-     "client_label": {"type": "string", "default": "Tú"}, "server_label": {"type": "string", "default": "Servidor"},
-     "resource_label": {"type": "string", "default": "Recurso de un solo uso", "description": "Qué se está abusando (cupón, voto…)"},
-     "check_label": {"type": "string", "default": "¿Ya usado?"},
-     "before_value": {"type": "string", "default": "1 uso", "description": "Lo que debería pasar (vacío lo omite)"},
-     "after_value": {"type": "string", "default": "N usos", "description": "Lo que pasa de verdad"},
-     "result_label": {"type": "string", "default": "Todas llegan **antes** de que el servidor compruebe una por una"}},
-    _race_condition, 6, 9, ["seguridad", "race condition", "toctou", "concurrencia"]))  # fmt: skip
 _reg(Template(
     "title_card", "Rótulo de título cinematográfico",
     "Icono animado, título que se escribe, línea de acento y subtítulo. Para abrir un tema o separar secciones.",

@@ -3,6 +3,7 @@
 // subtítulos con palabra activa y efectos (módulos preview.js del registro). Es la referencia visual mientras se edita.
 import { evalProps } from './animation.js';
 import { anchorFactors, reframePlan } from './geometry.js';
+import { SceneLive } from './scene-live.js';
 import { activeCue, groupCues } from './subtitles.js';
 import { mapWords } from './time.js';
 
@@ -32,6 +33,13 @@ export class Stage {
     this._mappedKey = '';
     /** @type {[number,number,string][]} */ this._mapped = [];
     this.fontsReady = false;
+    this.sceneLive = new SceneLive(document.body);
+    this.sceneLive.onError = (id, message) => console.warn(`[escena ${id}] error de JavaScript:`, message);
+  }
+
+  /** Se llama al desmontar la vista previa (cambio de proyecto, salir del editor): no dejar iframes huérfanos. */
+  dispose() {
+    this.sceneLive.destroyAll();
   }
 
   setSize(/** @type {number} */ outW, /** @type {number} */ outH) {
@@ -103,6 +111,7 @@ export class Stage {
     this.hits = [];
     this._drawBase(c, W, H);
     const sorted = doc.layers.map((/** @type {any} */ l, /** @type {number} */ i) => [l, i]).sort((/** @type {any} */ a, /** @type {any} */ b) => a[0].z - b[0].z || a[1] - b[1]).map((/** @type {any} */ x) => x[0]);
+    const liveLayers = []; // capas `scene` con `code`: se reproducen en un <iframe> real, no se dibujan aquí
     for (const layer of sorted) {
       if (!layer.visible || t < layer.start || t >= layer.end) continue;
       if (layer.type === 'effect') {
@@ -136,11 +145,25 @@ export class Stage {
       else if (layer.type === 'shape') this._shape(cctx, layer, t, W, H);
       else if (layer.type === 'icon' || layer.type === 'image') this._icon(cctx, layer, t, W, H);
       else if (layer.type === 'subtitle') this._subtitle(cctx, layer, t, W, H);
-      else if (layer.type === 'scene') this._scene(cctx, layer, W, H);
+      else if (layer.type === 'scene') { if (layer.code) { liveLayers.push(layer); this._sceneHit(layer, W, H); } else this._scene(cctx, layer, W, H); }
     }
     this.ctx.clearRect(0, 0, W, H);
     this.ctx.drawImage(cur, 0, 0);
     if (selectedId) this._selection(selectedId);
+    this.sceneLive.sync(liveLayers, t, this.canvas.getBoundingClientRect(), doc.output.width, (/** @type {any} */ l) => this._layerWords(l));
+  }
+
+  /** Rectángulo de una capa `scene` en el fotograma lógico (sin dibujar: lo pinta el <iframe> real de scene-live.js). */
+  _sceneRect(/** @type {any} */ layer, /** @type {number} */ W, /** @type {number} */ H) {
+    const b = layer.box, tall = layer.params?.orient === 'tall';
+    const w = b.w * W, h = b.h ? b.h * H : w * (tall ? 16 / 9 : 9 / 16);
+    const [fx, fy] = anchorFactors(b.anchor);
+    return [b.x * W - w * fx, b.y * H - h * fy, w, h];
+  }
+
+  _sceneHit(/** @type {any} */ layer, /** @type {number} */ W, /** @type {number} */ H) {
+    const [x, y, w, h] = this._sceneRect(layer, W, H);
+    this.hits.push({ id: layer.id, rect: [x, y, x + w, y + h] });
   }
 
   _drawBase(/** @type {CanvasRenderingContext2D} */ c, /** @type {number} */ W, /** @type {number} */ H) {
@@ -204,123 +227,69 @@ export class Stage {
     const p = evalProps(layer, t - layer.start, box.x, box.y, box.rotation);
     c.save();
     const sizePx = st.size * H;
-    const em = this._setFont(c, st.font, sizePx, st.bold);
-    const text = st.uppercase ? layer.text.toUpperCase() : layer.text;
-    const lines = this._wrap(c, text, box.w * W);
-    const widths = lines.map((l) => c.measureText(l).width);
-    const bw = Math.max(...widths, 1), bh = lines.length * sizePx;
-    const [fx, fy] = anchorFactors(box.anchor);
-    const toScreen = this._xf(c, (box.x + p.dx) * W, (box.y + p.dy) * H, p, box.rotation);
-    c.globalAlpha = p.opacity;
-    c.textBaseline = 'middle';
-    const pad = st.bg_color ? sizePx * 0.2 : 0, outline = st.bg_color ? 0 : st.outline_width * H;
-    const hAlign = box.anchor.endsWith('left') ? 'left' : box.anchor.endsWith('right') ? 'right' : 'center';
-    lines.forEach((ln, i) => {
-      const lw = widths[i];
-      const x = -bw * fx + (hAlign === 'left' ? 0 : hAlign === 'right' ? bw - lw : (bw - lw) / 2);
-      const y = -bh * fy + i * sizePx + sizePx / 2;
-      if (st.bg_color) { c.fillStyle = hexA(st.bg_color); c.fillRect(x - pad, y - sizePx / 2 - pad * 0.4, lw + pad * 2, sizePx + pad * 0.8); }
-      if (outline > 0) { c.lineWidth = outline * 2; c.lineJoin = 'round'; c.strokeStyle = hexA(st.outline_color); c.strokeText(ln, x, y); }
-      c.fillStyle = hexA(st.color);
-      c.fillText(ln, x, y);
-    });
-    this._bounds(layer.id, toScreen, -bw * fx - pad, -bh * fy - pad, -bw * fx + bw + pad, -bh * fy + bh + pad);
-    c.restore();
-    return em;
-  }
-
-  _shape(/** @type {CanvasRenderingContext2D} */ c, /** @type {any} */ layer, /** @type {number} */ t, /** @type {number} */ W, /** @type {number} */ H) {
-    const box = layer.box;
-    const p = evalProps(layer, t - layer.start, box.x, box.y, box.rotation);
-    const w = box.w * W, h = box.h ? box.h * H : w;
-    const [fx, fy] = anchorFactors(box.anchor);
-    c.save();
-    const cx = (box.x + p.dx) * W - w * fx + w / 2, cy = (box.y + p.dy) * H - h * fy + h / 2; // gira y escala sobre su centro
-    const toScreen = this._xf(c, cx, cy, p, box.rotation);
-    c.globalAlpha = p.opacity;
-    c.beginPath();
-    if (layer.shape === 'ellipse') c.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2); else c.rect(-w / 2, -h / 2, w, h);
-    if (layer.fill) { c.fillStyle = hexA(layer.fill); c.fill(); }
-    if (layer.stroke) { c.lineWidth = layer.stroke_width * H; c.strokeStyle = hexA(layer.stroke); c.stroke(); }
-    this._bounds(layer.id, toScreen, -w / 2, -h / 2, w / 2, h / 2);
-    c.restore();
-  }
-
-  /** Las escenas animadas las dibuja el servidor (motor Python): aquí solo un marcador con su caja. */
-  _scene(/** @type {CanvasRenderingContext2D} */ c, /** @type {any} */ layer, /** @type {number} */ W, /** @type {number} */ H) {
-    const b = layer.box, tall = layer.params?.orient === 'tall';
-    const w = b.w * W, h = b.h ? b.h * H : w * (tall ? 16 / 9 : 9 / 16);
-    const [fx, fy] = anchorFactors(b.anchor);
-    const x = b.x * W - w * fx, y = b.y * H - h * fy;
-    c.save();
-    c.fillStyle = 'rgba(52,227,255,.08)'; c.fillRect(x, y, w, h);
-    c.strokeStyle = 'rgba(52,227,255,.7)'; c.setLineDash([10, 8]); c.lineWidth = 2; c.strokeRect(x, y, w, h);
-    c.setLineDash([]); c.fillStyle = 'rgba(255,255,255,.9)'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.font = `600 ${Math.max(12, W / 28)}px sans-serif`;
-    c.fillText(`◈ ${layer.template || 'Escena'}`, x + w / 2, y + h / 2 - W / 40);
-    c.font = `${Math.max(10, W / 40)}px sans-serif`; c.fillStyle = 'rgba(255,255,255,.6)';
-    c.fillText('se anima al renderizar', x + w / 2, y + h / 2 + W / 40);
-    this.hits.push({ id: layer.id, rect: [x, y, x + w, y + h] });
-    c.restore();
-  }
-
-  _icon(/** @type {CanvasRenderingContext2D} */ c, /** @type {any} */ layer, /** @type {number} */ t, /** @type {number} */ W, /** @type {number} */ H) {
-    const box = layer.box;
-    const img = this._image(layer.asset, layer.tint || null);
-    const p = evalProps(layer, t - layer.start, box.x, box.y, box.rotation);
-    const w = box.w * W, h = box.h ? box.h * H : img ? (w * img.naturalHeight) / Math.max(img.naturalWidth, 1) : w;
-    const [fx, fy] = anchorFactors(box.anchor);
-    c.save();
-    const cx = (box.x + p.dx) * W - w * fx + w / 2, cy = (box.y + p.dy) * H - h * fy + h / 2;
-    const toScreen = this._xf(c, cx, cy, p, box.rotation);
-    c.globalAlpha = p.opacity;
-    if (img) c.drawImage(img, -w / 2, -h / 2, w, h);
-    else { c.strokeStyle = 'rgba(255,255,255,.4)'; c.setLineDash([4, 4]); c.strokeRect(-w / 2, -h / 2, w, h); }
-    this._bounds(layer.id, toScreen, -w / 2, -h / 2, w / 2, h / 2);
-    c.restore();
-  }
-
-  _subtitle(/** @type {CanvasRenderingContext2D} */ c, /** @type {any} */ layer, /** @type {number} */ t, /** @type {number} */ W, /** @type {number} */ H) {
-    const doc = this.doc, st = layer.style;
-    const key = JSON.stringify(doc.timeline) + this.words.length;
-    if (key !== this._mappedKey) { this._mapped = mapWords(this.words, doc.timeline); this._mappedKey = key; /** @type {any} */ (this)._cues = new Map(); }
-    const cues = /** @type {Map<string, any>} */ (/** @type {any} */ (this)._cues);
-    const ck = `${layer.id}|${st.max_words_per_cue}|${layer.start}|${layer.end}`;
-    if (!cues.has(ck)) {
-      const ws = /** @type {[number,number,string][]} */ (this._mapped.map(([s, e, w]) => /** @type {[number,number,string]} */ ([Math.max(s, layer.start), Math.min(e, layer.end), w])).filter(([s, e]) => e > layer.start && s < layer.end));
-      cues.set(ck, groupCues(ws, st.max_words_per_cue));
-    }
-    const cue = activeCue(cues.get(ck), t, st);
-    if (!cue) { this.hits.push({ id: layer.id, rect: [W * 0.06, (st.position_y - 0.04) * H, W * 0.94, (st.position_y + 0.04) * H] }); return; }
-    c.save();
-    const sizePx = st.size * H;
+    const spacing = (st.letter_spacing || 0) * H;
+    const fadePop = st.animation === 'fade_pop';
+    // fade_pop: aparece con un fundido corto y un pequeño crecimiento al empezar cada frase
+    const intro = fadePop ? Math.min(1, cue.sinceStart / 0.11) : 1;
+    if (fadePop) c.globalAlpha *= Math.min(1, cue.sinceStart / 0.07);
+    const em = (/** @type {any} */ w) => (w.emph ? w.emph.scale || 1 : 1);
+    const setW = (/** @type {any} */ w) => {
+      const e = w.emph;
+      this._setFont(c, e?.font || st.font, sizePx * em(w), e?.bold ?? st.bold);
+      c.letterSpacing = `${spacing}px`;
+    };
     this._setFont(c, st.font, sizePx, st.bold);
     c.textBaseline = 'middle';
     const space = c.measureText(' ').width;
-    const rows = cue.lines.map((/** @type {any[]} */ ln) => ({ ln, w: ln.reduce((/** @type {number} */ a, /** @type {any} */ w) => a + c.measureText(w.text).width, 0) + space * (ln.length - 1) }));
-    const top = st.position_y * H - (rows.length * sizePx) / 2;
+    const rows = cue.lines.map((/** @type {any[]} */ ln) => {
+      const ws = ln.map((/** @type {any} */ w) => { setW(w); return c.measureText(w.text).width; });
+      return { ln, ws, w: ws.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) + space * (ln.length - 1) };
+    });
+    // si las palabras ampliadas no caben en el ancho, se reducen (como en el render)
+    for (const row of rows) {
+      const avail = W * 0.88;
+      if (row.w > avail) {
+        const big = row.ln.reduce((/** @type {number} */ a, /** @type {any} */ w, /** @type {number} */ i) => a + (em(w) > 1 ? row.ws[i] : 0), 0);
+        if (big > 0) {
+          const k = Math.max(0, (avail - (row.w - big)) / big);
+          row.ln.forEach((/** @type {any} */ w, /** @type {number} */ i) => { if (em(w) > 1) { const f = Math.max(1 / em(w), k); w.fit = f; row.ws[i] *= f; } });
+          row.w = row.ws.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0) + space * (row.ln.length - 1);
+        }
+      }
+    }
+    const lineH = (/** @type {any} */ row) => sizePx * Math.max(1, ...row.ln.map((/** @type {any} */ w) => em(w) * (w.fit || 1)));
+    const heights = rows.map(lineH);
+    const totalH = heights.reduce((/** @type {number} */ a, /** @type {number} */ b) => a + b, 0);
+    const top = st.position_y * H - totalH / 2;
     const outline = st.bg_color ? 0 : st.outline_width * H, pad = st.bg_color ? sizePx * 0.18 : 0;
-    let maxW = 0;
+    let maxW = 0, yTop = top;
     rows.forEach((row, i) => {
       maxW = Math.max(maxW, row.w);
-      const y = top + i * sizePx + sizePx / 2;
-      if (st.bg_color) { c.fillStyle = hexA(st.bg_color); c.fillRect(W / 2 - row.w / 2 - pad, y - sizePx / 2, row.w + pad * 2, sizePx); }
+      const y = yTop + heights[i] / 2;
+      if (st.bg_color) { c.fillStyle = hexA(st.bg_color); c.fillRect(W / 2 - row.w / 2 - pad, y - heights[i] / 2, row.w + pad * 2, heights[i]); }
       let x = W / 2 - row.w / 2;
-      for (const w of row.ln) {
-        const wd = c.measureText(w.text).width;
-        const hl = w.active && st.animation !== 'none' && st.highlight_color;
-        const scale = w.active && st.animation === 'pop' ? 0.8 + 0.32 * cue.progress : 1;
+      row.ln.forEach((/** @type {any} */ w, /** @type {number} */ k) => {
+        const wd = row.ws[k];
+        const e = w.emph;
+        const hl = w.active && st.animation !== 'none' && st.highlight_color && !e?.color;
+        const scale = (w.active && st.animation === 'pop' ? 0.8 + 0.32 * cue.progress : 1) * (fadePop ? 0.88 + 0.12 * intro : 1);
         c.save();
         c.translate(x + wd / 2, y);
-        c.scale(scale, scale);
-        if (outline > 0) { c.lineWidth = outline * 2; c.lineJoin = 'round'; c.strokeStyle = hexA(st.outline_color); c.strokeText(w.text, -wd / 2, 0); }
-        c.fillStyle = hexA(hl ? st.highlight_color : st.color);
-        c.fillText(w.text, -wd / 2, 0);
+        c.scale(scale * (w.fit || 1), scale * (w.fit || 1));
+        setW(w);
+        const ww = wd / (w.fit || 1);
+        if (st.shadow_blur) c.filter = `blur(${st.shadow_blur * H}px)`;
+        if (st.shadow) { c.fillStyle = hexA(st.shadow_color); c.fillText(w.text, -ww / 2 + st.shadow * H, st.shadow * H); }
+        if (outline > 0) { c.lineWidth = outline * 2; c.lineJoin = 'round'; c.strokeStyle = hexA(st.outline_color); c.strokeText(w.text, -ww / 2, 0); }
+        c.fillStyle = hexA(e?.color || (hl ? st.highlight_color : st.color));
+        c.fillText(w.text, -ww / 2, 0);
         c.restore();
         x += wd + space;
-      }
+      });
+      yTop += heights[i];
     });
-    this.hits.push({ id: layer.id, rect: [W / 2 - maxW / 2 - pad, top, W / 2 + maxW / 2 + pad, top + rows.length * sizePx] });
+    c.letterSpacing = '0px';
+    this.hits.push({ id: layer.id, rect: [W / 2 - maxW / 2 - pad, top, W / 2 + maxW / 2 + pad, top + totalH] });
     c.restore();
   }
 

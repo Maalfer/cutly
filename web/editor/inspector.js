@@ -29,13 +29,17 @@ function ScenePreview({ layer }) {
     setBusy(true);
     try {
       const dur = layer.end - layer.start;
-      const body = layer.template ? { template: layer.template, params: layer.params || {} } : { scene: layer.scene };
+      const body = layer.code ? { code: layer.code } : layer.template ? { template: layer.template, params: layer.params || {} } : { scene: layer.scene };
       const times = [0.08, 0.3, 0.55, 0.8].map((f) => +(f * dur).toFixed(2));
-      const r = await fetch('/api/v1/scenes/preview', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, duration: dur, times, width: 360, cols: 2 }) });
+      const extra = layer.code ? { width: 360, height: Math.round((360 * 16) / 9), fps: layer.fps || 30 } : { width: 360 };
+      const r = await fetch('/api/v1/scenes/preview', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, duration: dur, times, cols: 2, ...extra }) });
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
       setSrc(URL.createObjectURL(await r.blob()));
     } catch (e) { toast(/** @type {Error} */ (e).message, 'error'); } finally { setBusy(false); }
   };
+  // Se genera sola al abrir el panel: en el escenario esta capa solo se ve como un marcador (no hay animación
+  // en vivo ahí), así que sin esto la única señal de que la escena existe de verdad es este botón.
+  useEffect(() => { run(); }, [layer.id]);
   return html`<div><button class="small-btn" disabled=${busy} onClick=${run}>${busy ? 'Generando…' : '▶ Vista previa'}</button>${src && html`<img class="scene-preview" alt="Vista previa de la escena" src=${src} style="width:100%;margin-top:6px;border-radius:6px" />`}</div>`;
 }
 
@@ -234,9 +238,16 @@ function LayerPanel({ id }) {
       <${Num} label="Posición vertical" value=${g('style.position_y')} min=${0.05} max=${0.95} onInput=${(/** @type {number} */ v) => F('style.position_y', v)} />
       <${Num} label="Palabras por frase" value=${g('style.max_words_per_cue')} min=${1} max=${12} step=${1} onInput=${(/** @type {number} */ v) => F('style.max_words_per_cue', v)} />
       <${Num} label="Líneas máx." value=${g('style.max_lines')} min=${1} max=${3} step=${1} onInput=${(/** @type {number} */ v) => F('style.max_lines', v)} />
-      <${Sel} label="Animación" value=${g('style.animation')} options=${[['karaoke', 'Karaoke'], ['pop', 'Pop'], ['none', 'Ninguna']]} onInput=${(/** @type {string} */ v) => F('style.animation', v)} />
+      <${Sel} label="Animación" value=${g('style.animation')} options=${[['karaoke', 'Karaoke'], ['pop', 'Pop'], ['fade_pop', 'Fundido suave'], ['none', 'Ninguna']]} onInput=${(/** @type {string} */ v) => F('style.animation', v)} />
+      <${Num} label="Espaciado letras" value=${g('style.letter_spacing')} min=${-0.02} max=${0.1} step=${0.001} onInput=${(/** @type {number} */ v) => F('style.letter_spacing', v)} />
+      <${Num} label="Sombra" value=${g('style.shadow')} min=${0} max=${0.03} step=${0.001} onInput=${(/** @type {number} */ v) => F('style.shadow', v)} />
+      <${Num} label="Desenfoque sombra" value=${g('style.shadow_blur')} min=${0} max=${0.02} step=${0.0005} onInput=${(/** @type {number} */ v) => F('style.shadow_blur', v)} />
       <${Check} label="MAYÚSCULAS" value=${g('style.uppercase')} onInput=${(/** @type {boolean} */ v) => F('style.uppercase', v)} />
       <p class="muted small">Estilos rápidos:</p><${PresetList} kind="subtitle" presets=${presets} extra=${{ layer_id: id }} />
+    <//>`;
+    if (l.type === 'audio') return html`<${Group} title="Sonido">
+      <${Sel} label="Efecto" value=${l.sfx} options=${['whoosh', 'whoosh_fast', 'hit', 'pop', 'click', 'ding', 'riser', 'glitch'].map((n) => [n, n])} onInput=${(/** @type {string} */ v) => P({ sfx: v })} />
+      <${Num} label="Volumen (dB)" value=${l.gain_db} min=${-40} max=${12} step=${1} onInput=${(/** @type {number} */ v) => P({ gain_db: v })} />
     <//>`;
     if (l.type === 'icon' || l.type === 'image') return html`<${Group} title=${l.type === 'icon' ? 'Icono' : 'Imagen'}>
       <${Sel} label="Recurso" value=${l.asset} options=${assetOptions(assets, l.type, l.asset)} onInput=${(/** @type {string} */ v) => P({ asset: v })} />
@@ -249,7 +260,7 @@ function LayerPanel({ id }) {
       <${Num} label="Grosor borde" value=${l.stroke_width} min=${0} max=${0.05} step=${0.001} onInput=${(/** @type {number} */ v) => P({ stroke_width: v })} />
     <//>`;
     if (l.type === 'scene') return html`<${Group} title="Animación (escena)">
-      <p class="muted small">${l.template ? `Plantilla «${l.template}»: se ajusta sola a la duración de la capa.` : 'Escena personalizada (JSON).'}</p>
+      <p class="muted small">${l.code ? 'Escena de código (HTML/JS): se edita por API, aquí solo se puede previsualizar.' : l.template ? `Plantilla «${l.template}»: se ajusta sola a la duración de la capa.` : 'Escena personalizada (JSON).'}</p>
       ${l.template && html`<label class="field"><span>Parámetros (JSON)</span><textarea rows="5" value=${JSON.stringify(l.params || {}, null, 1)} onChange=${(/** @type {Event} */ e) => { try { P({ params: JSON.parse(/** @type {HTMLTextAreaElement} */ (e.target).value) }); } catch { toast('JSON no válido', 'error'); } }}></textarea></label>`}
       <${Sel} label="Encaje" value=${l.fit} options=${[['contain', 'Contener'], ['cover', 'Cubrir']]} onInput=${(/** @type {string} */ v) => P({ fit: v })} />
       <${ScenePreview} layer=${l} />
@@ -284,7 +295,7 @@ function LayerPanel({ id }) {
       <${Num} label="Rotación" value=${l.box.rotation} min=${-360} max=${360} step=${1} unit="°" onInput=${(/** @type {number} */ v) => F('box.rotation', v)} />
       <${Sel} label="Ancla" value=${l.box.anchor} options=${ANCHORS} onInput=${(/** @type {string} */ v) => F('box.anchor', v)} />
     <//>`}
-    ${l.type !== 'effect' && html`<${Group} title="Animación" open=${false}>
+    ${l.type !== 'effect' && l.type !== 'audio' && html`<${Group} title="Animación" open=${false}>
       <${Sel} label="Entrada" value=${anim.enter?.name || ''} options=${ENTER} onInput=${(/** @type {string} */ v) => P({ animations: { enter: v ? { name: v, dur: anim.enter?.dur || 0.3 } : null } })} />
       ${anim.enter && html`<${Num} label="Duración entrada" value=${anim.enter.dur} min=${0.05} max=${3} unit="s" onInput=${(/** @type {number} */ v) => P({ animations: { enter: { name: anim.enter.name, dur: v } } })} />`}
       <${Sel} label="Salida" value=${anim.exit?.name || ''} options=${ENTER} onInput=${(/** @type {string} */ v) => P({ animations: { exit: v ? { name: v, dur: anim.exit?.dur || 0.3 } : null } })} />

@@ -73,6 +73,7 @@ export function MediaPage({ id }) {
           </div>`)}
         </div>`}
         ${jobs.filter((j) => j.status === 'failed').slice(0, 2).map((j) => html`<div class="card error-card" key=${j.id}><strong>${JOB_LABEL[j.type] || j.type} falló</strong><p class="small">${j.error}</p></div>`)}
+        <div class="actions"><a class="linkbtn primary-link" href=${`#/editor/${id}`}>✂ Abrir en el editor</a></div>
         ${canWrite && html`<div class="actions">
           <button onClick=${() => act(() => api.post(`/media/${id}/proxy`), 'Regenerando vista previa')}>Regenerar vista previa</button>
           <button class="danger" onClick=${remove}>Borrar vídeo</button>

@@ -11,15 +11,28 @@ import { Library } from './library.js';
 import { TranscriptPanel } from './transcript.js';
 import { deleteSelected, duplicateLayer, splitAtPlayhead } from './ops.js';
 import { ed, get, openMedia, select, undoRedo, useEd } from './state.js';
+import { useNarrow, useVisualViewport } from './viewport.js';
 
 const TABS = /** @type {[string,string][]} */ ([['layers', 'Capas'], ['library', 'Biblioteca'], ['transcript', 'Transcripción']]);
+// Móvil: barra inferior con todo a un toque. [id, icono, texto]; «left» reutiliza las pestañas de TABS.
+const NAV = [['timeline', '✂', 'Edición'], ['layers', '☰', 'Capas'], ['library', '▦', 'Biblioteca'], ['transcript', '❝', 'Texto'], ['right', '⚙', 'Ajustes']];
 
 export function Editor({ mediaId }) {
   const loading = useEd((s) => s.loading);
   const error = useEd((s) => s.error);
   const left = useEd((s) => s.left);
   const timelineH = useEd((s) => s.timelineH);
-  const [mobile, setMobile] = useState('timeline'); // móvil: qué panel inferior se ve
+  const mobile = useEd((s) => s.mtab); // móvil: qué panel inferior se ve
+  const stageBig = useEd((s) => s.stageBig);
+  const selKind = useEd((s) => s.selection.kind);
+  const narrow = useNarrow();
+  const rootRef = useRef(/** @type {HTMLDivElement|null} */ (null));
+  useVisualViewport(rootRef);
+  const goNav = (/** @type {string} */ id) => {
+    if (id === 'timeline' || id === 'right') ed.set({ mtab: id });
+    else ed.set({ mtab: 'left', left: id });
+  };
+  const navOn = (/** @type {string} */ id) => (id === 'timeline' || id === 'right' ? mobile === id : mobile === 'left' && left === id);
   const resizeRef = useRef(/** @type {HTMLDivElement|null} */ (null));
   const dragging = useRef(false);
 
@@ -70,7 +83,7 @@ export function Editor({ mediaId }) {
   if (loading) return html`<div class="ed-fatal"><p class="muted">Abriendo el editor…</p></div>`;
 
   return html`
-    <div class=${'editor m-' + mobile} data-mobile=${mobile} style=${'grid-template-rows: 48px minmax(0, 1fr) 1px ' + timelineH + 'px'}>
+    <div ref=${rootRef} class=${'editor m-' + mobile} data-mobile=${mobile} data-big=${stageBig ? '1' : ''} style=${narrow ? '' : 'grid-template-rows: 48px minmax(0, 1fr) 1px ' + timelineH + 'px'}>
       <${TopBar} />
       <aside class="ed-left">
         <div class="tabs" role="tablist">${TABS.map(([id, label]) => html`<button role="tab" aria-selected=${left === id} class=${left === id ? 'on' : ''} onClick=${() => ed.set({ left: id })}>${label}</button>`)}</div>
@@ -83,7 +96,8 @@ export function Editor({ mediaId }) {
       <div ref=${resizeRef} class="tl-resize" onMouseDown=${(/** @type {MouseEvent} */ e) => { e.preventDefault(); dragging.current = true; resizeRef.current?.classList.add('dragging'); document.body.style.userSelect = 'none'; }}></div>
       <section class="ed-timeline"><${Timeline} /></section>
       <nav class="ed-mobile-tabs" aria-label="Paneles">
-        ${[['timeline', 'Línea de tiempo'], ['left', 'Capas y más'], ['right', 'Ajustes']].map(([id, label]) => html`<button class=${mobile === id ? 'on' : ''} onClick=${() => setMobile(id)}>${label}</button>`)}
+        ${NAV.map(([id, ico, label]) => html`<button class=${navOn(id) ? 'on' : ''} aria-current=${navOn(id) ? 'page' : undefined} onClick=${() => goNav(id)}>
+          <span class="ico" aria-hidden="true">${ico}${id === 'right' && selKind !== 'none' ? html`<i class="dot"></i>` : ''}</span><span class="lb">${label}</span></button>`)}
       </nav>
     </div>`;
 }

@@ -12,6 +12,7 @@ from pathlib import Path
 
 from cutly.registry import effects as fx_registry
 from cutly.schema.project import (
+    AudioLayer,
     EffectLayer,
     IconLayer,
     ImageLayer,
@@ -25,6 +26,7 @@ from cutly.schema.project import (
     TimelineClip,
     timeline_starts,
 )
+from cutly.services.audio.sfx import CATALOG, sfx_path
 from cutly.services.render import ass as A
 from cutly.services.render.animation import is_animated
 from cutly.services.render.effects_api import EffectBuildError, EffectCtx
@@ -329,6 +331,7 @@ def build_plan(
     ass_events: list[str] = []
     counters = {"ass": 0, "ov": 0}
     extra_inputs = len(doc.timeline)
+    sfx_layers: list[tuple[AudioLayer, int]] = []  # (capa, índice de su entrada de ffmpeg)
 
     def flush_ass():
         nonlocal cur
@@ -353,15 +356,49 @@ def build_plan(
             continue  # fuera de la ventana: ni se compone ni se rasteriza
         orig_layer = layer
         layer = layer.model_copy(update={"end": end})
+        if isinstance(layer, AudioLayer):
+            if opts.with_audio and not window:
+                try:
+                    wav = sfx_path(layer.sfx, opts.workdir / "sfx")
+                except (KeyError, OSError) as e:
+                    warnings.append(f"Sonido '{layer.id}' ({layer.sfx}) ignorado: {e}")
+                    continue
+                idx = extra_inputs + counters["ov"]
+                counters["ov"] += 1
+                inputs += ["-i", safe_path(wav)]
+                sfx_layers.append((layer, idx))
+            continue
         if isinstance(layer, SceneLayer):
             flush_ass()
             idx = extra_inputs + counters["ov"]
             counters["ov"] += 1
-            try:  # la plantilla se ajusta a la duración COMPLETA de la capa, aunque el vídeo la recorte
-                seq = render_scene_sequence(orig_layer, W, H, fps, opts.workdir / f"seq{idx}", warnings,
-                                            window=(t_off, t_off + duration) if window else None)  # fmt: skip
+            win = (t_off, t_off + duration) if window else None
+            try:  # la plantilla/código se ajusta a la duración COMPLETA de la capa, aunque el vídeo la recorte
+                if layer.code is not None:
+                    from cutly.services.scene_js.renderer import render_js_sequence
+
+                    lw = [
+                        {"w": txt, "start": round(ws - orig_layer.start, 3), "end": round(we - orig_layer.start, 3)}
+                        for ws, we, txt in mapped_words
+                        if we > orig_layer.start and ws < orig_layer.end
+                    ]  # lo dicho durante la capa, en segundos desde su inicio -> window.CUTLY_WORDS
+                    seq = render_js_sequence(
+                        orig_layer, W, H, fps, opts.workdir / f"seq{idx}", warnings, window=win, words=lw
+                    )
+                else:
+                    seq = render_scene_sequence(orig_layer, W, H, fps, opts.workdir / f"seq{idx}", warnings, window=win)
             except TemplateError as e:
                 warnings.append(f"Escena '{layer.id}' ignorada: {e}")
+                seq = None
+            except ImportError as e:
+                warnings.append(
+                    f"Escena de código '{layer.id}' ignorada: este servidor no tiene instalado el motor de navegador ({e})"
+                )
+                seq = None
+            except Exception as e:  # noqa: BLE001 - el motor de navegador es un proceso externo: un fallo ahí no debe tumbar el resto del render
+                warnings.append(
+                    f"Escena de código '{layer.id}' ignorada por un fallo inesperado del motor de navegador: {e}"
+                )
                 seq = None
             if seq is None:
                 counters["ov"] -= 1
@@ -410,13 +447,25 @@ def build_plan(
                 warnings.append(f"Efecto '{layer.effect}' ignorado: {e}")
                 continue
             k = counters["fx"] = counters.get("fx", 0) + 1
+            # En clips largos el efecto solo se compila sobre su ventana (trim + concat): encadenarlo sobre TODO el vídeo
+            # cuesta CPU en cada fotograma aunque su intensidad sea 0 (medido: ~3 % del render por capa).
+            span = _fx_span(start, end, t_off, duration, fps)
+            if span:
+                try:
+                    filters = fx_registry.build_filters(defn, layer.params, EffectCtx(start - (span[0] - FX_PREROLL / fps), end - (span[0] - FX_PREROLL / fps), rw, rh, fps))
+                except (fx_registry.EffectParamError, EffectBuildError) as e:
+                    warnings.append(f"Efecto '{layer.effect}' ignorado: {e}")
+                    continue
             chain = ",".join(filters)
             if layer.region:  # el efecto actúa solo sobre la región y se recompone encima
-                g.append(f"[{cur}]split=2[fb{k}][fr{k}]")
-                g.append(f"[fr{k}]crop={rw}:{rh}:{rx}:{ry},{chain}[fx{k}]")
-                g.append(f"[fb{k}][fx{k}]overlay=x={rx}:y={ry}[e{k}]")
+                body = [f"[IN]split=2[fb{k}][fr{k}]", f"[fr{k}]crop={rw}:{rh}:{rx}:{ry},{chain}[fx{k}]",
+                        f"[fb{k}][fx{k}]overlay=x={rx}:y={ry}[OUT]"]  # fmt: skip
             else:
-                g.append(f"[{cur}]{chain}[e{k}]")
+                body = [f"[IN]{chain}[OUT]"]
+            if span:
+                g += _fx_windowed(body, cur, k, span, t_off, duration, fps)
+            else:
+                g += [ln.replace("[IN]", f"[{cur}]").replace("[OUT]", f"[e{k}]") for ln in body]
             cur = f"e{k}"
             continue
         else:  # pragma: no cover
@@ -433,8 +482,73 @@ def build_plan(
         # El techo del limitador va 1,5 dB por debajo del objetivo: AAC y los picos entre muestras lo desbordan (medido +0,6 dBFS).
         chain += [f"volume={f(norm_gain_db)}dB", f"alimiter=limit={f(10 ** ((au.true_peak - 1.5) / 20))}:level=0"]
     if opts.with_audio:
-        g.append(f"[ac]{','.join(chain) if chain else 'anull'}[aout]")
+        base = ",".join(chain) if chain else "anull"
+        if not sfx_layers:
+            g.append(f"[ac]{base}[aout]")
+        else:  # efectos de sonido: se retrasan hasta su instante y se suman a la voz ya normalizada
+            g.append(f"[ac]{base}[am]")
+            for k, (lay, idx) in enumerate(sfx_layers):
+                dur = max(min(lay.end - lay.start, CATALOG[lay.sfx].duration), 0.05)
+                fo = min(lay.fade_out, dur)
+                ms = round(lay.start * 1000)
+                g.append(
+                    f"[{idx}:a]atrim=0:{f(dur)},afade=t=out:st={f(dur - fo)}:d={f(max(fo, 0.005))},volume={f(lay.gain_db)}dB,"
+                    f"aformat=channel_layouts=stereo,aresample=48000,adelay={ms}|{ms}[sx{k}]"
+                )
+            ins = "".join(f"[sx{k}]" for k in range(len(sfx_layers)))
+            g.append(f"[am]{ins}amix=inputs={len(sfx_layers) + 1}:normalize=0:duration=first:dropout_transition=0,"
+                     f"alimiter=limit={f(10 ** ((au.true_peak - 1.5) / 20))}:level=0[aout]")  # fmt: skip
     return RenderPlan(inputs, ";\n".join(g), W, H, duration, fps, warnings)
+
+
+FX_PREROLL = 6  # fotogramas previos que se procesan y se descartan: `tblend` consume el primero de cada etapa
+FX_WINDOW_MIN_DURATION = 20.0  # por debajo, encadenar el efecto sobre todo el vídeo es igual de barato y más simple
+
+
+def _fx_span(start: float, end: float, t_off: float, duration: float, fps: int) -> tuple[float, float] | None:
+    """(inicio, fin) de la ventana del efecto, en medios fotogramas (nunca coinciden con el pts de un fotograma: ningún
+    fotograma se pierde ni se duplica en el corte); None si compensa encadenarlo sobre todo el vídeo."""
+    if duration < FX_WINDOW_MIN_DURATION:
+        return None
+
+    def bound(t: float) -> float:
+        return t_off + (round((t - t_off) * fps) - 0.5) / fps
+
+    a, b = bound(max(start, t_off)), bound(min(end, t_off + duration))
+    if b - a < 1.5 / fps:
+        return None
+    if a - t_off < (FX_PREROLL + 1) / fps:
+        return None  # sin margen para el pre-roll (efectos con memoria de fotogramas): se encadena sobre todo el vídeo
+    return a, b
+
+
+def _fx_windowed(body: list[str], cur: str, k: int, span: tuple[float, float], t_off: float, duration: float, fps: int) -> list[str]:
+    """Parte el vídeo en antes / ventana / después, aplica `body` (con [IN] y [OUT]) solo a la ventana y lo une de nuevo.
+    Los tiempos dentro de la ventana van relativos a su inicio (el EffectCtx se construyó así)."""
+    a, b = span
+    pre, post = True, (t_off + duration) - b >= 1.0 / fps  # siempre hay `pre`: _fx_span exige margen para el pre-roll
+    n = 1 + pre + post
+    out = [f"[{cur}]split={n}" + "".join(f"[fs{k}_{i}]" for i in range(n))]
+    labels, i = [], 0
+    if pre:
+        out.append(f"[fs{k}_{i}]trim=end={f(a)},setpts=PTS-{f(t_off)}/TB[fp{k}]")
+        labels.append(f"[fp{k}]")
+        i += 1
+    pr = FX_PREROLL / fps
+    mid = [ln.replace("[IN]", f"[fw{k}]").replace("[OUT]", f"[fx{k}m]") for ln in body]
+    out.append(f"[fs{k}_{i}]trim=start={f(a - pr)}:end={f(b)},setpts=PTS-{f(a - pr)}/TB[fw{k}]")
+    out += mid
+    out.append(f"[fx{k}m]trim=start={f(pr)},setpts=PTS-{f(pr)}/TB[fm{k}]")  # descarta el pre-roll
+    labels.append(f"[fm{k}]")
+    i += 1
+    if post:
+        out.append(f"[fs{k}_{i}]trim=start={f(b)},setpts=PTS-{f(b)}/TB[fq{k}]")
+        labels.append(f"[fq{k}]")
+    out.append("".join(f"{x}" for x in labels) + f"concat=n={n}:v=1:a=0[fz{k}]")
+    # `concat` encadena mal los pts tras un trim (el primer fotograma de un tramo repite el pts del último del anterior y
+    # el codificador descarta uno por unión): se regeneran por número de fotograma (CFR) y se restaura el desfase.
+    out.append(f"[fz{k}]setpts=N/({fps}*TB)+{f(t_off)}/TB,setsar=1[e{k}]")
+    return out
 
 
 def _overlay_sequence(g: list[str], cur: str, idx: int, seq, start: float, end: float) -> str:

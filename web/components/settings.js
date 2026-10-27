@@ -21,7 +21,7 @@ async function copy(/** @type {string} */ text, /** @type {string} */ what) {
   catch { toast('No se pudo copiar; selecciona el texto a mano', 'error'); }
 }
 
-const fmtDate = (/** @type {string|null} */ s) => (s ? new Date(s + (s.endsWith('Z') ? '' : 'Z')).toLocaleString() : '—');
+const fmtDate = (/** @type {string|null} */ s) => (s ? new Date(/(Z|[+-]\d\d:?\d\d)$/.test(s) ? s : s + 'Z').toLocaleString() : '—');
 
 export function Settings() {
   const [keys, setKeys] = useState(/** @type {any[]|null} */ (null));

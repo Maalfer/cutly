@@ -4,6 +4,7 @@ Todo texto que llega aquí es no confiable (palabras del directo, textos del pro
 con `ass_escape` antes de entrar en un evento.
 """
 
+import unicodedata
 from dataclasses import dataclass
 from itertools import combinations
 
@@ -13,6 +14,7 @@ from cutly.schema.project import (
     SubtitleStyle,
     TextLayer,
     TimelineClip,
+    WordEmphasis,
     timeline_starts,
 )
 from cutly.services.render.animation import eval_props, is_animated, sample_times
@@ -99,10 +101,12 @@ def header(width: int, height: int, styles: list[str]) -> str:
     )
 
 
-def style_line(name, font, size_px, primary, outline_c, back_c, bold, italic, border_style, outline_px, an, ml, mr, mv):
+def style_line(name, font, size_px, primary, outline_c, back_c, bold, italic, border_style, outline_px, an, ml, mr, mv,
+               spacing=0.0, shadow_px=0.0):  # fmt: skip
     return (
         f"Style: {name},{font},{size_px:.1f},{primary},{primary},{outline_c},{back_c},{-1 if bold else 0},"
-        f"{-1 if italic else 0},0,0,100,100,0,0,{border_style},{outline_px:.1f},0,{an},{ml},{mr},{mv},1"
+        f"{-1 if italic else 0},0,0,100,100,{spacing:.2f},0,{border_style},{outline_px:.1f},{shadow_px:.1f},{an},"
+        f"{ml},{mr},{mv},1"
     )
 
 
@@ -133,24 +137,61 @@ def group_cues(words: list[tuple[float, float, str]], max_words: int) -> list[li
 LINE_CHARS = (
     17  # por encima, la frase se reparte en dos líneas (a ~83 px una línea de 17 letras cabe holgada en 1080 px)
 )
+LINE_FILL = 0.88  # fracción del ancho que puede ocupar una línea con palabras ampliadas
+GLYPH_W = 0.58  # ancho medio de un glifo respecto al cuerpo (estimación para repartir y limitar líneas)
 
 
-def _lines(texts: list[str], max_lines: int) -> list[list[int]]:
+def _lines(texts: list[str], max_lines: int, weights: list[float] | None = None) -> list[list[int]]:
     """Reparte los índices de palabra en líneas equilibradas por nº de letras: una sola línea si cabe, y nunca una
-    palabra huérfana si se puede evitar."""
+    palabra huérfana si se puede evitar. `weights` (escala de cada palabra) pondera las letras de las ampliadas."""
     n = len(texts)
-    total = sum(len(t) for t in texts) + n - 1
+    wt = weights or [1.0] * n
+    cost = [len(t) * w for t, w in zip(texts, wt, strict=True)]
+    total = sum(cost) + n - 1
     if max_lines <= 1 or n < 2 or total <= LINE_CHARS:
         return [list(range(n))]
     k = min(max_lines, n)
-    best: tuple[int, list[list[int]]] | None = None
+    best: tuple[float, list[list[int]]] | None = None
     for cuts in combinations(range(1, n), k - 1):
         bounds = [0, *cuts, n]
         groups = [list(range(bounds[i], bounds[i + 1])) for i in range(k)]
-        longest = max(sum(len(texts[j]) for j in g) + len(g) - 1 for g in groups)
+        longest = max(sum(cost[j] for j in g) + len(g) - 1 for g in groups)
         if best is None or longest < best[0]:
             best = (longest, groups)
     return best[1]  # type: ignore[index]
+
+
+def _norm_word(w: str) -> str:
+    """Palabra sin tildes, mayúsculas ni puntuación, para comparar con `emphasis.words`."""
+    d = unicodedata.normalize("NFD", w.casefold())
+    return "".join(c for c in d if c.isalnum() and not unicodedata.combining(c))
+
+
+def _emphasis_map(style: SubtitleStyle) -> dict[str, WordEmphasis]:
+    out: dict[str, WordEmphasis] = {}
+    for e in style.emphasis:
+        for w in e.words:
+            out.setdefault(_norm_word(w), e)
+    return out
+
+
+def _fit_scales(line: list[int], texts: list[str], scales: list[float], size_px: float, spacing_px: float, width: int):
+    """Reduce las palabras ampliadas de una línea si, por estimación, no caben en el ancho disponible."""
+    est = lambda sc: sum(len(texts[j]) * (GLYPH_W * size_px * sc[j] + spacing_px) for j in line) + (  # noqa: E731
+        GLYPH_W * size_px * (len(line) - 1)
+    )
+    avail = width * LINE_FILL
+    cur = est(scales)
+    if cur <= avail or all(scales[j] <= 1 for j in line):
+        return
+    # solo se encogen las ampliadas (nunca por debajo de 1) hasta que cabe
+    big = [j for j in line if scales[j] > 1]
+    fixed = cur - sum(len(texts[j]) * (GLYPH_W * size_px * scales[j] + spacing_px) for j in big)
+    room = avail - fixed
+    want = sum(len(texts[j]) * GLYPH_W * size_px * scales[j] for j in big)
+    k = max(0.0, (room - sum(len(texts[j]) * spacing_px for j in big)) / want) if want else 1.0
+    for j in big:
+        scales[j] = max(1.0, scales[j] * k)
 
 
 def subtitle_events(
@@ -160,15 +201,18 @@ def subtitle_events(
     st: SubtitleStyle = layer.style
     size_px = st.size * height
     outline_px = st.outline_width * height
+    spacing_px = st.letter_spacing * height
     border = 3 if st.bg_color else 1
     outline_c = ass_color(st.bg_color) if st.bg_color else ass_color(st.outline_color)
     name = f"Sub_{layer.id}".replace("-", "_")
-    style = style_line(name, font_name(st.font), size_px, ass_color(st.color), outline_c, ass_color("#00000080"),
+    style = style_line(name, font_name(st.font), size_px, ass_color(st.color), outline_c, ass_color(st.shadow_color),
                        st.bold, False, border, outline_px if not st.bg_color else size_px * 0.18, 5,
-                       int(width * 0.06), int(width * 0.06), 0)  # fmt: skip
+                       int(width * 0.06), int(width * 0.06), 0, spacing_px, st.shadow * height)  # fmt: skip
     z = layer.z + 100
-    pos = f"\\an5\\pos({width // 2},{round(st.position_y * height)})"
+    blur = f"\\blur{st.shadow_blur * height:.1f}" if st.shadow_blur else ""
+    pos = f"\\an5\\pos({width // 2},{round(st.position_y * height)}){blur}"
     base_c, hl_c = ass_color(st.color), ass_color(st.highlight_color or st.color)
+    base_font, emph = font_name(st.font), _emphasis_map(st)
     events = []
     if layer.source == "custom":
         words = []
@@ -177,24 +221,52 @@ def subtitle_events(
             step = (cue.end - cue.start) / max(len(toks), 1)
             words += [(cue.start + i * step, cue.start + (i + 1) * step, t) for i, t in enumerate(toks)]
     words = [(max(s, layer.start), min(e, layer.end), t) for s, e, t in words if e > layer.start and s < layer.end]
-    for cue in group_cues(words, st.max_words_per_cue):
-        texts = [ass_escape(w[2]).upper() if st.uppercase else ass_escape(w[2]) for w in cue]
-        lines = _lines(texts, st.max_lines)
+    cues = group_cues(words, st.max_words_per_cue)
+    for ci, cue in enumerate(cues):
+        styles = [emph.get(_norm_word(w[2])) for w in cue]
+        texts = [
+            ass_escape(w[2]).upper() if (e.uppercase if e and e.uppercase is not None else st.uppercase) else ass_escape(w[2])
+            for w, e in zip(cue, styles, strict=True)
+        ]
+        scales = [e.scale if e else 1.0 for e in styles]
+        lines = _lines(texts, st.max_lines, scales)
+        for ln in lines:
+            _fit_scales(ln, texts, scales, size_px, spacing_px, width)
         cue_end = cue[-1][1] + 0.12
+        if ci + 1 < len(cues):  # la frase no se queda sobre la siguiente (se pisarían en pantalla)
+            cue_end = max(cue[-1][1], min(cue_end, cues[ci + 1][0][0]))
         for i, (s, _e, _t) in enumerate(cue):
             end = cue[i + 1][0] if i + 1 < len(cue) else cue_end
             parts = []
             for idxs in lines:
                 seg = []
                 for j in idxs:
-                    if j == i and st.animation != "none" and st.highlight_color:
-                        pop = "\\fscx80\\fscy80\\t(0,90,\\fscx112\\fscy112)" if st.animation == "pop" else ""
-                        seg.append(f"{{\\1c{hl_c}{pop}}}{texts[j]}{{\\1c{base_c}\\fscx100\\fscy100}}")
-                    else:
-                        seg.append(texts[j])
+                    e, active = styles[j], j == i and st.animation != "none" and st.highlight_color
+                    tags = revert = ""
+                    if active and not (e and e.color):
+                        tags += f"\\1c{hl_c}"
+                        revert += f"\\1c{base_c}"
+                        if st.animation == "pop":
+                            tags += "\\fscx80\\fscy80\\t(0,90,\\fscx112\\fscy112)"
+                            revert += "\\fscx100\\fscy100"
+                    if e:
+                        if e.color:
+                            tags += f"\\1c{ass_color(e.color)}"
+                            revert += f"\\1c{base_c}"
+                        if scales[j] != 1:
+                            tags += f"\\fs{size_px * scales[j]:.1f}"
+                            revert += f"\\fs{size_px:.1f}"
+                        if e.font and font_name(e.font) != base_font:
+                            tags += f"\\fn{font_name(e.font)}"
+                            revert += f"\\fn{base_font}"
+                        if e.bold is not None and e.bold != st.bold:
+                            tags += f"\\b{int(e.bold)}"
+                            revert += f"\\b{int(st.bold)}"
+                    seg.append(f"{{{tags}}}{texts[j]}{{{revert}}}" if tags else texts[j])
                 parts.append(" ".join(seg))
             start = cue[0][0] if i == 0 else s
-            events.append(dialogue(z, start, end, name, "{" + pos + "}" + "\\N".join(parts)))
+            intro = "\\fad(70,0)\\fscx88\\fscy88\\t(0,110,\\fscx100\\fscy100)" if st.animation == "fade_pop" and i == 0 else ""
+            events.append(dialogue(z, start, end, name, "{" + pos + intro + "}" + "\\N".join(parts)))
     return [style], events
 
 

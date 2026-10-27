@@ -1,0 +1,75 @@
+{
+  "name": "zoom_blur",
+  "render_backend": "ffmpeg",
+  "fidelity": "exact",
+  "preview_fidelity": "approximate",
+  "title": "Zoom con desenfoque de movimiento",
+  "category": "cámara",
+  "tags": [
+    "zoom",
+    "blur",
+    "movimiento",
+    "impacto",
+    "whip"
+  ],
+  "description": "Acercamiento rápido con estela de movimiento (frames mezclados): el zoom de impacto de los montajes profesionales, más cinematográfico que zoom_punch. Úsalo en un cambio de idea o al decir la palabra clave.",
+  "params_schema": {
+    "type": "object",
+    "properties": {
+      "scale": {
+        "type": "number",
+        "minimum": 1.08,
+        "maximum": 2.0,
+        "default": 1.4,
+        "description": "Factor de zoom máximo"
+      },
+      "focus_x": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "default": 0.5,
+        "description": "Punto de enfoque horizontal"
+      },
+      "focus_y": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1,
+        "default": 0.45,
+        "description": "Punto de enfoque vertical"
+      },
+      "blur_frames": {
+        "type": "integer",
+        "minimum": 2,
+        "maximum": 5,
+        "default": 3,
+        "description": "Intensidad de la estela de movimiento (fotogramas mezclados: más = más estela)"
+      },
+      "envelope": {
+        "type": "string",
+        "enum": [
+          "pulse",
+          "in_out",
+          "decay",
+          "hold",
+          "ramp"
+        ],
+        "default": "in_out",
+        "description": "Forma de la intensidad en el tiempo: in_out (rampas), pulse (sube y baja), decay (golpe que se apaga), hold, ramp"
+      },
+      "attack": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.12,
+        "description": "Segundos de subida (in_out)"
+      },
+      "release": {
+        "type": "number",
+        "minimum": 0.02,
+        "maximum": 3,
+        "default": 0.25,
+        "description": "Segundos de bajada (in_out)"
+      }
+    }
+  }
+}

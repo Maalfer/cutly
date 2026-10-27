@@ -7,9 +7,15 @@ import { rt } from './preview.js';
 import { applyOps, clipById, ed, get, patchLayer, select, useEd } from './state.js';
 import { clipDuration, fmtClock, timelineDuration, timelineStarts } from './time.js';
 import { splitAtPlayhead, deleteSelected, TYPE_ICON, layerLabel } from './ops.js';
+import { isCoarse } from './viewport.js';
 
-const RULER = 24, CLIP_H = 50, ROW = 24, PAD = 6, EDGE = 7, SNAP_PX = 7;
-const COLORS = /** @type {Record<string,string>} */ ({ text: '#4f8cff', icon: '#e6a23c', image: '#b07cff', shape: '#3ec9a7', subtitle: '#ff6b81', effect: '#f0c040', scene: '#35d0ff' });
+// Medidas en píxeles CSS. Con dedos (puntero grueso) todo es más alto y las asas de recorte más anchas.
+let RULER = 24, CLIP_H = 50, ROW = 24, PAD = 6, EDGE = 7, SNAP_PX = 7;
+function applyDims() {
+  const t = isCoarse();
+  RULER = t ? 30 : 24; CLIP_H = t ? 60 : 50; ROW = t ? 34 : 24; EDGE = t ? 16 : 7; SNAP_PX = t ? 10 : 7;
+}
+const COLORS = /** @type {Record<string,string>} */ ({ text: '#4f8cff', icon: '#e6a23c', image: '#b07cff', shape: '#3ec9a7', subtitle: '#ff6b81', effect: '#f0c040', scene: '#35d0ff', audio: '#8bd450' });
 
 /** @param {string} v */
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -18,6 +24,7 @@ export function Timeline() {
   const doc = useEd((s) => s.doc);
   const wrap = useRef(/** @type {HTMLDivElement|null} */ (null));
   const cv = useRef(/** @type {HTMLCanvasElement|null} */ (null));
+  const ptr = useRef(/** @type {Map<number,[number,number]>} */ (new Map())); // dedos activos (pellizco)
   const view = useRef({ w: 600, h: 200, rows: /** @type {any[]} */ ([]), peaks: /** @type {Map<string,any>} */ (new Map()), drag: /** @type {any} */ (null) });
   const raf = useRef(0);
   const redraw = () => { cancelAnimationFrame(raf.current); raf.current = requestAnimationFrame(draw); };
@@ -28,6 +35,7 @@ export function Timeline() {
   const layerRows = () => [...get().doc.layers].sort((a, b) => b.z - a.z);
 
   function layout() {
+    applyDims();
     const d = get().doc;
     const rows = d ? layerRows() : [];
     const h = RULER + CLIP_H + PAD + Math.max(rows.length, 1) * ROW + PAD * 2;
@@ -39,6 +47,8 @@ export function Timeline() {
     const dpr = devicePixelRatio || 1;
     c.width = Math.round(view.current.w * dpr); c.height = Math.round(h * dpr);
     c.style.width = view.current.w + 'px'; c.style.height = h + 'px';
+    // si hay más filas de las que caben, el dedo debe poder desplazar en vertical; si no, todo el gesto es nuestro
+    c.style.touchAction = h > w.clientHeight ? 'pan-y' : 'none';
   }
 
   function snapPoints(/** @type {string} */ skip) {
@@ -114,7 +124,8 @@ export function Timeline() {
       g.strokeStyle = sel ? accent : line; g.lineWidth = sel ? 2 : 1; g.strokeRect(x0 + 0.5, y + 0.5, wd - 1, CLIP_H - 5);
       g.fillStyle = fg; g.fillText(`${fmtClock(cl.source_in)} → ${fmtClock(cl.source_out)}${cl.speed !== 1 ? `  ×${cl.speed}` : ''}`, x0 + 8, y + 10);
       // asas de recorte
-      g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x0, y, 4, CLIP_H - 4); g.fillRect(x0 + wd - 4, y, 4, CLIP_H - 4);
+      const hw = isCoarse() ? 8 : 4;
+      g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x0, y, hw, CLIP_H - 4); g.fillRect(x0 + wd - hw, y, hw, CLIP_H - 4);
       if (cl.transition_in && i > 0) { g.fillStyle = '#ffffff55'; const tw = cl.transition_in.dur * z; g.fillRect(x0, y, tw, CLIP_H - 4); g.fillStyle = fg; g.fillText('⇄', x0 + 4, y + CLIP_H - 14); }
     });
 
@@ -158,7 +169,10 @@ export function Timeline() {
       const starts = timelineStarts(d.timeline);
       for (let i = 0; i < d.timeline.length; i++) {
         const c = d.timeline[i], x0 = t2x(starts[i]), x1 = x0 + clipDuration(c) * get().zoom;
-        if (x >= x0 - 2 && x <= x1 + 2) return { kind: 'clip', clip: c, index: i, edge: x - x0 < EDGE ? 'l' : x1 - x < EDGE ? 'r' : null, start: starts[i] };
+        if (x >= x0 - 2 && x <= x1 + 2) {
+          const eg = Math.min(EDGE, (x1 - x0) / 3);
+          return { kind: 'clip', clip: c, index: i, edge: x - x0 < eg ? 'l' : x1 - x < eg ? 'r' : null, start: starts[i] };
+        }
       }
       return { kind: 'ruler' };
     }
@@ -166,7 +180,10 @@ export function Timeline() {
     const l = view.current.rows[r];
     if (l) {
       const x0 = t2x(l.start), x1 = t2x(l.end);
-      if (x >= x0 - 2 && x <= x1 + 2) return { kind: 'layer', layer: l, edge: x - x0 < EDGE ? 'l' : x1 - x < EDGE ? 'r' : null };
+      if (x >= x0 - 2 && x <= x1 + 2) {
+        const eg = Math.min(EDGE, (x1 - x0) / 3);
+        return { kind: 'layer', layer: l, edge: x - x0 < eg ? 'l' : x1 - x < eg ? 'r' : null };
+      }
     }
     return { kind: 'empty' };
   }
@@ -181,6 +198,25 @@ export function Timeline() {
     const [x, y] = localXY(e), h = hit(x, y);
     /** @type {HTMLCanvasElement} */ (cv.current).setPointerCapture(e.pointerId);
     const v = view.current;
+    ptr.current.set(e.pointerId, [x, y]);
+    if (ptr.current.size === 2) { // dos dedos: pellizco = zoom, y arrastrar = desplazar
+      const [a, b] = [...ptr.current.values()], cx = (a[0] + b[0]) / 2, st = get();
+      v.drag = { mode: 'pinch', d0: Math.max(Math.hypot(a[0] - b[0], a[1] - b[1]), 1), z0: st.zoom, tc: st.scroll + cx / st.zoom };
+      return;
+    }
+    const touch = e.pointerType === 'touch';
+    const st0 = get().selection;
+    // Con el dedo, tocar algo SIN seleccionar solo lo selecciona y arrastrar desplaza la línea de tiempo (no mueve el clip
+    // por accidente). Una vez seleccionado, arrastrarlo sí lo mueve/recorta.
+    if (touch && (h.kind === 'clip' || h.kind === 'layer')) {
+      const id = h.kind === 'clip' ? h.clip.id : h.layer.id;
+      if (st0.kind !== h.kind || st0.id !== id) {
+        select(h.kind, id);
+        v.drag = { mode: 'pan', x0: x, s0: get().scroll };
+        redraw();
+        return;
+      }
+    }
     if (h.kind === 'ruler' || h.kind === 'empty') {
       if (h.kind === 'empty') select('none');
       v.drag = { mode: 'scrub' };
@@ -201,7 +237,16 @@ export function Timeline() {
 
   function onMove(/** @type {PointerEvent} */ e) {
     const v = view.current, [x, y] = localXY(e);
+    if (ptr.current.has(e.pointerId)) ptr.current.set(e.pointerId, [x, y]);
     const d = v.drag;
+    if (d?.mode === 'pinch') {
+      if (ptr.current.size < 2) return;
+      const [a, b] = [...ptr.current.values()], cx = (a[0] + b[0]) / 2;
+      const z = Math.min(600, Math.max(4, d.z0 * Math.hypot(a[0] - b[0], a[1] - b[1]) / d.d0));
+      ed.set({ zoom: z, scroll: Math.max(0, d.tc - cx / z) });
+      return;
+    }
+    if (d?.mode === 'pan') { ed.set({ scroll: Math.max(0, d.s0 - (x - d.x0) / get().zoom) }); return; }
     if (!d) {
       const h = hit(x, y);
       /** @type {HTMLCanvasElement} */ (cv.current).style.cursor = h.kind === 'layer' || h.kind === 'clip' ? (h.edge ? 'ew-resize' : h.kind === 'layer' ? 'grab' : 'move') : 'default';
@@ -254,8 +299,10 @@ export function Timeline() {
     redraw();
   }
 
-  function onUp() {
+  function onUp(/** @type {PointerEvent} */ e) {
+    ptr.current.delete(e.pointerId);
     const d = view.current.drag;
+    if (d?.mode === 'pinch' && ptr.current.size > 0) return; // queda un dedo: no se hace nada hasta soltarlo
     view.current.drag = null;
     if (d?.mode === 'trim' && d.result) applyOps([{ op: 'set_clip_range', clip_id: d.id, ...d.result }], 'Recortar clip');
     else if (d?.mode === 'moveclip' && d.moved) {
@@ -313,12 +360,12 @@ export function Timeline() {
   const clipSel = useEd((s) => s.selection);
   return html`
     <div class="tl-tools">
-      <button class="small-btn" onClick=${splitAtPlayhead} title="Dividir el clip en el cabezal (S)">✂ Dividir</button>
-      <button class="small-btn" onClick=${deleteSelected} title="Borrar lo seleccionado (Supr)">🗑 Borrar</button>
-      <button class="small-btn" disabled=${clipSel.kind !== 'clip'} onClick=${() => { const c = clipById(clipSel.id); if (c) applyOps([{ op: 'add_clip', source_in: c.source_in, source_out: c.source_out, speed: c.speed }], 'Duplicar clip'); }} title="Duplicar el clip seleccionado al final">⧉ Duplicar clip</button>
+      <button class="small-btn tl-split" onClick=${splitAtPlayhead} title="Dividir el clip en el cabezal (S)">✂<span class="hide-xs"> Dividir</span></button>
+      <button class="small-btn" onClick=${deleteSelected} title="Borrar lo seleccionado (Supr)">🗑<span class="hide-xs"> Borrar</span></button>
+      <button class="small-btn" disabled=${clipSel.kind !== 'clip'} onClick=${() => { const c = clipById(clipSel.id); if (c) applyOps([{ op: 'add_clip', source_in: c.source_in, source_out: c.source_out, speed: c.speed }], 'Duplicar clip'); }} title="Duplicar el clip seleccionado al final">⧉<span class="hide-sm"> Duplicar clip</span></button>
       <span class="grow"></span>
       <button class="icon-btn" aria-label="Alejar" onClick=${() => ed.set({ zoom: Math.max(4, zoom / 1.4) })}>−</button>
-      <input type="range" min="4" max="600" step="1" value=${Math.round(zoom)} aria-label="Zoom" onInput=${(/** @type {Event} */ e) => ed.set({ zoom: +(/** @type {HTMLInputElement} */ (e.target).value) })} />
+      <input class="hide-sm" type="range" min="4" max="600" step="1" value=${Math.round(zoom)} aria-label="Zoom" onInput=${(/** @type {Event} */ e) => ed.set({ zoom: +(/** @type {HTMLInputElement} */ (e.target).value) })} />
       <button class="icon-btn" aria-label="Acercar" onClick=${() => ed.set({ zoom: Math.min(600, zoom * 1.4) })}>+</button>
       <button class="small-btn" onClick=${() => { const w = view.current.w || 600; const tot = timelineDuration(get().doc.timeline) || 1; ed.set({ zoom: Math.max(4, Math.min(600, (w - 20) / tot)), scroll: 0 }); }} title="Ajustar todo el clip a la pantalla">Ajustar</button>
     </div>

@@ -1,0 +1,22 @@
+{
+ "name": "reel_word_clean",
+ "description": "Una palabra cada vez, Inter fina y blanca con sombra suave y sin contorno (estilo editorial de reels de autor). Pon énfasis en palabras clave con style.emphasis.",
+ "data": {
+  "font": "Inter SemiBold",
+  "size": 0.03,
+  "color": "#FFFFFF",
+  "outline_color": "#000000",
+  "outline_width": 0,
+  "highlight_color": null,
+  "bold": false,
+  "max_words_per_cue": 1,
+  "max_lines": 1,
+  "animation": "fade_pop",
+  "position_y": 0.62,
+  "letter_spacing": 0.001,
+  "shadow": 0.002,
+  "shadow_color": "#00000088",
+  "shadow_blur": 0.0015,
+  "emphasis": []
+ }
+}

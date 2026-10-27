@@ -29,6 +29,8 @@ def check_layer(layer) -> None:
         except AssetNotFound as e:
             raise OpError(f"Layer '{layer.id}': {e}.{_near(layer.asset, all_asset_ids())}") from e
     elif isinstance(layer, SceneLayer):
+        if layer.code is not None:
+            return  # motor de navegador: los errores de JS se ven en /scenes/preview o al renderizar, no aquí
         try:
             scene = layer.scene
             if layer.template:
@@ -43,9 +45,10 @@ def check_layer(layer) -> None:
                     f"Disponibles: {', '.join(sorted(fonts))}"
                 )
     elif isinstance(layer, TextLayer | SubtitleLayer):
-        font = layer.style.font
         fonts = available_fonts()
-        if font != "default" and font not in fonts:
-            raise OpError(
-                f"Layer '{layer.id}': la fuente '{font}' no existe. Disponibles: default, {', '.join(sorted(fonts))}"
-            )
+        used = [layer.style.font] + [e.font for e in getattr(layer.style, "emphasis", []) if e.font]
+        for font in used:
+            if font != "default" and font not in fonts:
+                raise OpError(
+                    f"Layer '{layer.id}': la fuente '{font}' no existe. Disponibles: default, {', '.join(sorted(fonts))}"
+                )

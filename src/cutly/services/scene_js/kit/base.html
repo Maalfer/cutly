@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Escena base Cutly</title>
+<style>
+  /* Sin @keyframes/transition: no siguen el reloj virtual. Todo se anima en el bucle de abajo. */
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#07090f}
+  canvas{display:block;width:100%;height:100%}
+  /* viñeta cinematográfica: oscurece las esquinas, estática (no animada) -> no choca con la regla de nada de CSS animado */
+  body::after{content:'';position:fixed;inset:0;pointer-events:none;box-shadow:inset 0 0 18vw 6vw rgba(0,0,0,.55)}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<script>
+// ============================ PLANTILLA BASE CUTLY (escena `code`) ============================
+// Reglas que ya cumple esta plantilla (y que `POST /scenes/lint` comprueba):
+//  - TODO se mide con `u` (= innerWidth/1080): el mismo código sirve en 1080x1920, 540x960 o 1920x1080.
+//  - Texto: titulares >= 3.2*u*10 (~34 px a 1080), cuerpo >= 2.4% del ancho (~26 px). Nunca menos.
+//  - Márgenes seguros: 6% a los lados, nada importante en el 18% inferior (botones de la app) ni 8% superior.
+//  - Reloj: solo requestAnimationFrame(now) / performance.now(). Nada de Date.now, setTimeout, CSS keyframes.
+//  - Sin red, sin fuentes remotas, sin WebGL. Emoji y Unicode funcionan. Fondo opaco (para texto/iconos sobre el vídeo usa kinetic.html + `transparent`).
+//  - Parámetros (textos, colores) en window.CUTLY_PARAMS = layer.params, para ajustar sin reescribir.
+//  - Sincronía con la voz: window.CUTLY_WORDS = [{w,start,end}] (segundos desde el inicio de la capa) con lo que se
+//    dice durante la escena. Usa saidAt(/cupón/i, fallback) para disparar un elemento justo al decir la palabra.
+const P = Object.assign({
+  accent: '#34e3ff', accent2: '#ff5c8a', title: 'Cómo funciona',
+  steps: ['Cliente', 'Servidor', 'Base de datos'],
+  message: 'petición', caption: 'Un paso, una idea', recap: ['Idea 1', 'Idea 2', 'Idea 3'],
+  recapWords: [],   // p. ej. ['primero', 'segundo', 'tercero']: palabra que dispara cada tarjeta (opcional)
+}, window.CUTLY_PARAMS || {});
+const WORDS = window.CUTLY_WORDS || [];
+
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let u = 1, DPR = 1;
+function resize() {
+  DPR = Math.min(devicePixelRatio || 1, 2);
+  cv.width = innerWidth * DPR; cv.height = innerHeight * DPR;
+  u = innerWidth / 1080;
+}
+resize(); addEventListener('resize', resize);
+
+// ---------- utilidades ----------
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const easeOut = t => 1 - Math.pow(1 - clamp(t), 3);
+const easeIO = t => { t = clamp(t); return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+const sub = (t, a, b) => clamp((t - a) / (b - a));           // progreso de t dentro de [a, b]
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
+function hexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; }
+const FONT = '"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif';
+const font = (px, w = 700) => `${w} ${px * u}px ${FONT}`;
+
+const norm = x => String(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9ñ]/g, '');
+/** Segundo (desde el inicio de la capa) en que se dice `word` (texto o RegExp, sin importar tildes/mayúsculas);
+ *  `fallback` si no se dice (p. ej. sin transcripción): así la escena funciona igual sin palabras. `nth`: 0 = primera vez. */
+function saidAt(word, fallback, nth = 0) {
+  if (word == null || word === '') return fallback;
+  const hit = WORDS.filter(x => word instanceof RegExp ? word.test(x.w) : norm(x.w) === norm(word));
+  return hit[nth] ? hit[nth].start : fallback;
+}
+/** Palabra que se está diciendo en el instante `T` (o null): para subrayar/karaoke. */
+function currentWord(T) { return WORDS.find(x => T >= x.start && T < x.end) || null; }
+
+/** Parte `text` en líneas que quepan en `maxW` (px de pantalla). Devuelve la lista de líneas. */
+function wrap(text, maxW) {
+  const out = []; let line = '';
+  for (const word of String(text).split(' ')) {
+    const test = line ? line + ' ' + word : word;
+    if (ctx.measureText(test).width > maxW && line) { out.push(line); line = word; } else line = test;
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+// ---------- fondo y partículas ambientales (deterministas: sin Math.random en el dibujo) ----------
+function rnd(i) { const s = Math.sin(i * 12.9898) * 43758.5453; return s - Math.floor(s); }
+const motes = Array.from({ length: 36 }, (_, i) => ({ x: rnd(i), y: rnd(i + 99), r: 2 + rnd(i + 7) * 4, sp: .01 + rnd(i + 3) * .03, ph: rnd(i + 5) * 6.28 }));
+function drawBackground(T) {
+  const W = innerWidth, H = innerHeight;
+  const g = ctx.createRadialGradient(W / 2, H * .45, 0, W / 2, H * .45, Math.max(W, H) * .8);
+  g.addColorStop(0, '#13182a'); g.addColorStop(1, '#05060b');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for (const m of motes) {
+    const y = ((m.y - T * m.sp) % 1 + 1) % 1;
+    ctx.fillStyle = hexA(P.accent, .08 + .06 * Math.sin(T * 1.5 + m.ph));
+    ctx.beginPath(); ctx.arc(m.x * W, y * H, m.r * u, 0, 7); ctx.fill();
+  }
+}
+
+// ---------- rótulo inferior (píldora que se ajusta al texto y NUNCA se sale del encuadre) ----------
+function callout(text, T, tIn, tOut, color = P.accent) {
+  const a = Math.min(sub(T, tIn, tIn + .35), 1 - sub(T, tOut - .35, tOut));
+  if (a <= .01) return;
+  ctx.font = font(34, 700);
+  const maxW = innerWidth * .88 - 80 * u;
+  const lines = wrap(text, maxW);
+  const lh = 44 * u, padX = 34 * u, padY = 22 * u;
+  const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + padX * 2 + 26 * u;
+  const h = lines.length * lh + padY * 2;
+  const x = (innerWidth - w) / 2, y = innerHeight * .80 - h + (1 - easeOut(a)) * 30 * u;  // por encima del 18% inferior
+  ctx.save(); ctx.globalAlpha = a;
+  rr(x, y, w, h, Math.min(h / 2, 40 * u)); ctx.fillStyle = 'rgba(12,14,24,.82)'; ctx.fill();
+  ctx.strokeStyle = hexA(color, .6); ctx.lineWidth = 2 * u; ctx.stroke();
+  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x + padX, y + h / 2, 7 * u, 0, 7); ctx.fill();
+  ctx.fillStyle = '#f2f5ff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  lines.forEach((l, i) => ctx.fillText(l, x + padX + 26 * u, y + padY + lh * (i + .5)));
+  ctx.restore();
+}
+
+// ---------- bloques reutilizables ----------
+function node(label, cx, cy, color, lit) {
+  const w = 300 * u, h = 130 * u;
+  ctx.save();
+  if (lit) { const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, w); g.addColorStop(0, hexA(color, .3)); g.addColorStop(1, hexA(color, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, w, 0, 7); ctx.fill(); }
+  rr(cx - w / 2, cy - h / 2, w, h, 22 * u); ctx.fillStyle = 'rgba(16,20,34,.94)'; ctx.fill();
+  ctx.strokeStyle = lit ? color : hexA(color, .5); ctx.lineWidth = (lit ? 4 : 2.5) * u; ctx.stroke();
+  ctx.fillStyle = lit ? color : '#dfe6ff'; ctx.font = font(40, 800); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, cx, cy); ctx.restore();
+}
+function bigText(text, cx, cy, size, color, alpha = 1) {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.font = font(size, 800);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const lines = wrap(text, innerWidth * .88);
+  lines.forEach((l, i) => ctx.fillText(l, cx, cy + (i - (lines.length - 1) / 2) * size * 1.2 * u));
+  ctx.restore();
+}
+
+// ---------- CÁMARA DE MUNDO (opcional, para planos que vuelan: paneo, zoom, seguir algo) ----------
+// La mayoría de escenas NO la necesitan: usa las funciones de arriba (coordenadas de pantalla) en su lugar.
+// Úsala cuando quieras composición espacial con cámara que se mueve (acercarse a un detalle, seguir un paquete que
+// viaja, alejarse para revelar el mapa completo). Coordenadas de MUNDO fijas (WORLD.w x WORLD.h), independientes
+// del tamaño real de pantalla: dibuja con W(x,y)/wText en vez de x,y directos, y la cámara hace el resto.
+const WORLD = { w: 1600, h: 900 };
+const cam = { x: WORLD.w / 2, y: WORLD.h / 2, zoom: 1, shx: 0, shy: 0 };
+const camTarget = { x: WORLD.w / 2, y: WORLD.h / 2, zoom: 1 };
+let camK = 0.05;
+/** Mueve la cámara a (x,y) de mundo con ese zoom; `k` (0-1, por defecto 0.05) = suavidad (más bajo = más lento/cinematográfico). */
+function camTo(x, y, zoom, k) { camTarget.x = x; camTarget.y = y; camTarget.zoom = zoom; if (k) camK = k; }
+function worldScale() { return Math.max(innerWidth / WORLD.w, innerHeight / WORLD.h) * cam.zoom; }
+/** Coordenada de mundo -> píxel de pantalla. (Se llama W, no P: P ya es window.CUTLY_PARAMS.) */
+function W(x, y) { const s = worldScale(); return [(x - cam.x) * s + innerWidth / 2 + cam.shx, (y - cam.y) * s + innerHeight / 2 + cam.shy]; }
+/** Llámala una vez por fotograma (antes de dibujar) si usas la cámara. `handheld` 0-1: temblor suave tipo cámara en mano (0 = fija). */
+function updateCam(dt, T, handheld = 0) {
+  const f = 1 - Math.pow(1 - camK, dt * 60);
+  cam.x += (camTarget.x - cam.x) * f; cam.y += (camTarget.y - cam.y) * f; cam.zoom += (camTarget.zoom - cam.zoom) * f;
+  if (handheld > 0) {
+    cam.shx = (Math.sin(T * .8) * 5 + Math.sin(T * 1.9) * 2.5) * cam.zoom * handheld;
+    cam.shy = (Math.cos(T * .9) * 4 + Math.sin(T * 1.5) * 2) * cam.zoom * handheld;
+  }
+}
+/** Texto en coordenadas de MUNDO (tamaño en unidades de mundo: se escala solo con la cámara). */
+function wText(x, y, text, color, sizeW, weight = 800, align = 'center') {
+  ctx.save(); ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.fillStyle = color;
+  ctx.font = `${weight} ${sizeW * worldScale()}px ${FONT}`;
+  const [px, py] = W(x, y); ctx.fillText(text, px, py); ctx.restore();
+}
+/** Punto a medio camino entre `a` y `b` (world {x,y}) pero en ARCO (curva de Bézier), no en línea recta: para que algo
+ *  «viaje» de forma natural. `curve` = cuánto se abomba el arco (unidades de mundo; 0 = recta); `t` 0-1. */
+function arcPt(a, b, curve, t) {
+  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+  const cx = mx - (dy / len) * curve, cy = my + (dx / len) * curve, i = 1 - t;
+  return { x: i * i * a.x + 2 * i * t * cx + t * t * b.x, y: i * i * a.y + 2 * i * t * cy + t * t * b.y };
+}
+
+/** Maqueta de ventana de navegador (barra de direcciones con texto escrito y candado), en coordenadas de PANTALLA
+ *  (x,y = esquina sup. izq., w/h en px de pantalla). Útil para contenido web/seguridad: peticiones, URLs, cookies… */
+function browserChrome(x, y, w, h, url, T, typeFrom = 0, cps = 14, secure = true) {
+  ctx.save();
+  rr(x, y, w, h, 18 * u); ctx.fillStyle = 'rgba(12,16,28,.97)'; ctx.fill(); ctx.strokeStyle = '#1d2c4a'; ctx.lineWidth = 2 * u; ctx.stroke();
+  const barH = 50 * u;
+  rr(x, y, w, barH, 18 * u); ctx.fillStyle = 'rgba(20,24,40,.98)'; ctx.fill();
+  ['#ff5f56', '#ffbd2e', '#27c93f'].forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x + 26 * u + i * 20 * u, y + barH / 2, 6 * u, 0, 7); ctx.fill(); });
+  const addrY = y + barH + 34 * u, addrX = x + 26 * u, addrW = w - 52 * u;
+  rr(addrX, addrY - 20 * u, addrW, 40 * u, 20 * u); ctx.fillStyle = 'rgba(6,10,20,.9)'; ctx.fill(); ctx.strokeStyle = hexA(P.accent, .5); ctx.lineWidth = 1.6 * u; ctx.stroke();
+  const n = Math.max(0, Math.floor((T - typeFrom) * cps)), shown = (secure ? '🔒 ' : '') + url.slice(0, n);
+  ctx.font = font(25, 600); ctx.fillStyle = '#dfe8f7'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(shown, addrX + 16 * u, addrY);
+  if (n < url.length && Math.floor(T * 2.4) % 2 === 0) { const cw = ctx.measureText(shown).width; ctx.fillStyle = P.accent; ctx.fillRect(addrX + 16 * u + cw + 2 * u, addrY - 12 * u, 2 * u, 24 * u); }
+  ctx.restore();
+  return { contentY: addrY + 36 * u, contentX: addrX, contentW: addrW }; // dónde empezar a dibujar el "contenido" de la página
+}
+
+// ---------- GALERÍA DE EFECTOS (dibujados de verdad, no solo zooms/fades) ----------
+// Úsalos para la idea PRINCIPAL de cada escena, no solo como decoración. Todos son deterministas (nada de
+// Math.random suelto) y escalan con `u`. `prog` siempre es 0-1 (pásale sub(t, tIn, tOut) ya calculado).
+
+/** Trazo de un icono simple (sin emoji: mismo aspecto en cualquier plataforma), centrado en (cx,cy), lado ~`s` px
+ *  de pantalla. `draw` 0-1 anima el trazo apareciendo (como si se dibujara); 1 = completo. Añade los que te hagan
+ *  falta siguiendo el mismo patrón (un par de ctx.beginPath/stroke en coordenadas relativas a 0,0 escaladas por k). */
+const ICONS = {
+  check: (k, draw) => { const p = [[-.5, 0], [-.15, .4], [.55, -.45]]; strokePath(p, k, draw); },
+  cross: (k, draw) => { strokePath([[-.45, -.45], [.45, .45]], k, Math.min(draw * 2, 1)); strokePath([[.45, -.45], [-.45, .45]], k, Math.max(draw * 2 - 1, 0)); },
+  arrow_right: (k, draw) => { strokePath([[-.5, 0], [.5, 0]], k, Math.min(draw * 1.4, 1)); strokePath([[.1, -.35], [.5, 0], [.1, .35]], k, Math.max((draw - .3) / .7, 0)); },
+  arrow_up: (k, draw) => { strokePath([[0, .5], [0, -.5]], k, Math.min(draw * 1.4, 1)); strokePath([[-.35, -.1], [0, -.5], [.35, -.1]], k, Math.max((draw - .3) / .7, 0)); },
+  lock: (k, draw) => {
+    ctx.save(); ctx.globalAlpha = Math.min(draw * 2, 1);
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-.4 * k, -.05 * k, .8 * k, .55 * k, .08 * k) : ctx.rect(-.4 * k, -.05 * k, .8 * k, .55 * k); ctx.fill();
+    ctx.globalAlpha = Math.max(Math.min((draw - .5) * 2, 1), 0);
+    ctx.beginPath(); ctx.arc(0, -.05 * k, .28 * k, Math.PI, 0); ctx.lineWidth = k * .12; ctx.stroke(); ctx.restore();
+  },
+  warning: (k, draw) => {
+    strokePath([[0, -.5], [-.48, .42], [.48, .42], [0, -.5]], k, Math.min(draw * 1.3, 1));
+    ctx.save(); ctx.globalAlpha = Math.max(Math.min((draw - .6) * 3, 1), 0);
+    ctx.beginPath(); ctx.arc(0, .18 * k, k * .045, 0, 7); ctx.fill();
+    ctx.lineWidth = k * .09; ctx.beginPath(); ctx.moveTo(0, -.18 * k); ctx.lineTo(0, .02 * k); ctx.stroke(); ctx.restore();
+  },
+  bolt: (k, draw) => { strokePath([[.12, -.5], [-.35, .08], [.02, .08], [-.12, .5], [.35, -.1], [-.02, -.1], [.12, -.5]], k, draw); },
+  eye: (k, draw) => {
+    strokePath([[-.5, 0], [0, -.3], [.5, 0], [0, .3], [-.5, 0]], k, Math.min(draw * 1.4, 1));
+    ctx.save(); ctx.globalAlpha = Math.max(Math.min((draw - .4) * 2, 1), 0);
+    ctx.beginPath(); ctx.arc(0, 0, k * .16, 0, 7); ctx.fill(); ctx.restore();
+  },
+  euro: (k, draw) => { ctx.save(); ctx.globalAlpha = Math.min(draw * 1.4, 1); ctx.fillStyle = ctx.strokeStyle; ctx.font = `800 ${k * 1.05}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('€', 0, k * .04); ctx.restore(); },
+};
+function strokePath(pts, k, draw) {
+  if (draw <= 0) return;
+  const segs = pts.length - 1, p = Math.max(0, Math.min(1, draw)) * segs;
+  ctx.beginPath(); ctx.moveTo(pts[0][0] * k, pts[0][1] * k);
+  for (let i = 0; i < segs; i++) {
+    const f = Math.max(0, Math.min(1, p - i));
+    if (f <= 0) break;
+    ctx.lineTo(lerp(pts[i][0], pts[i + 1][0], f) * k, lerp(pts[i][1], pts[i + 1][1], f) * k);
+  }
+  ctx.stroke();
+}
+/** Dibuja un icono de ICONS en una placa circular (como un badge). `draw`: 0-1, progreso del trazo. */
+function iconBadge(name, cx, cy, size, color, draw = 1, bg = 'rgba(16,20,34,.92)') {
+  if (draw <= 0) return;  // antes: la placa (fondo+borde) se veía a plena opacidad aunque el trazo aún no hubiera empezado
+  const r = size * .62, plateA = Math.min(draw * 3, 1);  // la placa aparece rápido (pop), el trazo del icono sigue a `draw`
+  ctx.save(); ctx.translate(cx, cy); ctx.globalAlpha = plateA;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fillStyle = bg; ctx.fill();
+  ctx.strokeStyle = hexA(color, .7); ctx.lineWidth = 2.5 * u; ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = color; ctx.lineWidth = size * .11; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.fillStyle = color;
+  (ICONS[name] || ICONS.check)(size * .68, draw);
+  ctx.restore();
+}
+
+/** Texto que se escribe letra a letra (máquina de escribir). `cps` = caracteres/segundo. Alinea igual que fillText normal. */
+function typewriter(text, x, y, size, color, T, tIn, cps = 18, align = 'left') {
+  const n = Math.max(0, Math.floor((T - tIn) * cps));
+  if (n <= 0) return;
+  ctx.save(); ctx.fillStyle = color; ctx.font = font(size, 700); ctx.textAlign = align; ctx.textBaseline = 'middle';
+  const shown = text.slice(0, n);
+  ctx.fillText(shown, x, y);
+  if (n < text.length && Math.floor(T * 2.4) % 2 === 0) {  // cursor parpadeante determinista (sin Math.random)
+    const w = ctx.measureText(shown).width, cx0 = align === 'left' ? x + w + size * u * .08 : align === 'right' ? x - w : x;
+    ctx.fillRect(cx0, y - size * u * .55, size * u * .08, size * u * 1.1);
+  }
+  ctx.restore();
+}
+
+/** Cifra que cuenta de `from` a `to` entre tIn y tOut (ease-out), con separador de miles. */
+function countUp(from, to, T, tIn, tOut, decimals = 0) {
+  const v = lerp(from, to, easeOut(sub(T, tIn, tOut)));
+  return v.toLocaleString('es-ES', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+/** Subrayado/resaltado que CRECE de izquierda a derecha (como si lo pintaras con un rotulador), detrás o bajo un texto. */
+function highlightSweep(x, y, w, h, prog, color) {
+  if (prog <= 0) return;
+  ctx.save(); ctx.fillStyle = hexA(color, .38);
+  rr(x, y, w * clamp(prog), h, h / 2); ctx.fill(); ctx.restore();
+}
+
+/** Anillo de progreso (cargas, pasos, cuenta atrás). `prog` 0-1. */
+function progressRing(cx, cy, r, prog, color, trackColor = 'rgba(255,255,255,.12)') {
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineWidth = r * .16;
+  ctx.strokeStyle = trackColor; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke();
+  if (prog > 0) { ctx.strokeStyle = color; ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + 6.283 * clamp(prog)); ctx.stroke(); }
+  ctx.restore();
+}
+
+/** Ráfaga de partículas deterministas saliendo de (cx,cy). `prog` 0-1 (úsalo para un «pop» de énfasis puntual). */
+function burst(cx, cy, prog, color, n = 14, seed = 0) {
+  if (prog <= 0) return;
+  const e = easeOut(prog);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * 6.283 + rnd(seed + i) * 0.4, dist = (40 + rnd(seed + i + 50) * 60) * u * e;
+    ctx.save(); ctx.globalAlpha = 1 - e; ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(cx + Math.cos(a) * dist, cy + Math.sin(a) * dist, (2 + rnd(seed + i + 9) * 3) * u * (1 - e * .5), 0, 7); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ============================ ESCENAS (edita esto) ============================
+// `dur` = segundos de cada una. El total no debe pasar de la duración de la capa (end - start).
+const SCENES = [
+  { dur: 3, draw(t) {                                   // 1. título
+      bigText(P.title, innerWidth / 2, innerHeight * .38, 78, '#fff', easeOut(sub(t, 0, .6)));
+      ctx.fillStyle = P.accent; ctx.globalAlpha = easeOut(sub(t, .3, 1)); ctx.fillRect(innerWidth * .3, innerHeight * .46, innerWidth * .4 * easeOut(sub(t, .3, 1.2)), 6 * u); ctx.globalAlpha = 1;
+      callout(P.caption, t, .8, 3); } },
+  { dur: 5, draw(t) {                                   // 2. flujo con un mensaje que viaja
+      const xs = innerWidth / 2, ys = P.steps.map((_, i) => innerHeight * (.24 + .24 * i)), n = P.steps.length;
+      for (let i = 0; i < n - 1; i++) {
+        ctx.strokeStyle = 'rgba(180,195,255,.25)'; ctx.lineWidth = 3 * u; ctx.setLineDash([12 * u, 12 * u]);
+        ctx.beginPath(); ctx.moveTo(xs, ys[i]); ctx.lineTo(xs, ys[i + 1]); ctx.stroke(); ctx.setLineDash([]);
+      }
+      const p = sub(t, .6, 4.2) * (n - 1), seg = Math.min(Math.floor(p), n - 2), f = easeIO(p - seg);
+      P.steps.forEach((s, i) => node(s, xs, ys[i], i % 2 ? P.accent2 : P.accent, i === seg + (f > .5 ? 1 : 0)));
+      const y = lerp(ys[seg], ys[seg + 1], f);
+      if (p > 0 && p < n - 1 && ys.every(v => Math.abs(y - v) > 75 * u)) {  // solo viaja por los enlaces, no tapa las etiquetas
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xs, y, 16 * u, 0, 7); ctx.fill();
+        bigText(P.message, xs + 230 * u, y, 34, '#fff');
+      }
+      callout(P.caption, t, .4, 5); } },
+  { dur: 4, draw(t) {                                   // 3. resumen: tarjetas que aparecen en cascada
+      P.recap.forEach((r, i) => {
+        const at = saidAt(P.recapWords[i], null);          // aparece cuando se dice su palabra; si no, en cascada
+        const t0 = at == null ? .3 + i * .5 : at - this.t0 - .15;
+        const a = easeOut(sub(t, t0, t0 + .6)), y = innerHeight * (.28 + .16 * i) + (1 - a) * 40 * u;
+        ctx.save(); ctx.globalAlpha = a; rr(innerWidth * .07, y - 60 * u, innerWidth * .86, 120 * u, 24 * u);
+        ctx.fillStyle = 'rgba(16,20,34,.94)'; ctx.fill(); ctx.strokeStyle = hexA(P.accent, .6); ctx.lineWidth = 2.5 * u; ctx.stroke();
+        ctx.fillStyle = '#f2f5ff'; ctx.font = font(44, 700); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(r, innerWidth * .07 + 40 * u, y); ctx.restore();
+      }); } },
+  { dur: 5, draw(t) {                                   // 4. GALERÍA: iconos que se dibujan + contador + texto escrito + resaltado
+      // Ejemplo de cómo combinar la galería de arriba (bórralo si no te sirve; es solo referencia).
+      const items = [['check', 'Rápido'], ['lock', 'Seguro'], ['bolt', 'A tiempo']];
+      items.forEach(([ic, label], i) => {
+        const cx = innerWidth * (0.28 + i * 0.22), cy = innerHeight * .3, t0 = .2 + i * .35;
+        const pop = easeOut(sub(t, t0, t0 + .4));
+        ctx.save(); ctx.translate(0, (1 - pop) * 20 * u); ctx.globalAlpha = pop;
+        iconBadge(ic, cx, cy, 70 * u, P.accent, easeOut(sub(t, t0, t0 + .5)));
+        ctx.restore();
+        ctx.save(); ctx.globalAlpha = pop; ctx.fillStyle = '#dfe6ff'; ctx.font = font(26, 700);
+        ctx.textAlign = 'center'; ctx.fillText(label, cx, cy + 62 * u); ctx.restore();
+      });
+      ctx.font = font(44, 800);
+      const label = 'resultado:', vw = ctx.measureText(label).width;
+      highlightSweep(innerWidth / 2 - vw / 2 - 10 * u, innerHeight * .56 - 30 * u, vw + 20 * u, 60 * u, sub(t, 1.6, 2.1), P.accent2);
+      ctx.save(); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, innerWidth / 2, innerHeight * .56); ctx.restore();
+      bigText(countUp(0, 100, t, 2, 3.2) + ' %', innerWidth / 2, innerHeight * .68, 64, P.accent, easeOut(sub(t, 1.9, 2.4)));
+      typewriter('> ' + P.caption, innerWidth * .08, innerHeight * .8, 28, '#9fb0ff', t, 2.6, 22);
+      burst(innerWidth / 2, innerHeight * .68, sub(t, 3.1, 3.5), P.accent, 16, 3); } },
+  { dur: 5.6, draw(t) {                                 // 5. CÁMARA + NAVEGADOR + PAQUETE EN ARCO (plano cinematográfico)
+      // Referencia de estilo: cuando la idea tenga composición espacial (algo que viaja, un detalle al que acercarse),
+      // mueve la CÁMARA (camTo/W/wText) en vez de dejarlo todo quieto en coordenadas de pantalla fijas.
+      camTo(t < 2.4 ? 1180 : 820, 460, t < 2.4 ? 1 : 1.18, .045);
+      browserChrome(innerWidth * .06, innerHeight * .07, innerWidth * .52, 150 * u, 'https://ejemplo.com/api/accion', t, .2, 16);
+      wText(1180, 460, 'Servidor', P.accent2, 58);
+      const p = sub(t, 2.3, 3.7);
+      if (p > 0) {
+        const pt = arcPt({ x: 460, y: 540 }, { x: 1120, y: 500 }, -150, easeOut(p));
+        const [px, py] = W(pt.x, pt.y); ctx.fillStyle = P.accent; ctx.beginPath(); ctx.arc(px, py, 10 * worldScale(), 0, 7); ctx.fill();
+      }
+      iconBadge('check', innerWidth * .66, innerHeight * .74, 86 * u, P.accent2, easeOut(sub(t, 3.7, 4.3)));
+      callout('La cámara acompaña lo que pasa, no solo el texto', t, .6, 5.4); } },
+];
+let acc = 0; for (const sc of SCENES) { sc.t0 = acc; acc += sc.dur; }   // inicio de cada escena (s desde el inicio de la capa)
+const TOTAL = acc;
+
+// ============================ bucle (no cambies este patrón) ============================
+let T = 0, last = performance.now();
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, 0.05); last = now; T += dt;
+  updateCam(dt, T); // inocuo si no usas camTo/P/wText: la cámara se queda centrada y quieta
+  let t = Math.min(T, TOTAL - 0.001), i = 0;
+  while (i < SCENES.length - 1 && t >= SCENES[i].dur) { t -= SCENES[i].dur; i++; }
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  drawBackground(T);
+  const fade = Math.min(sub(t, 0, .25), 1 - sub(t, SCENES[i].dur - .25, SCENES[i].dur));
+  ctx.globalAlpha = i === SCENES.length - 1 ? sub(t, 0, .25) : fade;
+  SCENES[i].draw(t);
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

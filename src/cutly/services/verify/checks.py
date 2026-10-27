@@ -57,6 +57,32 @@ def _label(layer) -> str:
     return f"'{layer.name or layer.id}' ({layer.type})"
 
 
+def _code_scene_issues(visible: list, dur: float) -> list[Issue]:
+    """Escenas `code`: comprobaciones baratas (solo texto fuente y tiempos; el análisis en ejecución es
+    `POST /projects/{id}/layers/{layer_id}/lint`). Dos a la vez, o una larguísima, se pagan caras en el render."""
+    from cutly.schema.project import SceneLayer
+
+    out: list[Issue] = []
+    scenes = [x for x in visible if isinstance(x, SceneLayer) and x.code is not None]
+    try:
+        from cutly.services.scene_js.lint import LintResult, static_issues
+        from cutly.services.scene_js.renderer import MAX_SECONDS
+    except ImportError:  # el extra del navegador no está instalado: no hay nada más que comprobar aquí
+        return out
+    for layer in scenes:
+        res = LintResult()
+        static_issues(layer.code, res)
+        for i in res.issues:
+            out.append(Issue(i.severity, f"scene_code_{i.code}", f"Escena de código {_label(layer)}: {i.message}", layer.start, layer.id, i.suggestion or None))  # fmt: skip
+        if layer.end - layer.start > MAX_SECONDS:
+            out.append(Issue("warning", "scene_code_long", f"La escena de código {_label(layer)} dura {layer.end - layer.start:.0f} s y solo se renderizan {MAX_SECONDS} s.", layer.start, layer.id, "Divídela en escenas de 8-15 s."))  # fmt: skip
+    for i, a in enumerate(scenes):
+        for b in scenes[i + 1 :]:
+            if min(a.end, b.end, dur) - max(a.start, b.start) > 0.5:
+                out.append(Issue("warning", "scene_code_overlap", f"Las escenas de código {_label(a)} y {_label(b)} se solapan: cada una cuesta ~12× tiempo real y casi 900 MB.", max(a.start, b.start), b.id, "Una escena de código a la vez: sepáralas en el tiempo."))  # fmt: skip
+    return out
+
+
 def check_layers(doc: ProjectDoc, W: int, H: int) -> list[Issue]:
     out: list[Issue] = []
     dur = doc.duration
@@ -130,6 +156,7 @@ def check_layers(doc: ProjectDoc, W: int, H: int) -> list[Issue]:
                     "Ajusta start/end.",
                 )
             )
+    out += _code_scene_issues(visible, dur)
     # solapes entre capas visibles de contenido (no formas ni efectos)
     content = [
         (layer, layer_rect(layer, W, H))

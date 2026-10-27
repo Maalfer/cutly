@@ -168,26 +168,6 @@ def test_template_scene_scales_with_duration():
     assert last(long) == pytest.approx(last(short) * 3, rel=0.02)
 
 
-def test_race_condition_fail_moment_depends_on_request_count():
-    """Con más peticiones en paralelo, la cruz de «fallo» y el valor final deben aparecer más tarde
-    (la ráfaga tarda más en completarse), y los textos antes/después no se solapan en el tiempo."""
-    from cutly.schema.scene import Dot, Node, Text
-
-    def fail_time(scene):
-        return next(o.at for o in scene.objects if o.type == "node" and getattr(o, "kind", None) == "cross")
-
-    few = TP.build_template("race_condition", {"requests": 3}, 8)
-    many = TP.build_template("race_condition", {"requests": 10}, 8)
-    assert fail_time(many) > fail_time(few)
-    dots = [o for o in few.objects if isinstance(o, Dot)]
-    assert len(dots) == 1 and dots[0].count == 3
-    locks = [o for o in few.objects if isinstance(o, Node) and o.kind == "lock"]
-    assert locks and locks[0].keys and locks[0].keys[0].t == pytest.approx(fail_time(few))
-    before = next(o for o in few.objects if isinstance(o, Text) and o.text == "1 uso")
-    after = next(o for o in few.objects if isinstance(o, Text) and o.text == "N usos")
-    assert before.until == pytest.approx(after.at) and before.at < after.at
-
-
 # --- API ----------------------------------------------------------------------------------------------------------
 
 

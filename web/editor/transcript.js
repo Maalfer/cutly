@@ -56,9 +56,9 @@ export function TranscriptPanel() {
       <button class="seg-time" disabled=${out == null} title=${out == null ? 'Fuera del tramo' : 'Ir a este punto'} onClick=${() => out != null && rt.player?.seek(out)}>${out != null ? fmtClock(out) : '—'}</button>
       ${editing === s.id
         ? html`<textarea autofocus rows="2" onBlur=${(/** @type {Event} */ e) => save(s, /** @type {HTMLTextAreaElement} */ (e.target).value)} onKeyDown=${(/** @type {KeyboardEvent} */ e) => { if (e.key === 'Escape') setEditing(null); if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); /** @type {HTMLElement} */ (e.target).blur(); } e.stopPropagation(); }}>${s.text}</textarea>`
-        : html`<span class="seg-text" tabindex="0" title="Doble clic para corregir el texto" onDblClick=${() => setEditing(s.id)} onKeyDown=${(/** @type {KeyboardEvent} */ e) => { if (e.key === 'Enter') setEditing(s.id); }}>${s.text}</span>`}
+        : html`<span class="seg-text" tabindex="0" title="Doble clic para corregir el texto" onDblClick=${() => setEditing(s.id)} onClick=${() => { if (matchMedia('(pointer: coarse)').matches) setEditing(s.id); }} onKeyDown=${(/** @type {KeyboardEvent} */ e) => { if (e.key === 'Enter') setEditing(s.id); }}>${s.text}</span>`}
     </div>`)}</div>
-    <p class="muted tiny pad">Doble clic en una frase para corregirla; los subtítulos se actualizan al instante.</p>
+    <p class="muted tiny pad">Doble clic (o un toque en el móvil) en una frase para corregirla; los subtítulos se actualizan al instante.</p>
   </div>`;
 }
 const s_in = (/** @type {any} */ s, /** @type {any} */ c) => s.end > c.source_in && s.start < c.source_out;
