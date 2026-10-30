@@ -46,7 +46,9 @@ def me(p: Principal = Depends(current_principal)):
 
 
 @router.get("/api-keys")
-def list_keys(_: Principal = Depends(require_write), session: Session = Depends(get_session)):
+def list_keys(p: Principal = Depends(require_write), session: Session = Depends(get_session)):
+    if p.kind != "user":
+        raise HTTPException(403, "Solo una sesión web puede listar API keys")
     keys = session.exec(select(ApiKey)).all()
     return [k.model_dump(exclude={"key_hash"}) for k in keys]
 

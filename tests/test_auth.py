@@ -48,6 +48,15 @@ def test_read_only_key_cannot_write(client):
     assert client.get("/api/v1/api-keys", headers=h).status_code == 403
 
 
+def test_write_key_cannot_list_api_keys(client):
+    """GET /api-keys es gestión de credenciales (como POST/DELETE): solo la sesión web, nunca un portador de clave."""
+    with Session(get_engine()) as s:
+        _, token = generate_api_key(s, "agente-externo", can_write=True)
+    h = {"Authorization": f"Bearer {token}"}
+    assert client.get("/api/v1/auth/me", headers=h).json()["can_write"] is True
+    assert client.get("/api/v1/api-keys", headers=h).status_code == 403
+
+
 def test_web_is_served_with_strict_csp(client):
     r = client.get("/")
     assert r.status_code == 200 and "importmap" in r.text
