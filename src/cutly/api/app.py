@@ -7,7 +7,8 @@ from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
@@ -29,6 +30,7 @@ from cutly.api.routers import (
     uploads,
     verify,
 )
+from cutly.auth import Principal, require_read
 from cutly.config import get_settings
 from cutly.db.session import init_db
 
@@ -53,8 +55,11 @@ def create_app() -> FastAPI:
         version="0.1.0",
         description="Editor de vídeo API-first. La web y Claude (MCP) usan estos mismos endpoints.",
         lifespan=lifespan,
-        docs_url="/api/v1/docs",
-        openapi_url="/api/v1/openapi.json",
+        # Documentación y esquema deshabilitados por defecto: se exponen más abajo detrás de autenticación
+        # (sin esto, cualquiera sin sesión ni API key podía ver el mapa completo de la API).
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
     )
 
     hits: dict[str, deque] = defaultdict(deque)
@@ -85,6 +90,18 @@ def create_app() -> FastAPI:
     @app.get("/api/v1/health", tags=["system"])
     def health():
         return {"status": "ok"}
+
+    @app.get("/api/v1/openapi.json", include_in_schema=False)
+    def openapi_spec(_: Principal = Depends(require_read)):
+        return JSONResponse(app.openapi())
+
+    @app.get("/api/v1/docs", include_in_schema=False)
+    def swagger_docs(_: Principal = Depends(require_read)):
+        return get_swagger_ui_html(openapi_url="/api/v1/openapi.json", title=f"{app.title} - Docs")
+
+    @app.get("/redoc", include_in_schema=False)
+    def redoc_docs(_: Principal = Depends(require_read)):
+        return get_redoc_html(openapi_url="/api/v1/openapi.json", title=f"{app.title} - ReDoc")
 
     for r in (
         auth,
