@@ -4,6 +4,7 @@ import json
 import re
 import shutil
 import subprocess
+import tempfile
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -61,18 +62,23 @@ def _check_schema(schema: dict) -> None:
 
 
 def _dry_run(defn: R.EffectDef) -> None:
+    """Prueba la cadena con FFmpeg sobre un vídeo de prueba mínimo."""
     try:
         chain = ",".join(R.build_filters(defn, {}, EffectCtx(0.2, 0.8, 128, 128, 10)))
     except Exception as e:
         raise HTTPException(422, f"La cadena de filtros no es válida: {e}") from e
     cmd = ["ffmpeg", "-nostdin", "-v", "error", "-f", "lavfi", "-i", "testsrc=size=128x128:rate=10:duration=1",
            "-vf", chain, "-frames:v", "10", "-f", "null", "-"]
-    try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-    except subprocess.TimeoutExpired as e:
-        raise HTTPException(422, "La cadena de filtros tarda demasiado en una prueba mínima") from e
+    # cwd dedicado: aunque la lista blanca de opciones ya impide que un filtro lea o escriba rutas,
+    # FFmpeg no necesita acceso al directorio de trabajo real del proceso para esta prueba.
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=30, cwd=tmp)
+        except subprocess.TimeoutExpired as e:
+            raise HTTPException(422, "La cadena de filtros tarda demasiado en una prueba mínima") from e
     if r.returncode != 0:
-        raise HTTPException(422, "La cadena de filtros no es válida") from e
+        # No se devuelve el stderr de FFmpeg: podría revelar si una ruta del sistema existe o no.
+        raise HTTPException(422, "La cadena de filtros no es válida para FFmpeg")
 
 
 @router.get("/effects")
@@ -150,3 +156,4 @@ def delete_effect(name: str, _: Principal = Depends(require_write)):
 def reload_effects(_: Principal = Depends(require_write)):
     R.reload()
     return {"count": len(R.all_effects()), "broken": R.errors()}
+

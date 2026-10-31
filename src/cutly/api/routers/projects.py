@@ -3,7 +3,7 @@
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 from sqlmodel import Session, select
 
 from cutly.auth import Principal, require_read, require_write
@@ -14,6 +14,7 @@ from cutly.schema.project import Layer, ProjectDoc, timeline_starts
 from cutly.services.projects import store
 from cutly.services.projects.check import check_project
 from cutly.services.projects.hooks import check_layer
+from cutly.services.sanitize.text import sanitize_label
 from cutly.services.scene_js.kinetic import TitleSpec, build_title_layer
 
 router = APIRouter(tags=["projects"])
@@ -29,6 +30,11 @@ class ProjectCreate(BaseModel):
     source_out: float | None = Field(None, gt=0)
     subtitles: bool = Field(True, description="Añade una layer de subtítulos desde la transcripción si existe")
     layout: Literal["vertical", "horizontal"] = Field("vertical", description="vertical = 1080x1920 (reels/shorts, recorte centrado); horizontal = 1920x1080 sin recorte (YouTube, clips largos de un directo)")
+
+    @field_validator("name")
+    @classmethod
+    def _sanitize_name(cls, v: str | None) -> str | None:
+        return sanitize_label(v) or None if v is not None else v
 
 
 class OpsIn(BaseModel):
@@ -53,6 +59,14 @@ class LayerPatchIn(BaseModel):
 
 class RenameIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
+
+    @field_validator("name")
+    @classmethod
+    def _sanitize_name(cls, v: str) -> str:
+        v = sanitize_label(v)
+        if not v:
+            raise ValueError("El nombre no puede estar vacío")
+        return v
 
 
 def _row(session: Session, project_id: str) -> Project:

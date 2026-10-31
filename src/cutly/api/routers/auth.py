@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from sqlmodel import Session, select
 
 from cutly.auth import (
@@ -11,6 +11,7 @@ from cutly.auth import (
 )
 from cutly.db.models import ApiKey, User
 from cutly.db.session import get_session
+from cutly.services.sanitize.text import sanitize_label
 
 router = APIRouter(tags=["auth"])
 
@@ -21,8 +22,16 @@ class LoginIn(BaseModel):
 
 
 class KeyIn(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=120)
     can_write: bool = False
+
+    @field_validator("name")
+    @classmethod
+    def _sanitize_name(cls, v: str) -> str:
+        v = sanitize_label(v)
+        if not v:
+            raise ValueError("El nombre no puede estar vacío")
+        return v
 
 
 @router.post("/auth/login")

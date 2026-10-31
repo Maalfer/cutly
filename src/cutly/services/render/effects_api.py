@@ -13,7 +13,100 @@ ALLOWED_FILTERS = {
     "curves", "negate", "fade", "unsharp", "lutyuv", "lutrgb", "format", "setsar", "colorchannelmixer", "chromashift",
     "pad", "hflip", "vflip", "rotate", "colorlevels", "colortemperature", "tmix", "tblend", "lenscorrection", "edgedetect",
 }  # fmt: skip
+
+# Para cada filtro permitido, solo estas opciones (nombre completo o alias corto de FFmpeg) pueden aparecer.
+# Que el nombre del filtro esté en la lista blanca no basta: algunos (p. ej. curves con plot=/psfile=) tienen
+# opciones que leen o escriben rutas del sistema de ficheros. Aquí solo se expone el subconjunto sin esa semántica.
+ALLOWED_FILTER_OPTIONS: dict[str, set[str]] = {
+    "scale": {"w", "h", "flags", "eval", "interl", "force_original_aspect_ratio", "force_divisible_by", "enable"},
+    "crop": {"w", "h", "x", "y", "keep_aspect", "exact", "enable"},
+    "eq": {"contrast", "brightness", "saturation", "gamma", "gamma_r", "gamma_g", "gamma_b", "gamma_weight", "eval", "enable"},
+    "rgbashift": {"rh", "rv", "gh", "gv", "bh", "bv", "ah", "av", "edge", "enable"},
+    "vignette": {"angle", "a", "x0", "y0", "mode", "eval", "dither", "aspect", "enable"},
+    "noise": {
+        "all_seed", "all_strength", "alls", "allf",
+        "c0_seed", "c0_strength", "c0s", "c0f", "c1_seed", "c1_strength", "c1s", "c1f",
+        "c2_seed", "c2_strength", "c2s", "c2f", "c3_seed", "c3_strength", "c3s", "c3f", "enable",
+    },  # fmt: skip
+    "drawbox": {"x", "y", "w", "h", "color", "c", "thickness", "t", "replace", "box", "enable"},
+    "hue": {"h", "s", "H", "b", "eval", "enable"},
+    "gblur": {"sigma", "sigmaV", "steps", "planes", "enable"},
+    "boxblur": {
+        "luma_radius", "lr", "luma_power", "lp", "chroma_radius", "cr", "chroma_power", "cp",
+        "alpha_radius", "ar", "alpha_power", "ap", "enable",
+    },  # fmt: skip
+    "colorbalance": {"rs", "gs", "bs", "rm", "gm", "bm", "rh", "gh", "bh", "pl", "enable"},
+    "curves": {"preset", "master", "m", "r", "g", "b", "all", "red", "green", "blue", "interp", "eval", "enable"},
+    "negate": {"negate_alpha", "enable"},
+    "fade": {"type", "t", "start_frame", "s", "nb_frames", "n", "alpha", "start_time", "st", "duration", "d", "color", "c", "enable"},
+    "unsharp": {
+        "luma_msize_x", "lx", "luma_msize_y", "ly", "luma_amount", "la",
+        "chroma_msize_x", "cx", "chroma_msize_y", "cy", "chroma_amount", "ca",
+        "alpha_msize_x", "ax", "alpha_msize_y", "ay", "alpha_amount", "aa", "enable",
+    },  # fmt: skip
+    "lutyuv": {"c0", "c1", "c2", "c3", "y", "u", "v", "a", "enable"},
+    "lutrgb": {"c0", "c1", "c2", "c3", "r", "g", "b", "a", "enable"},
+    "format": {"pix_fmts", "enable"},
+    "setsar": {"sar", "r", "max", "enable"},
+    "colorchannelmixer": {
+        "rr", "rg", "rb", "ra", "gr", "gg", "gb", "ga", "br", "bg", "bb", "ba",
+        "ar", "ag", "ab", "aa", "pc", "pa", "enable",
+    },  # fmt: skip
+    "chromashift": {"cbh", "cbv", "crh", "crv", "edge", "enable"},
+    "pad": {"width", "w", "height", "h", "x", "y", "color", "c", "eval", "aspect", "enable"},
+    "hflip": {"enable"},
+    "vflip": {"enable"},
+    "rotate": {"angle", "a", "out_w", "ow", "out_h", "oh", "fillcolor", "c", "bilinear", "enable"},
+    "colorlevels": {
+        "rimin", "gimin", "bimin", "aimin", "romin", "gomin", "bomin", "aomin",
+        "rimax", "gimax", "bimax", "aimax", "romax", "gomax", "bomax", "aomax", "preserve", "enable",
+    },  # fmt: skip
+    "colortemperature": {"temperature", "mix", "pl", "enable"},
+    "tmix": {"frames", "weights", "scale", "planes", "enable"},
+    "tblend": {
+        "c0_mode", "c1_mode", "c2_mode", "c3_mode", "all_mode",
+        "c0_expr", "c1_expr", "c2_expr", "c3_expr", "all_expr",
+        "c0_opacity", "c1_opacity", "c2_opacity", "c3_opacity", "all_opacity",
+        "shortest", "repeatlast", "enable",
+    },  # fmt: skip
+    "lenscorrection": {"cx", "cy", "k1", "k2", "i", "fc", "enable"},
+    "edgedetect": {"low", "high", "mode", "planes", "enable"},
+}
+assert ALLOWED_FILTER_OPTIONS.keys() == ALLOWED_FILTERS
+
 _FILTER = re.compile(r"^([a-z0-9_]+)(=([A-Za-z0-9_.,:'()+\-*/<>=!&|%@ \[\]]*))?$")
+_OPTION_KEY = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)=")
+
+
+def _split_options(opts: str) -> list[str]:
+    """Divide las opciones de un filtro por ':' de nivel superior (respeta las comillas simples)."""
+    tokens, current, in_quotes = [], [], False
+    for c in opts:
+        if c == "'":
+            in_quotes = not in_quotes
+            current.append(c)
+        elif c == ":" and not in_quotes:
+            tokens.append("".join(current))
+            current = []
+        else:
+            current.append(c)
+    tokens.append("".join(current))
+    return tokens
+
+
+def _check_options(name: str, opts: str) -> None:
+    """Cada opción con nombre (`clave=valor`) debe estar en la lista blanca del filtro `name`.
+
+    Los valores posicionales (sin `clave=`) se dejan pasar: ninguno de los filtros permitidos interpreta
+    un valor posicional como ruta de fichero.
+    """
+    allowed = ALLOWED_FILTER_OPTIONS[name]
+    for token in _split_options(opts):
+        m = _OPTION_KEY.match(token)
+        if m and m.group(1) not in allowed:
+            raise EffectBuildError(
+                f"Opción '{m.group(1)}' no permitida en el filtro '{name}'. Permitidas: {', '.join(sorted(allowed))}"
+            )
 
 
 class EffectBuildError(ValueError):
@@ -116,4 +209,6 @@ def validate_filters(filters: list[str]) -> list[str]:
             )
         if node.count("'") % 2:
             raise EffectBuildError(f"Comillas sin cerrar en el filtro: {node!r}")
+        _check_options(m.group(1), m.group(3) or "")
     return filters
+
