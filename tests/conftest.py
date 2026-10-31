@@ -10,6 +10,7 @@ Settings.model_config["env_file"] = None
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
+    monkeypatch.setenv("CUTLY_ENV", "dev")  # evita exigir un CUTLY_SESSION_SECRET real en los tests
     monkeypatch.setenv("CUTLY_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("CUTLY_DATABASE_URL", f"sqlite:///{tmp_path}/t.db")
     monkeypatch.setenv("CUTLY_QUEUE_MODE", "inline")

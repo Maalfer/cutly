@@ -9,7 +9,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="CUTLY_", env_file=".env", extra="ignore")
 
-    env: str = "dev"
+    # Por defecto "prod": si se olvida configurar CUTLY_ENV en un despliegue real, la cookie de sesión
+    # sigue llevando el atributo Secure en vez de quedarse en texto claro sobre HTTP sin que nadie lo note.
+    # El desarrollo local declara CUTLY_ENV=dev explícitamente (ver tests/conftest.py).
+    env: str = "prod"
     data_dir: Path = Path("./data")
     database_url: str = "sqlite:///./data/cutly.db"
     redis_url: str = "redis://localhost:6379/0"
@@ -61,4 +64,11 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    s = Settings()
+    if s.env == "prod" and s.session_secret == "cambia-esto":
+        raise RuntimeError(
+            "CUTLY_SESSION_SECRET no está configurado (sigue en el valor de ejemplo del código). "
+            "En producción esto permite forjar cookies de sesión de cualquier usuario: "
+            "define CUTLY_SESSION_SECRET con un valor aleatorio, o CUTLY_ENV=dev si es un entorno local."
+        )
+    return s
