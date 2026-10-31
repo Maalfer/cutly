@@ -31,7 +31,7 @@ class EffectCreate(BaseModel):
         min_length=1, max_length=8,
         description="Filtros de FFmpeg con huecos {param}, {env} (intensidad 0..1 en el tiempo), {t0}, {t1}, {W}, {H}, {window}. "
         "Solo filtros de la lista blanca (GET /effects/allowed-filters).",
-    )  # fmt: skip
+    )
 
 
 def _check_schema(schema: dict) -> None:
@@ -61,21 +61,22 @@ def _check_schema(schema: dict) -> None:
 
 
 def _dry_run(defn: R.EffectDef) -> None:
-    """Prueba la cadena con FFmpeg sobre un vídeo de prueba mínimo: así no se guarda un efecto que luego falle al renderizar."""
-    chain = ",".join(R.build_filters(defn, {}, EffectCtx(0.2, 0.8, 128, 128, 10)))
+    try:
+        chain = ",".join(R.build_filters(defn, {}, EffectCtx(0.2, 0.8, 128, 128, 10)))
+    except Exception as e:
+        raise HTTPException(422, f"La cadena de filtros no es válida: {e}") from e
     cmd = ["ffmpeg", "-nostdin", "-v", "error", "-f", "lavfi", "-i", "testsrc=size=128x128:rate=10:duration=1",
-           "-vf", chain, "-frames:v", "10", "-f", "null", "-"]  # fmt: skip
+           "-vf", chain, "-frames:v", "10", "-f", "null", "-"]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
     except subprocess.TimeoutExpired as e:
         raise HTTPException(422, "La cadena de filtros tarda demasiado en una prueba mínima") from e
     if r.returncode != 0:
-        raise HTTPException(422, f"FFmpeg rechaza la cadena de filtros: {r.stderr.strip()[-300:]}")
+        raise HTTPException(422, "La cadena de filtros no es válida") from e
 
 
 @router.get("/effects")
 def list_effects(q: str | None = None, category: str | None = None, _: Principal = Depends(require_read)):
-    """Efectos disponibles con su esquema de parámetros y una layer de ejemplo lista para usar en `add_layer`."""
     out = [e.public() for e in R.all_effects()]
     if category:
         out = [e for e in out if e["category"] == category]
@@ -102,7 +103,6 @@ def describe_effect(name: str, _: Principal = Depends(require_read)):
 
 @router.get("/effects/{name}/preview.js")
 def effect_preview(name: str, _: Principal = Depends(require_read)):
-    """Módulo ES del preview del navegador: `export function render(ctx, img, params, progress, size)`."""
     try:
         e = R.get(name)
     except R.EffectParamError as ex:
@@ -114,15 +114,14 @@ def effect_preview(name: str, _: Principal = Depends(require_read)):
 
 @router.post("/effects")
 def create_effect(body: EffectCreate, _: Principal = Depends(require_write)):
-    """Crea un efecto declarativo (sin código): una cadena de filtros de FFmpeg parametrizada y validada."""
     if body.name in {e.name for e in R.all_effects() if e.source == "builtin"}:
         raise HTTPException(409, f"'{body.name}' es un efecto incluido; elige otro nombre")
     _check_schema(body.params_schema)
     meta = {"name": body.name, "title": body.title, "description": body.description, "category": body.category,
-            "tags": body.tags, "params_schema": body.params_schema, "chain": body.chain}  # fmt: skip
+            "tags": body.tags, "params_schema": body.params_schema, "chain": body.chain}
     probe = R.EffectDef(name=body.name, title=body.title, description=body.description, category=body.category,
-                        params_schema=body.params_schema, source="user", template=body.chain)  # fmt: skip
-    try:  # prueba con los valores por defecto: si no genera filtros válidos, no se guarda
+                        params_schema=body.params_schema, source="user", template=body.chain)
+    try:
         R.build_filters(probe, {}, EffectCtx(1.0, 2.0, 1080, 1920, 30))
     except (EffectBuildError, R.EffectParamError) as e:
         raise HTTPException(422, f"La cadena de filtros no es válida: {e}") from e
@@ -149,6 +148,5 @@ def delete_effect(name: str, _: Principal = Depends(require_write)):
 
 @router.post("/effects-reload")
 def reload_effects(_: Principal = Depends(require_write)):
-    """Vuelve a leer la carpeta effects/ (tras copiar a mano un efecto nuevo al servidor)."""
     R.reload()
     return {"count": len(R.all_effects()), "broken": R.errors()}
