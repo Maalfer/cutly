@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlmodel import Session, select
 
 from cutly.auth import (
+    DUMMY_PASSWORD_HASH,
     Principal,
     current_principal,
     generate_api_key,
@@ -37,7 +38,11 @@ class KeyIn(BaseModel):
 @router.post("/auth/login")
 def login(body: LoginIn, request: Request, session: Session = Depends(get_session)):
     user = session.exec(select(User).where(User.username == body.username)).first()
-    if user is None or not verify_password(user.password_hash, body.password):
+    # Se calcula el hash siempre (señuelo si el usuario no existe): si no, el tiempo de respuesta
+    # delata qué usernames existen aunque el mensaje de error sea idéntico.
+    pw_hash = user.password_hash if user is not None else DUMMY_PASSWORD_HASH
+    valid = verify_password(pw_hash, body.password)
+    if user is None or not valid:
         raise HTTPException(401, "Usuario o contraseña incorrectos")
     request.session["user_id"] = user.id
     return {"username": user.username}

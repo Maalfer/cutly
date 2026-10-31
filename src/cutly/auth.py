@@ -20,6 +20,11 @@ def hash_password(pw: str) -> str:
     return _ph.hash(pw)
 
 
+# Hash señuelo para que un login con usuario inexistente cueste lo mismo que uno con contraseña
+# incorrecta (si no, el tiempo de respuesta delata qué usernames existen: CWE-208).
+DUMMY_PASSWORD_HASH = hash_password(secrets.token_urlsafe(32))
+
+
 def verify_password(pw_hash: str, pw: str) -> bool:
     try:
         return _ph.verify(pw_hash, pw)
