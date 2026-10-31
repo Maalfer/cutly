@@ -19,6 +19,13 @@ from cutly.services.render.effects_api import EffectBuildError, EffectCtx, env, 
 NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
 ENVELOPES = ["pulse", "in_out", "decay", "hold", "ramp"]
 
+# `pattern` y el valor que se le compara son ambos controlados por quien crea el efecto (incluido vía API).
+# Python `re` no tiene timeout: un patrón con retroceso catastrófico (p. ej. "^(a+)+$") contra un valor que
+# no casa consume CPU de forma exponencial con su longitud. Acotar ambas longitudes antes de evaluar deja
+# el peor caso en milisegundos sea cual sea el patrón.
+_MAX_PATTERN_LEN = 200
+_MAX_PATTERN_VALUE_LEN = 20
+
 
 class EffectParamError(ValueError):
     pass
@@ -87,8 +94,16 @@ def validate_params(schema: dict, params: dict) -> dict:
             raise EffectParamError(f"'{name}'={v} es mayor que el máximo {spec['maximum']}")
         if "enum" in spec and v not in spec["enum"]:
             raise EffectParamError(f"'{name}'='{v}' no es válido. Opciones: {spec['enum']}")
-        if "pattern" in spec and not re.match(spec["pattern"], str(v)):
-            raise EffectParamError(f"'{name}'='{v}' no tiene el formato esperado ({spec['pattern']})")
+        if "pattern" in spec:
+            pattern, value = spec["pattern"], str(v)
+            if len(pattern) > _MAX_PATTERN_LEN:
+                raise EffectParamError(f"El patrón de '{name}' es demasiado largo (máx. {_MAX_PATTERN_LEN} caracteres)")
+            if len(value) > _MAX_PATTERN_VALUE_LEN:
+                raise EffectParamError(
+                    f"'{name}' es demasiado largo para validarse por patrón (máx. {_MAX_PATTERN_VALUE_LEN} caracteres)"
+                )
+            if not re.match(pattern, value):
+                raise EffectParamError(f"'{name}'='{v}' no tiene el formato esperado ({pattern})")
         if "maxLength" in spec and len(str(v)) > spec["maxLength"]:
             raise EffectParamError(f"'{name}' es demasiado largo (máx. {spec['maxLength']})")
         out[name] = v
