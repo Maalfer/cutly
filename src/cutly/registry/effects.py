@@ -167,6 +167,27 @@ def all_effects() -> list[EffectDef]:
     return sorted((e for k, e in _all().items() if k != "__errors__"), key=lambda e: (e.category, e.name))
 
 
+_PLACEHOLDER = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
+
+def _fill_template(tpl: str, subs: dict) -> str:
+    """Sustituye solo marcadores `{nombre}` simples. La plantilla la define quien crea el efecto (incluso vía
+    API), así que NO se usa `str.format` directamente sobre ella: su minilenguaje permite acceder a atributos
+    ({x.__class__...}), usar índices posicionales no capturados aquí ({0}, lanza IndexError sin control) y,
+    sobre todo, un especificador de anchura ({x:>N}) que con N grande agota la memoria del proceso (CWE-134)."""
+
+    def repl(m: re.Match) -> str:
+        key = m.group(1)
+        if key not in subs:
+            raise EffectBuildError(f"La plantilla usa {{{key}}}, que no es un parámetro del efecto")
+        return str(subs[key])
+
+    out = _PLACEHOLDER.sub(repl, tpl)
+    if "{" in out or "}" in out:
+        raise EffectBuildError(f"Marcador de plantilla inválido en {tpl!r}: solo se admite {{nombre}}")
+    return out
+
+
 def get(name: str) -> EffectDef:
     e = _all().get(name)
     if e is None or name == "__errors__":
@@ -191,12 +212,7 @@ def build_filters(defn: EffectDef, params: dict, ctx: EffectCtx) -> list[str]:
         subs = {**{k: (f(v) if isinstance(v, float | int) and not isinstance(v, bool) else str(v)) for k, v in p.items()},
                 "env": e, "t0": f(ctx.t0), "t1": f(ctx.t1), "W": str(ctx.width), "H": str(ctx.height),
                 "window": f"between(t,{f(ctx.t0)},{f(ctx.t1)})"}  # fmt: skip
-        filters = []
-        for tpl in defn.template or []:
-            try:
-                filters.append(tpl.format(**subs))
-            except KeyError as ex:
-                raise EffectBuildError(f"La plantilla usa {{{ex.args[0]}}}, que no es un parámetro del efecto") from ex
+        filters = [_fill_template(tpl, subs) for tpl in (defn.template or [])]
     return validate_filters(filters)
 
 
