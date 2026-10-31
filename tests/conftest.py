@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -6,6 +8,9 @@ from cutly.db.session import reset_engine
 
 # Los tests nunca deben leer el .env de producción.
 Settings.model_config["env_file"] = None
+# A nivel de módulo (no en un fixture): algunos tests llaman a get_settings() en tiempo de colección
+# (p. ej. test_effects.py parametriza sobre R.all_effects()), antes de que corra ningún fixture.
+os.environ.setdefault("CUTLY_ENV", "dev")
 
 
 @pytest.fixture
