@@ -5,7 +5,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 
 from cutly.auth import Principal, require_read, require_write
 from cutly.config import get_settings
@@ -17,6 +17,23 @@ from cutly.worker.queue import enqueue
 
 router = APIRouter(tags=["render"])
 
+# El servidor tiene un único worker: un número ilimitado de renders en cola agota CPU y disco (CWE-770)
+# aunque cada petición individual sea legítima. Tope global, no por proyecto: el recurso que protege es
+# compartido por toda la instancia.
+MAX_PENDING_RENDERS = 10
+
+
+def _check_render_quota(session: Session) -> None:
+    pending = session.exec(
+        select(func.count()).select_from(Job).where(Job.type == "render", Job.status.in_(["queued", "running"]))
+    ).one()
+    if pending >= MAX_PENDING_RENDERS:
+        raise HTTPException(
+            429,
+            f"Hay {pending} renders en cola o en curso (máximo {MAX_PENDING_RENDERS}); "
+            "espera a que terminen antes de encolar más",
+        )
+
 
 class RenderIn(BaseModel):
     quality: Literal["final", "draft"] = "final"
@@ -27,6 +44,7 @@ class RenderIn(BaseModel):
 
 
 def _enqueue(session: Session, row: Project, quality: str, start: float | None = None, end: float | None = None) -> str:
+    _check_render_quota(session)
     doc = store.load_doc(session, row)
     if not doc.timeline:
         raise HTTPException(422, "El proyecto no tiene clips: añade uno con la operación add_clip antes de renderizar")
