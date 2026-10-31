@@ -141,7 +141,7 @@ def describe_template(name: str, _: Principal = Depends(require_read)):
 
 
 @router.post("/scenes/build")
-def build_scene(body: SceneSource, _: Principal = Depends(require_read)):
+def build_scene(body: SceneSource, _: Principal = Depends(require_write)):
     """Expande una plantilla a su escena completa (JSON editable): úsala como punto de partida para personalizarla
     y ponla en `layer.scene` (con `template` vacío)."""
     return resolve_scene(body).model_dump(mode="json", exclude_none=True)
@@ -290,7 +290,7 @@ def live_doc(
     code: str = Form(..., max_length=300_000),
     params: str = Form("{}", max_length=20_000),
     words: str = Form("[]", max_length=200_000),
-    _: Principal = Depends(require_read),
+    _: Principal = Depends(require_write),
 ):
     """Documento de una escena `code`, con el harness de reloj ya inyectado, para el `<iframe>` en vivo del
     editor web (`web/editor/scene-live.js`) — nunca se llama desde fuera de ahí. El editor navega un iframe
