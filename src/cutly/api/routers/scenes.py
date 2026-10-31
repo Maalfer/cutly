@@ -268,8 +268,11 @@ def lint(body: LintBody, _: Principal = Depends(require_write)):
     if not _busy.acquire(timeout=20):
         raise HTTPException(503, "Hay otra vista previa o validación en curso; reintenta en unos segundos")
     try:
-        from cutly.services.scene_js.lint import lint_scene
-        from cutly.services.scene_js.renderer import JsSceneError
+        try:
+            from cutly.services.scene_js.lint import lint_scene
+            from cutly.services.scene_js.renderer import JsSceneError
+        except ImportError as e:
+            raise HTTPException(503, f"Este servidor no tiene instalado el motor de navegador ({e})") from e
 
         try:
             res = lint_scene(body.code, body.width, body.height, body.duration, body.params, body.fps, body.words)
@@ -310,7 +313,10 @@ def live_doc(
         ]
     except (ValueError, KeyError, TypeError):
         wl = []
-    html = _inject_live_harness(code, parsed, wl)
+    try:
+        html = _inject_live_harness(code, parsed, wl)
+    except ImportError as e:
+        raise HTTPException(503, f"Este servidor no tiene instalado el motor de navegador ({e})") from e
     resp = HTMLResponse(html)
     resp.headers["X-Frame-Options"] = "SAMEORIGIN"  # el editor SÍ puede embeberlo (mismo origen); nadie más
     return resp
