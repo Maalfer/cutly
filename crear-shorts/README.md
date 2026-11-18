@@ -62,6 +62,7 @@ prueba (cada ejemplo trae su limpieza, p. ej. `DEMO-CLICKFIX/limpieza-restore.md
 | `METODOLOGIA/04-flujo-toma-video.md` | Protocolo de toma: fases, pacing, verificación, "no tocar" |
 | `METODOLOGIA/05-controlar-aplicaciones.md` | **Patrón general para conducir CUALQUIER app**: abrir/esperar/enfocar/cerrar, multi-app, sincronización, robustez |
 | `METODOLOGIA/06-navegador-y-herramientas-gui.md` | **Navegador** (URL, clics, formularios, pestañas, leer) y **herramientas GUI** (Burp Suite como caso) |
+| `METODOLOGIA/08-maquina-virtual.md` | **Controlar una VM (VirtualBox/Kali)** en vez del anfitrión: qué canal sirve para qué, resultados medidos (10/10), 6 fallos de montaje y comparación VM vs anfitrión |
 | `METODOLOGIA/07-auditoria-de-pruebas.md` | **Fallos reales** encontrados probando la navegación + **protocolo de pruebas** para validar el control en cualquier SO |
 
 **EJEMPLOS** (demos completas de referencia):

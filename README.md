@@ -61,7 +61,8 @@ cutly/
 │   │   ├── 04-flujo-toma-video.md    ←   protocolo de toma: fases, pacing, verificación
 │   │   ├── 05-controlar-aplicaciones.md        ←  conducir CUALQUIER app: abrir/esperar/enfocar/cerrar, multi-app
 │   │   ├── 06-navegador-y-herramientas-gui.md  ←  navegador + herramientas GUI (Burp Suite)
-│   │   └── 07-auditoria-de-pruebas.md          ←  fallos reales hallados probando + protocolo de pruebas por SO
+│   │   ├── 07-auditoria-de-pruebas.md          ←  fallos reales hallados probando + protocolo de pruebas por SO
+│   │   └── 08-maquina-virtual.md               ←  controlar una VM (VirtualBox/Kali): resultados medidos y comparación con el anfitrión
 │   ├── DEMO-CLICKFIX/                ←   ejemplo: demo ClickFix (exfiltración por copiar-y-pegar)
 │   │   ├── demo-completa.md · reproducir-paso-a-paso.md · limpieza-restore.md
 │   ├── DEMO-IDOR/                    ←   ejemplo: demo de IDOR con navegador + Burp Suite
@@ -77,7 +78,8 @@ cutly/
 │       ├── mac-control.sh            ←   funciones que HACEN y VERIFICAN (foco, colocar, clic, esperar); bash y zsh
 │       ├── tipear.py                 ←   teclea como una persona (ritmo variable, pausas, errores corregidos)
 │       ├── mover.py                  ←   mueve el cursor como una persona (curva, lento-rápido-lento)
-│       └── teclear.swift             ←   emisor de teclado Unicode y ratón (tildes OK; sin el coste de cliclick)
+│       ├── teclear.swift             ←   emisor de teclado Unicode y ratón (tildes OK; sin el coste de cliclick)
+│       └── vm_control.py             ←   controla una VM Linux/X11 de VirtualBox (xdotool por SSH + capturas de VBoxManage)
 │
 └── editor/                           ← FASE 2: editar la grabación en clips
     ├── CLAUDE.md                     ←   METODOLOGÍA PRINCIPAL de edición (directo → clips 16:9)
