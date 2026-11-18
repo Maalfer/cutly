@@ -13,20 +13,42 @@
 
 ## 1. Navegador — el caballo de batalla
 
+### 1.0 Perfil LIMPIO para grabar (importante para el vídeo y la privacidad)
+
+`open -a "Google Chrome"` abre **tu perfil real**: sale tu nombre de cuenta ("Hola, …"), tus extensiones
+(una abrió una pestaña "Upgraded - Wappalyzer" sola), tus marcadores, el autocompletado de tu historial… y
+todo eso queda **grabado**. Para grabar usa un perfil desechable:
+
+```bash
+PROF=/tmp/chrome-demo-profile        # cualquier carpeta; se crea sola y se puede borrar después
+open -na "Google Chrome" --args --user-data-dir="$PROF" --no-first-run --no-default-browser-check \
+     --disable-extensions "http://127.0.0.1:8765/"
+# -n abre una instancia NUEVA aparte de tu Chrome normal. Verificado: sin cuenta, sin extensiones, sin avisos.
+# Al terminar: pkill -f chrome-demo-profile      (solo mata la instancia de la demo, no tu Chrome)
+```
+Un perfil nuevo tampoco tiene historial, así que no hay autocompletado de URLs viejas (ver 1.1).
+
 ### 1.1 Abrir e ir a una URL (teclado, más fiable que clic)
 
 ```bash
-open -a "Google Chrome" && wait_for "Nueva pestaña" 15   # wait_for: ver doc 05 §2.1
-osascript -e 'tell application "Google Chrome" to activate'
-# Nueva pestaña y foco a la barra de direcciones:
-osascript -e 'tell application "System Events" to keystroke "t" using {command down}'   # Cmd+T
-osascript -e 'tell application "System Events" to keystroke "l" using {command down}'   # Cmd+L (barra URL)
-type_human "Google Chrome" "https://lab.local/cuenta" --wpm 45   # ritmo humano; NO keystroke (instantáneo)
-osascript -e 'tell application "System Events" to keystroke return'
-wait_for "Mi cuenta" 15      # esperar a que la página cargue (texto que solo sale cargada)
+source crear-shorts/herramientas/mac-control.sh
+type_url "Google Chrome" "127.0.0.1:8765/cuenta?id=1002" --wpm 45     # Cmd+L, teclea, Suprimir, Enter
+wait_for "usuarioB" 10          # esperar a que cargue (texto que solo sale cargado)
 ```
+**Por qué `type_url` y no teclear + Enter:** el navegador **autocompleta en línea con el historial**. Medido:
+al teclear `127.0.0.1:8765/` Chrome lo completó a `…/cuenta?id=1002` (una URL visitada antes) y Enter
+cargó **la página anterior en vez de la tecleada**; en el vídeo el espectador habría visto escribir una
+cosa y cargar otra. La solución es pulsar **Suprimir (borrado hacia delante, `key code 117`)** antes de
+Enter: quita el texto autocompletado si lo hay y no hace nada si no lo hay (un retroceso borraría una
+letra real). Con perfil limpio (1.0) el problema casi no aparece, pero `type_url` lo cubre siempre.
+
+Las URLs tecleadas con `type_human` llegan **íntegras** aunque se simulen errores (probado al 4 %).
 
 ### 1.2 Clicar un elemento de la página
+
+> Usa `click_text "Texto" 1 c "Google Chrome"` (la app como 4.º argumento): busca solo en la ventana de esa
+> app, la trae delante y mueve el cursor como una persona. Sin la app, clica la primera coincidencia de
+> TODA la pantalla, que puede ser texto de otra ventana (error real, doc 07 nº 22).
 
 ```bash
 screencapture -x /tmp/pag.png
@@ -78,16 +100,25 @@ Toda herramienta GUI (Burp, Wireshark, un cliente de BBDD, un IDE…) se conduce
 ciclo**: esperar a que cargue → localizar por OCR/atajo → clic/teclear → verificar. Burp es el
 ejemplo más denso porque arranca lento y tiene muchas pestañas; si dominas Burp, dominas el resto.
 
-### 2.1 Lanzar Burp y pasar el arranque (es LENTO)
+### 2.1 Lanzar Burp y pasar el arranque (VERIFICADO con Burp Suite Community 2026.10)
 
 ```bash
-open -a "Burp Suite Community Edition"
-wait_for "Temporary project" 60          # el arranque puede tardar 10-30 s: timeout GENEROSO
-# "Next" (proyecto temporal) → "Use Burp defaults" → "Start Burp":
-# localizar cada botón por OCR y clicar (están abajo a la derecha del diálogo):
-screencapture -x /tmp/burp.png; ~/Desktop/ctrl-kit/ocr /tmp/burp.png | grep -iE "Next|Start"
-# clic en Next ... wait_for "Use Burp defaults" ... clic en Start ... wait_for "Dashboard" 30
+source crear-shorts/herramientas/mac-control.sh
+open -a "Burp Suite"                          # el .app se llama "Burp Suite", no "...Community Edition"
+wait_for "Temporary project" 60               # ~5-10 s; timeout generoso por si tarda más
+click_text "Next" 1 c "Burp Suite"           # proyecto temporal en memoria (Community no tiene proyectos en disco)
+wait_for "Use Burp defaults" 20
+click_text "Start" 1 c "Burp Suite"           # "Start Burp"
+wait_for "Dashboard" 60                       # Burp listo
+place_window_ax "Burp Suite" 0 29 1280 700    # agrandar para que se lea (sin permisos extra)
 ```
+Cosas que se descubrieron probándolo:
+- **El proceso se llama `JavaApplicationStub`** para System Events, pero `Burp Suite` para `winlist`. Las
+  funciones de `mac-control.sh` resuelven la app **por PID**, así que usa siempre el nombre de `winlist`.
+- Al arrancar hay una ventana transparente de ~1824×1020 y luego el diálogo de 985×640: `click_text` con
+  la app busca en la ventana superior; si el clic cae donde no debe, `wait_for` te lo dirá (el paso
+  siguiente no aparece). **Verifica siempre el resultado de cada clic.**
+- Para salir: `Cmd+Q` abre "*are you sure you want to exit?*" → `click_text "Yes" 1 c "Burp Suite"`.
 
 ### 2.2 Proxy: interceptar tráfico del navegador
 
@@ -104,20 +135,36 @@ screencapture -x /tmp/b.png; ~/Desktop/ctrl-kit/ocr /tmp/b.png | grep -iE "Proxy
 # clic en "Proxy" → clic en "Intercept is off" para ponerlo "on" (verificar que cambió el texto)
 ```
 
-### 2.3 El flujo típico: interceptar → Repeater → modificar → reenviar
+### 2.3 Flujo Repeater: escribir la petición → enviar → cambiar el id → reenviar (VERIFICADO)
 
-```
-1. Intercept ON  → en el navegador, hacer la acción (cargar /cuenta?id=1001)
-2. Burp captura la petición → clic derecho → "Send to Repeater"  (o Cmd/Ctrl+R)
-3. Ir a la pestaña "Repeater" (OCR + clic)
-4. Editar la petición (clic en el id, cambiar 1001 → 1002)
-5. "Send" (botón, o Cmd/Ctrl+Espacio según versión) → leer la RESPUESTA (panel derecho) con OCR
-6. Intercept OFF para que el navegador vuelva a fluir
-```
+Ejecutado de punta a punta contra el lab local (`DEMO-IDOR/lab_idor.py`), todo con entrada humana:
 
-Cada uno de esos pasos = ciclo del doc 05 (localizar por OCR/atajo, actuar, **verificar con OCR**
-que la respuesta trae lo esperado). Para editar texto dentro de un campo de Burp: clic para situar
-el cursor, `Cmd/Ctrl+A` si quieres reemplazar todo, teclear.
+```bash
+click_text "Repeater" 1 c "Burp Suite"                       # pestaña Repeater (viene con un editor vacío)
+clic_humano 233 350                                          # clic dentro del editor de la petición
+type_human "Burp Suite" $'GET /cuenta?id=1001 HTTP/1.1\nHost: 127.0.0.1:8765\n\n' --wpm 45
+#   -> Swing recibe bien Unicode y saltos de línea; el Inspector ya interpreta "1 parámetro, 2 cabeceras"
+clic_humano 1223 169                                         # el lápiz de "Target: Not specified" NO tiene texto: clic por coordenada
+#   -> diálogo "Configure target details": Burp RELLENA host y puerto desde la cabecera Host; solo pulsar:
+click_text "OK" 1 c "Burp Suite"
+click_text "Send" 1 c "Burp Suite"
+wait_for "usuarioA" 12                                       # respuesta 1: Cuenta de usuarioA
+
+# --- el cambio IDOR: seleccionar solo el valor y teclear encima ---
+select_text "id=1001" 1 "Burp Suite" "1001"                  # doble clic VERIFICADO (copia y comprueba)
+type_human "Burp Suite" "1002" --wpm 30 --typos 0            # reemplaza la selección
+click_text "Send" 1 c "Burp Suite"
+wait_for "usuarioB" 12                                       # respuesta 2: Cuenta de usuarioB  -> IDOR
+```
+**Por qué `select_text` y no un doble clic a pelo:** en Burp (Java) un doble clic ciego fallaba **1 de
+cada 3 veces de forma periódica** (no seleccionaba nada; Cmd+C copiaba la petición entera) aunque el punto
+fuera exacto, el OCR leyera bien y se esperaran 4 s entre intentos: es un contador interno de la
+aplicación. `select_text` copia lo seleccionado, lo compara con lo esperado y reintenta: 12 de 12.
+Además apunta a un **trozo dentro de la palabra** (`"1001"` dentro de `/cuenta?id=1001`) por
+proporción de caracteres, que es exacto en la fuente monoespaciada del editor.
+
+> **Proxy/Intercept** (la variante "el navegador pasa por Burp") se describe en 2.2; el flujo de arriba
+> es el equivalente directo sin depender del proxy y es el más estable para grabar.
 
 ### 2.4 Otras herramientas, mismo patrón
 

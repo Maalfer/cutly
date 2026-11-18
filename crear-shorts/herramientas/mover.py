@@ -36,7 +36,13 @@ def trayecto(x0, y0, x1, y1, dur=None, rng=None):
     rng = rng or random.Random()
     dist = math.hypot(x1 - x0, y1 - y0)
     if dist < 2:
-        return [(x1, y1)]
+        # El cursor YA está en el destino. Un clic sin ningún movimiento previo se pierde o se malinterpreta
+        # (medido en Burp/Java: un doble clic en el MISMO píxel que el anterior seleccionaba "nada"; fallaba
+        # 3 de 8 veces) y además una persona no clica dos veces en el píxel exacto sin mover la mano.
+        # Pequeño desvío de 4-9 px y vuelta, con movimientos reales de ratón.
+        dx, dy = rng.choice([-1, 1]) * rng.randint(4, 9), rng.choice([-1, 1]) * rng.randint(3, 7)
+        pts = [(round(x1 + dx * f), round(y1 + dy * f)) for f in (0.25, 0.6, 1.0, 0.7, 0.35, 0.1)]
+        return pts + [(x1, y1)]
     dur = dur if dur else min(1.6, 0.35 + dist / 1100.0 * rng.uniform(0.8, 1.2))
     n = max(8, int(dur / 0.03))
     # punto de control: a mitad de camino, desplazado en perpendicular (curvatura 4-12 % de la distancia)

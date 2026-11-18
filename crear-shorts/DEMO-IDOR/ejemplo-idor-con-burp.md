@@ -60,6 +60,15 @@ cuenta", la petición es `GET /cuenta?id=1001`. Si cambiamos a `id=1002`, salen 
 
 ---
 
+## 2b. Lab listo y flujo YA PROBADO
+
+El lab del paso anterior existe: `python3 crear-shorts/DEMO-IDOR/lab_idor.py &` (solo `127.0.0.1:8765`).
+El acto 2 (Burp: escribir la petición, enviar, cambiar `1001`→`1002`, reenviar) está **verificado de
+punta a punta** con Burp Suite Community 2026.10 y entrada humana: ver
+`METODOLOGIA/06-navegador-y-herramientas-gui.md`, secciones 1.0 (perfil limpio de Chrome), 1.1
+(`type_url`) y 2.3 (flujo Repeater con `select_text`). Resultado medido: respuesta 1 `Cuenta de
+usuarioA`, respuesta 2 `Cuenta de usuarioB`.
+
 ## 3. La toma (FASES 1-3 — grabando, una secuencia continua)
 
 **Anuncio:** `"⚠️ TOMA — NO TOQUES EL MAC HASTA 'CORTEN' (~30-40s)"` y confirmar que OBS graba

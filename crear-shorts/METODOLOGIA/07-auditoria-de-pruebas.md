@@ -40,6 +40,17 @@
 | 23 | Tras el clic erróneo, **todo lo siguiente falló en cadena** ("no encontré la palabra") | Clicar otra ventana la sube al frente y entierra la tuya; el OCR ya no ve su texto | `click_text` con APP hace `ensure_front` primero; probado: enterrada a propósito, recupera 4/4 |
 | 24 | La salida de `click_text` se llenó de `scale=2.0` (solo en zsh) | En zsh, `local x` repetido dentro de un bucle **imprime** `x=valor` | Declarar todas las variables locales al inicio de la función |
 | 25 | El texto verificado en TextEdit no coincidía (`Curl`, comillas “ ”) | Autocorrector de TextEdit (mayúscula inicial, comillas tipográficas) | No es un fallo del tecleo: verificar en Terminal/editor plano o desactivar la autocorrección |
+| 26 | Al usar `ensure_front` con **Chrome**, macOS mostró un diálogo "**Warp quiere controlar la app Google Chrome**" y el script se colgó esperando | `tell application "X" to activate` exige un permiso de **Automatización por cada app nueva** (Apple Events) | `ensure_front` usa System Events (`set frontmost`), que ya tiene permiso, y `open -a` de reserva. **No se concede ningún permiso por el usuario**; si aparece uno, es decisión suya |
+| 27 | El mismo diálogo aparecía en la captura como **overlay real**: `UserNotificationCenter`, capa 8, 458×432 | Un permiso pendiente es una ventana de sistema encima de todo | El gate lo marcó `<-- saldrá en el vídeo` (**P14 verificada con un overlay real**, no solo sintético) |
+| 28 | Chrome se abrió con **tu perfil real**: nombre de cuenta, extensiones y una pestaña "Upgraded - Wappalyzer" abierta por una extensión | `open -a` usa el perfil por defecto | Perfil desechable `--user-data-dir=... --disable-extensions` (doc 06 §1.0): sin cuenta, sin extensiones, sin historial |
+| 29 | Tecleando `127.0.0.1:8765/` y Enter, Chrome cargó la página **anterior** (`.../cuenta?id=1002`) | **Autocompletado en línea** con el historial: Enter navega a lo autocompletado | `type_url`: teclear → **Suprimir** (`key code 117`, borra la sugerencia y no toca nada si no la hay) → Enter |
+| 30 | `ensure_front "Burp Suite"` falló: "foco actual: JavaApplicationStub" | System Events llama al proceso `JavaApplicationStub`; `winlist` lo llama `Burp Suite` (cf. nº 14, Warp/`stable`) | Resolver la app **por PID** (`_proc_ref`, `front` devuelve el nombre de winlist) |
+| 31 | Con Burp, `click_text "Next"` clicó **un campo vacío** y el diálogo no avanzó | El foco ya era de Burp pero su ventana aún **no estaba pintada encima**: la captura/OCR leyó texto de otras ventanas (mis mensajes con la palabra "Next") | `ensure_front` espera a que la ventana de la app sea la **primera del z-order** (foco ≠ visible). Alternar Chrome↔Burp: 4/4 correcto |
+| 32 | El clic en el campo se calculó bien pero **el paso siguiente no aparecía** | Un clic sin verificar es un clic que puede no haber hecho nada | Siempre `wait_for` del resultado del clic (lo detectó el `TIMEOUT` de `wait_for "Use Burp defaults"`) |
+| 33 | Doble clic sobre `/cuenta?id=1001` seleccionó **`id`**, no el valor | El OCR da la caja de la palabra entera y se clicó su centro (mismo error que el nº 8, un nivel más fino) | `click_text ... SUBCADENA`: posición proporcional del trozo; exacta en fuentes monoespaciadas (editores, Burp) |
+| 34 | Un doble clic en Burp **fallaba 1 de cada 3 veces, de forma periódica** (3 de 8, luego 4 de 12...): no seleccionaba nada y Cmd+C copiaba la petición entera | Contador interno de la app (Java): **no** era el punto, ni el OCR, ni el tiempo (igual con 4 s de pausa) ni clicar en el mismo píxel (el desvío no lo arregló) | `select_text`: doble clic → copiar → **comparar con lo esperado** → reintentar (máx. 3) y restaurar el portapapeles. **12/12** |
+| 35 | Mi primera hipótesis (clic en el mismo píxel que el anterior) era **errónea** | Correlación aparente: los fallos caían en posiciones repetidas por casualidad | Se descartó midiendo (el desvío de `mover.py` se mantiene: un clic con el cursor ya en el sitio sin movimiento previo tampoco es humano) |
+| 36 | Chrome **ignoró Cmd+Q** | Opción "Avisar antes de salir con ⌘Q" (hay que mantenerlo pulsado) | Cerrar con `Cmd+W` por ventana; para la instancia de la demo, `pkill -f chrome-demo-profile` |
 
 ### Lo que **sí** funcionó a la primera (medido)
 - **Control del cursor:** `cliclick m:300,600` → `mousepos` devuelve `300,600` exacto.
@@ -88,10 +99,14 @@ Usa solo ventanas **creadas por ti** (no toques las apps del usuario) y límpial
 | P16 | **Tecleo humano** | teclea una frase con tildes, `€`, `¿`, comillas, `\|`, `~` y errores simulados (3-5 %); compara el texto final **exacto** en un editor sin autocorrector; mide cuánto tardó y que aparece **progresivamente** | texto idéntico, duración ≈ estimada, y a mitad se ve a medias |
 | P17 | **Ratón humano** | mueve a 6 destinos (incluido uno a 1 px del anterior); muestrea la posición durante un trayecto largo | llega exacto 6/6; el muestreo pasa por puntos intermedios con perfil lento-rápido-lento; < 2 s |
 | P18 | **Clic dirigido a una app con texto repetido** | repite una palabra en dos ventanas; `click_text` con la app; entierra la ventana a propósito | clica en la ventana correcta 4/4 y la recupera del fondo |
+| P19 | **Barra de URL con autocompletado** | teclea una URL cuyo prefijo exista en el historial; Enter | carga la URL **tecleada**, no la autocompletada (`type_url`) |
+| P20 | **Campo de una página web** | clic por OCR en un `<input>` y tecleo con tildes/`€`/`¿`/errores | el valor del campo = el texto pedido; al enviar, llega en la URL |
+| P21 | **Campo de una app Java/Swing (Burp)** | teclea una petición con saltos de línea en el editor; selecciona un trozo y reescríbelo | el contenido es exacto; la selección se verifica (12/12 con `select_text`) |
+| P22 | **Ciclo de vida de una app lenta** | `open -a`, avanzar diálogos con `click_text` + `wait_for` verificando cada paso, usarla, cerrarla | llega al estado esperado sin clics perdidos; al cerrar no quedan procesos |
 
-Resultado en **macOS**: P1-P13 y P15-P18 ejecutadas sobre ventanas reales; **P14 (overlay) solo con datos
-sintéticos** (no se provocó una notificación real del sistema, por no molestar al usuario). Los fallos
-1-25 de la tabla se encontraron y corrigieron.
+Resultado en **macOS**: P1-P22 ejecutadas sobre ventanas reales (Terminal, TextEdit, Chrome y Burp Suite); **P14
+(overlay) verificada con un overlay real** (diálogo de permisos del sistema). Los fallos
+1-36 de la tabla se encontraron y corrigieron.
 Resultado en **Windows / Linux X11 / Linux Wayland**: ⏳ pendiente — ejecutar el protocolo, anotar
 fallos aquí y construir el kit equivalente a `mac-control.sh`.
 

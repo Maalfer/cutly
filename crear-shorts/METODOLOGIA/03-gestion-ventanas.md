@@ -155,7 +155,11 @@ capa alta que no es menú/Dock/cursor: notificación, aviso del sistema…; cier
    teclear sin dar foco lo escribió en Terminal y 0 veces en TextEdit. Usa `type_in "App" "texto"`:
    **se niega a escribir** si `front` no es la app esperada.
 5. **El nombre del proceso cambia según la API:** Warp es `Warp` en CGWindowList pero `stable` en
-   System Events. Comprueba el nombre que devuelve `front`/`winlist`, no el que supones.
+   System Events; Burp Suite es `Burp Suite` en `winlist` pero `JavaApplicationStub` en System Events.
+   El **PID** es lo único común: `front`/`ensure_front`/`place_window_ax` ya resuelven por PID y usan el
+   nombre de `winlist`.
+5b. **Foco ≠ visible:** una app puede tener el foco y su ventana aún no estar pintada encima (la captura
+   lee entonces texto de otras ventanas). `ensure_front` espera a que sea la primera del z-order.
 6. Algunas apps **no obedecen** los bounds (mínimos, rejilla de caracteres): `place_window` lee los
    bounds reales y falla si difieren > 12 px.
 

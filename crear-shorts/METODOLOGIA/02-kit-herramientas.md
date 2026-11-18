@@ -212,3 +212,20 @@ click_text "Guardar" 1 c TextEdit
 > **Cuidado con las apps con autocorrector** (TextEdit: mayúscula inicial y comillas tipográficas
 > “ ”). El tecleo es correcto pero el *texto final* cambia. Para verificar texto exacto usa Terminal o
 > un editor plano; en un vídeo, desactiva la autocorrección de esa app.
+
+## Funciones añadidas tras probar con Chrome y Burp (en `mac-control.sh`)
+
+| Función | Qué hace | Por qué |
+|---|---|---|
+| `type_url APP URL` | `Cmd+L` → teclea (humano) → **Suprimir** → Enter | el navegador autocompleta con el historial y Enter cargaba otra página (doc 07 nº 29) |
+| `select_text PALABRA [n] [APP] [SUBCADENA]` | doble clic → copia → **comprueba** → reintenta; restaura el portapapeles | un doble clic ciego fallaba 1 de cada 3 veces en Burp (nº 34); 12/12 con esto |
+| `click_text ... [APP] [SUBCADENA]` | además apunta a un **trozo** dentro de la palabra y busca por contenido si no hay coincidencia exacta | el centro de `/cuenta?id=1001` caía en "id" (nº 33) |
+| `place_window_ax APP x y w h [N]` | coloca la ventana N con **solo Accesibilidad** y verifica los bounds | no pide el permiso de Automatización por app (nº 26) |
+| `ensure_front APP` | foco por **PID** y espera a que su ventana esté **encima en el z-order** | `JavaApplicationStub` vs "Burp Suite" (nº 30) y foco ≠ visible (nº 31) |
+| `key_forward_delete` | Suprimir (borrado hacia delante) | quita el autocompletado sin tocar una letra real |
+
+> **Permisos de macOS (importante para quien conduzca el equipo):** controlar una app con
+> `tell application "X" ...` (AppleScript de la app) pide un permiso de **Automatización por cada app**; mientras
+> el diálogo está sin responder, el script **se cuelga** y el diálogo queda **encima del vídeo**. Las funciones
+> del kit evitan ese camino (System Events + Accesibilidad). **Un agente no debe aceptar ese diálogo por su
+> cuenta**: conceder control sobre una app con sesiones iniciadas es decisión del usuario.

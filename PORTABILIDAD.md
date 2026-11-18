@@ -103,7 +103,7 @@ la que está detallada en `crear-shorts/METODOLOGIA/`; las otras dos son su equi
 | **Geometría de ventanas (x,y,w,h)** — para el detector de solapes | AppleScript `position`/`size` de cada ventana | PowerShell + `GetWindowRect` (user32, P/Invoke) | **`wmctrl -lG`** (da id, x, y, w, h, título) | compositor (p. ej. `swaymsg -t get_tree`) |
 | **Ver la pantalla como un humano** | captura + **el modelo con visión la mira** (Claude); OCR para coords | igual (captura + visión + Tesseract para coords) | igual | igual |
 | **Portapapeles** | `pbcopy` / `pbpaste` | `Set-Clipboard` / `Get-Clipboard` · `… \| clip` | `xclip -selection clipboard` · `xsel -b` | `wl-copy` / `wl-paste` |
-| **Permiso para automatizar** | TCC → **Accesibilidad** (obligatorio) | normalmente sin permiso extra (ojo UAC/apps elevadas) | X11 lo permite de serie | **restringido**: input por `uinput` (ydotool + daemon), captura por portal |
+| **Permiso para automatizar** | TCC → **Accesibilidad** (obligatorio) **y, si se usa AppleScript de una app, Automatización por cada app** (evitable usando System Events) | normalmente sin permiso extra (ojo UAC/apps elevadas) | X11 lo permite de serie | **restringido**: input por `uinput` (ydotool + daemon), captura por portal |
 
 ### Instalación del kit de control por sistema
 

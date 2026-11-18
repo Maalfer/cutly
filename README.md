@@ -65,7 +65,8 @@ cutly/
 │   ├── DEMO-CLICKFIX/                ←   ejemplo: demo ClickFix (exfiltración por copiar-y-pegar)
 │   │   ├── demo-completa.md · reproducir-paso-a-paso.md · limpieza-restore.md
 │   ├── DEMO-IDOR/                    ←   ejemplo: demo de IDOR con navegador + Burp Suite
-│   │   └── ejemplo-idor-con-burp.md
+│   │   ├── ejemplo-idor-con-burp.md
+│   │   └── lab_idor.py                 ←  laboratorio local vulnerable (solo 127.0.0.1) para grabar el IDOR
 │   └── herramientas/                 ←   código fuente de las herramientas
 │       ├── ocr.swift                 ←   OCR con Vision de macOS (texto + coordenadas)
 │       ├── mousepos.swift            ←   posición real del cursor
