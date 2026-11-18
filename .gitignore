@@ -1,0 +1,26 @@
+# cutly guarda METODOLOGIA, no material pesado.
+# Se excluyen los videos (fuentes en bruto y clips finales) y audio intermedio.
+# Se versiona todo lo demas: docs, scripts, transcripciones de ejemplo y _cortes.log.
+
+# Videos
+*.mp4
+*.mkv
+*.mov
+*.webm
+*.avi
+*.m4v
+
+# Audio intermedio y descargas a medias
+*.wav
+*.part
+*.ytdl
+
+# Sistema / editores
+.DS_Store
+**/.DS_Store
+*.swp
+__pycache__/
+*.pyc
+
+# Modelos Whisper (viven en ~/.whisper-models, nunca en el repo)
+*.bin

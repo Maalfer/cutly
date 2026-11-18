@@ -1,0 +1,58 @@
+
+=== 2026-11-18 | crudo/editar.mkv (grabación de pantalla Mac, 1920x1080@60, AUDIO EN SILENCIO DIGITAL -91dB, sin voz) ===
+Clip: short_ClickFix-En-Mac-Asi-Te-Roban-Todo-Con-Un-Copiar-Y-Pegar_editado.mp4
+Formato SHORT vertical 1080x1920@60, 8M. Hueco NEGRO arriba 1080x648 (0-648px, = proporción de referencia.mp4 432/1280) para poner la cámara.
+Abajo: recorte 816x961 de la fuente escalado a 1080x1272. Pista de audio silenciosa (para voz en off después).
+Tramos (s fuente -> recorte x:y):
+  230.0-234.0  552:8   página falsa "3 amenazas" (empieza tras cargar en 229.75)
+  260.0-264.0  552:8   cursor al botón -> clic 262.6 -> "¡COMANDO COPIADO!" (cortados 234-260: página estática)
+  326.9-329.0  968:2   aparece la Terminal de la víctima (cortado 264-326.9: agente IA en Warp arreglando el pegado)
+  334.8-343.8  968:2   pegado base64 (335.5) -> barra de limpieza falsa -> "Tu Mac está protegido"
+  340.8-348.0  135:2   panel C2 del atacante: se inunda en 341.1 (solapado a propósito con el tramo anterior: "mientras tanto")
+  390.0-405.5  135:2   scroll por el panel C2 de arriba a abajo hasta el resumen
+Descartado: 0-230 (agente IA preparando ventanas), 348-390 y 406-432 (agente/scroll repetido), 432-470 (código del C2).
+Duración: 41.8s (verificada con ffprobe). Fotogramas comprobados a ambos lados de cada unión.
+
+--- 2026-11-18 REVISION v2 (mismo clip, a petición del usuario) ---
+Reordenado: ahora el banner/comando del C2 (listener) va ANTES del pegado base64, y la
+barra de progreso se reencuadra para que no quede pegada al borde inferior.
+Tramos (s fuente | cx:cy:cw:ch | padtop=648, salida 1080x1920@60, 8M, audio silencioso):
+  230.0-234.0 | 552:8:816:961   | página falsa "3 amenazas" + COPIAR
+  260.0-264.0 | 552:8:816:961   | clic -> "¡COMANDO COPIADO!"
+  329.0-332.5 | 135:2:816:961   | C2: comando python3 c2_server.py + banner NIGHTVAGA "Esperando conexiones"
+  334.8-340.3 | 968:2:816:961   | pegado base64 en terminal víctima
+  340.5-343.8 | 968:636:816:444 | barra progreso + "Tu Mac protegido" (paneo abajo mismo zoom -> barra sube al centro)
+  390.0-405.5 | 135:2:816:961   | panel C2 inundándose (botín)
+Duración: 35.8s. Fotogramas de cada unión y del tramo de barra verificados visualmente.
+
+--- 2026-11-18 v3: INTRO AÑADIDA (nota: proyecto movido a ~/Desktop/cutly/editor/) ---
+Fuentes nuevas en crudo/: intro.mkv (grab. pantalla, 43s, SILENCIO -91dB) + ransomware-message.jpg (CryptoLocker 450x353).
+Se antepone una intro al clip ClickFix. Orden pedido por el usuario: búsqueda -> peligro(ransomware) -> ejercicio.
+Intro (todo escalado a 1080x1920@60, hueco negro arriba padtop=648, audio silencioso):
+  intro 8.0-10.5  | crop 816:961:190:40  -> búsqueda YouTube "komo aktibar mi windows para ziempre"
+  intro 12.8-15.8 | crop 816:961:90:40   -> resultados: vídeos de activación pirata
+  intro 38.0-41.0 | crop 1180:640:30:95  -> terminal "curl https://microchoft/activate....." (ancho para que se lea la URL falsa entera; dh=586)
+  ransomware.jpg  | 3.0s, scale 1080 ancho (dh=847), padtop=860 (centrado) -> CryptoLocker, el peligro
+Descartado de intro.mkv: relleno (prompt vacío, terminal muerta) y un vistazo accidental al editor de vídeo (~42-43s).
+Luego, los 6 tramos del ejercicio ClickFix (ver entrada v2). Duración total: 47.3s.
+
+--- 2026-11-18 v4: banda sup. constante + mas lento + paneo curl ---
+3 arreglos pedidos por el usuario:
+ 1) Banda negra superior (zona rostro) AHORA constante = padtop 648 en TODOS los segmentos
+    (antes el ransomware iba a 860). Verificado midiendo: 648px en búsqueda/curl/ransomware/ejercicio.
+ 2) Búsqueda YouTube ahora desde que empieza a escribir (intro 2.5-10.8, antes 8.0-10.5): se ve
+    teclear "komo aktibar mi windows para ziempre" entero.
+ 3) Comando curl a TAMAÑO COMPLETO (crop 816x961 como el resto) con PANEO horizontal x=40->330
+    (intro 35.8-40.3; acaba antes de que asome OBS ~41.8) para que se lea toda la línea.
+ + Ritmo general MÁS LENTO (duraciones ampliadas; total 66.9s vs 47.3s) para poder recortar a mano.
+Segmentos (todos padtop=648; salida 1080x1920@60, 8M, audio silencioso):
+  INTRO:  i 2.5-10.8  crop816:961:190:40  búsqueda (desde tecleo)
+          i 12.8-18.0 crop816:961:90:40   resultados pirata (scrollea)
+          i 35.8-40.3 crop816:961 PAN x40->330 y20  curl microchoft (tamaño completo + paneo)
+          ransomware.jpg 4.5s scale1080 (dh847) padtop648
+  EJERC.: m 230-236   552:8     pagina falsa
+          m 258-265   552:8     aprox+clic+COPIADO
+          m 327.5-333 135:2     banner C2
+          m 334.6-341 968:2     pegado base64
+          m 340.5-344.5 968:636:816:444  barra progreso (subida)
+          m 390-405.5 135:2     panel C2 inundado
