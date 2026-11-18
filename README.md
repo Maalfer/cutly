@@ -26,7 +26,7 @@ El flujo tiene dos fases independientes, cada una con su carpeta y su metodolog�
 │  FASE 1 — GENERAR / GRABAR          │  FASE 2 — EDITAR                         │
 │  (carpeta  crear-shorts/)           │  (carpeta  editor/)                      │
 │                                     │                                          │
-│  La IA controla el Mac al 100%      │  La IA transcribe, analiza y recorta     │
+│  La IA controla el ordenador 100%   │  La IA transcribe, analiza y recorta     │
 │  (cursor, teclado, ventanas, apps)  │  la grabación en bruto hasta dejar       │
 │  y ejecuta una demo cinematográfica │  clips limpios: formato largo (16:9)     │
 │  mientras el usuario graba con OBS. │  o SHORT vertical (9:16) con hueco        │
@@ -52,17 +52,19 @@ cutly/
 ├── README.md                         ← ESTE archivo (empieza aquí)
 ├── PORTABILIDAD.md                   ← cómo usar todo en macOS / Windows / Linux
 │
-├── crear-shorts/                     ← FASE 1: la IA controla el Mac y graba la demo
-│   ├── README.md                     ←   índice + estado de la máquina + permiso maestro
-│   ├── METODOLOGIA/
-│   │   ├── 01-control-total-mac.md   ←   permiso de Accesibilidad + teoría del control
+├── crear-shorts/                     ← FASE 1: la IA controla el ordenador y graba la demo
+│   ├── README.md                     ←   índice + qué puede hacer la IA + permiso maestro
+│   ├── METODOLOGIA/                  ←   el CÓMO (sirve para cualquier demo)
+│   │   ├── 01-control-total-mac.md   ←   permiso + teoría del control
 │   │   ├── 02-kit-herramientas.md    ←   OCR, cursor, cliclick, find_button (con código)
 │   │   ├── 03-gestion-ventanas.md    ←   z-order, apps fullscreen, direccionar por ID
-│   │   └── 04-flujo-toma-video.md    ←   protocolo de toma: fases, pacing, verificación
-│   ├── DEMO-CLICKFIX/                ←   ejemplo real completo (demo ClickFix de exfiltración)
-│   │   ├── 05-demo-completa.md
-│   │   ├── 06-reproducir-paso-a-paso.md
-│   │   └── 07-limpieza-restore.md
+│   │   ├── 04-flujo-toma-video.md    ←   protocolo de toma: fases, pacing, verificación
+│   │   ├── 05-controlar-aplicaciones.md        ←  conducir CUALQUIER app: abrir/esperar/enfocar/cerrar, multi-app
+│   │   └── 06-navegador-y-herramientas-gui.md  ←  navegador + herramientas GUI (Burp Suite)
+│   ├── DEMO-CLICKFIX/                ←   ejemplo: demo ClickFix (exfiltración por copiar-y-pegar)
+│   │   ├── demo-completa.md · reproducir-paso-a-paso.md · limpieza-restore.md
+│   ├── DEMO-IDOR/                    ←   ejemplo: demo de IDOR con navegador + Burp Suite
+│   │   └── ejemplo-idor-con-burp.md
 │   └── herramientas/                 ←   código fuente de las herramientas
 │       ├── ocr.swift                 ←   OCR con Vision de macOS (texto + coordenadas)
 │       ├── mousepos.swift            ←   posición real del cursor
@@ -100,8 +102,10 @@ Sí se versiona todo lo demás: documentación, scripts, transcripciones de ejem
 2. **`PORTABILIDAD.md`** si NO estás en macOS (o si quieres los comandos de tu sistema):
    instalación, control del ordenador, rutas y GPU para Windows y Linux.
 3. ¿Vas a **grabar/generar** una demo nueva controlando el ordenador?
-   → `crear-shorts/README.md` y luego `crear-shorts/METODOLOGIA/01…04`
-   (en macOS tal cual; en Windows/Linux, con los equivalentes de `PORTABILIDAD.md`).
+   → `crear-shorts/README.md`, luego `crear-shorts/METODOLOGIA/01…06` (el `05` y el `06` son el
+   patrón general para conducir cualquier app: navegador, Burp, terminal…) y un ejemplo completo
+   (`DEMO-CLICKFIX/` o `DEMO-IDOR/`). En macOS tal cual; en Windows/Linux con los equivalentes de
+   `PORTABILIDAD.md`.
 4. ¿Vas a **editar** una grabación en clips?
    → `editor/CLAUDE.md` (clips 16:9 desde un directo) **y**
    `editor/METODOLOGIA-SHORTS.md` (shorts verticales 9:16 con hueco para la cara).

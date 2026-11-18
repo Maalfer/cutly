@@ -12,6 +12,23 @@
 > (sección 2). Lee ESTA carpeta para entender el *cómo* y el *porqué*, y `PORTABILIDAD.md` para
 > traducir cada comando a tu sistema.
 
+## 🤖 Qué puede hacer la IA (control completo del ordenador)
+
+Con este kit, un modelo (Claude u otro) **controla el ordenador por completo** para montar la
+demo que haga falta, mientras el usuario graba con OBS:
+
+- **Cursor:** mover (con trayecto cinematográfico), clicar, doble-clic, arrastrar, rueda.
+- **Teclado:** escribir texto, combinaciones y atajos, navegar menús y campos.
+- **Aplicaciones:** abrirlas, esperar a que carguen, enfocarlas, escribir en ellas y cerrarlas
+  (navegador, Burp Suite, terminal, editores… cualquiera).
+- **Ventanas:** posicionarlas, ocultarlas/minimizarlas, listar la pila, montar un layout estable.
+- **"Ver" la pantalla:** OCR con coordenadas + análisis de píxeles + enumeración de ventanas,
+  para **verificar cada acción** antes de la siguiente.
+
+Así puede hacer demos completas de principio a fin: p. ej. **explicar un IDOR** (abrir el
+navegador, ir a una ruta, loguear, abrir Burp, interceptar, modificar y reenviar) — ver
+`DEMO-IDOR/ejemplo-idor-con-burp.md`. El *cómo* general está en `METODOLOGIA/05` y `06`.
+
 ---
 
 ## ⚠️ ESTADO ACTUAL DE LA MÁQUINA (leer primero)
@@ -46,15 +63,23 @@ Fecha: miércoles 18 de noviembre de 2026, ~20:00
 
 ## 📚 Índice de documentación
 
+**METODOLOGÍA** (el *cómo*, sirve para cualquier demo):
+
 | Doc | Contenido |
 |-----|-----------|
-| `METODOLOGIA/01-control-total-mac.md` | Cómo la IA controla el MacBook al 100%: permiso de Accesibilidad + teoría |
+| `METODOLOGIA/01-control-total-mac.md` | Cómo la IA controla el ordenador al 100%: permiso + teoría |
 | `METODOLOGIA/02-kit-herramientas.md` | Las herramientas: OCR, cursor, cliclick, find_button — con código y uso |
 | `METODOLOGIA/03-gestion-ventanas.md` | Lecciones de z-order, apps fullscreen, direccionar ventanas por ID |
 | `METODOLOGIA/04-flujo-toma-video.md` | Protocolo de toma: fases, pacing, verificación, "no tocar" |
-| `DEMO-CLICKFIX/05-demo-completa.md` | La demo ClickFix v2 (exfiltración): contexto, archivos, arquitectura |
-| `DEMO-CLICKFIX/06-reproducir-paso-a-paso.md` | Reproducción exacta comando a comando |
-| `DEMO-CLICKFIX/07-limpieza-restore.md` | Limpieza completa del sistema y restauración |
+| `METODOLOGIA/05-controlar-aplicaciones.md` | **Patrón general para conducir CUALQUIER app**: abrir/esperar/enfocar/cerrar, multi-app, sincronización, robustez |
+| `METODOLOGIA/06-navegador-y-herramientas-gui.md` | **Navegador** (URL, clics, formularios, pestañas, leer) y **herramientas GUI** (Burp Suite como caso) |
+
+**EJEMPLOS** (demos completas de referencia):
+
+| Demo | Contenido |
+|------|-----------|
+| `DEMO-CLICKFIX/demo-completa.md` · `reproducir-paso-a-paso.md` · `limpieza-restore.md` | Demo ClickFix v2 (exfiltración por copiar-y-pegar): contexto, arquitectura, reproducción y limpieza |
+| `DEMO-IDOR/ejemplo-idor-con-burp.md` | **Demo de IDOR** conduciendo navegador + Burp Suite, de principio a fin |
 | `herramientas/` | Código fuente de las herramientas (copias) |
 
 ## 📂 Carpetas del proyecto fuera de esta doc
