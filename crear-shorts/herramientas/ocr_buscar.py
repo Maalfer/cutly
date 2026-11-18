@@ -6,7 +6,7 @@ LÓGICOS de la palabra buscada, listo para `cliclick`.
 Uso:  ocr --words captura.png | python3 ocr_buscar.py <palabra> [n-ésima=1] [escala=2] [x,y,w,h] [subcadena]
 
 - Ignora mayúsculas, tildes y signos de puntuación ("Sesión:" == "sesion").
-- n-ésima: si la palabra aparece varias veces, cuál (1 = la primera, de arriba abajo).
+- n-ésima: si la palabra aparece varias veces, cuál (1 = la primera, de arriba abajo; -1 = la última).
 - escala: factor físico/lógico (Retina = 2). Calcúlalo, no lo supongas (ver screen_scale()).
 - x,y,w,h (opcional, PUNTOS LÓGICOS): busca SOLO dentro de esa región (p. ej. la ventana de una app).
   Sin región se busca en toda la pantalla y se toma la primera coincidencia de arriba abajo, que puede
@@ -33,7 +33,9 @@ def norm(s):
 
 
 def buscar(lineas, target, n, scale, reg, sub, modo):
-    k = 0
+    """n > 0: la n-ésima coincidencia de arriba abajo. n < 0: contando desde el final (-1 = la última).
+    La última sirve cuando una palabra sale varias veces y el BOTÓN es la de más abajo (p. ej. 'Delete')."""
+    hits = []
     for ln in lineas:
         m = re.match(r"^(.*)\t\[(\d+),(\d+) (\d+)x(\d+)\]", ln.rstrip("\n"))
         if not m:
@@ -52,10 +54,9 @@ def buscar(lineas, target, n, scale, reg, sub, modo):
         cx, cy = (x + w * frac) / scale, (y + h / 2) / scale
         if reg and not (reg[0] <= cx <= reg[0] + reg[2] and reg[1] <= cy <= reg[1] + reg[3]):
             continue
-        k += 1
-        if k == n:
-            return f"{cx:.0f},{cy:.0f}"
-    return None
+        hits.append(f"{cx:.0f},{cy:.0f}")
+    idx = n - 1 if n > 0 else n
+    return hits[idx] if -len(hits) <= idx < len(hits) else None
 
 
 def main():
