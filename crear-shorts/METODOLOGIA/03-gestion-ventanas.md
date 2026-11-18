@@ -1,5 +1,10 @@
 # 03 — Gestión de ventanas: lecciones duramente aprendidas
 
+> **macOS** (AppleScript/System Events). Las *lecciones* (diagnosticar antes de construir,
+> direccionar por ID y no por "front window", orden back-to-front, no tocar durante la toma) valen
+> en cualquier SO. Equivalentes para mover/listar/ocultar ventanas en Windows (`nircmd`/PowerShell)
+> y Linux (`wmctrl`/`xdotool`): `../../PORTABILIDAD.md` §2.
+
 ## El problema raíz
 
 En un Mac real del usuario hay una **pila de ventanas fullscreen** que nadie ve:

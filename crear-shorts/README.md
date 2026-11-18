@@ -1,8 +1,16 @@
-# 🎬 CREAR-SHORTS — Base de conocimiento para crear videos con IA controlando el Mac
+# 🎬 CREAR-SHORTS — Base de conocimiento para crear videos con IA controlando el ordenador
 
 > **Propósito:** Que cualquier modelo/agente de IA pueda retomar el trabajo y seguir
-> creando videos de demos de seguridad donde la IA controla el MacBook al 100%
+> creando videos de demos de seguridad donde la IA controla el ordenador al 100%
 > mientras el usuario graba la pantalla.
+
+> **⚠️ Multiplataforma:** esta carpeta describe la implementación en **macOS** (es donde se
+> desarrolló: `cliclick`, AppleScript, OCR con Vision…). La *metodología* (verificar cada acción,
+> pacing cinematográfico, gestión de z-order, toma única sin tocar) es **la misma en Windows y
+> Linux**; solo cambian los comandos del kit de control. La tabla de equivalencias
+> macOS ⇄ Windows ⇄ Linux y cómo instalar el kit en cada sistema están en **`../PORTABILIDAD.md`**
+> (sección 2). Lee ESTA carpeta para entender el *cómo* y el *porqué*, y `PORTABILIDAD.md` para
+> traducir cada comando a tu sistema.
 
 ---
 
@@ -54,10 +62,17 @@ Fecha: miércoles 18 de noviembre de 2026, ~20:00
 - `~/Desktop/ctrl-kit/` — herramientas compiladas en vivo (ocr, mousepos)
 - `~/Desktop/clickfix-demo/` — la demo ClickFix completa (página, payload, C2, decoys)
 
-## 🔑 El permiso maestro (ya concedido)
+## 🔑 El permiso maestro (macOS)
 
 El binario `/Users/mario/.opencode/bin/opencode` está añadido en:
 **System Settings → Privacidad y seguridad → Accesibilidad**
 
-Sin esto, NADA del control funciona. Si un modelo nuevo no puede clicar/teclear,
+Sin esto, NADA del control funciona en macOS. Si un modelo nuevo no puede clicar/teclear,
 verificar este permiso primero (es la causa #1 de fallos).
+
+**En otros sistemas el "permiso maestro" es distinto** (ver `../PORTABILIDAD.md` §2):
+- **Windows:** normalmente no hace falta permiso; solo si la ventana objetivo corre **elevada**
+  (como admin), el automatizador también debe ir elevado.
+- **Linux X11:** permitido de serie.
+- **Linux Wayland:** el input sintético necesita `ydotool` con su daemon y acceso a `/dev/uinput`;
+  si se complica, graba la demo en una sesión **X11**.

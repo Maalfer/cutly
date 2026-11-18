@@ -1,5 +1,8 @@
 # 02 — Kit de herramientas del agente
 
+> **macOS.** Equivalente de cada herramienta (cursor, teclado, OCR, captura, ventanas,
+> portapapeles) para Windows y Linux en `../../PORTABILIDAD.md` §2, con cómo instalarlas.
+
 Ubicación en vivo: `~/Desktop/ctrl-kit/` (compilados y funcionando)
 Copias del código fuente: `~/Desktop/crear-shorts/herramientas/`
 

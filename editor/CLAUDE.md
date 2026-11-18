@@ -5,6 +5,12 @@
 > Para **Shorts verticales 9:16** (1080×1920 con hueco arriba para la cara, recorte, paneo de
 > contenido ancho y ritmo lento) usa `METODOLOGIA-SHORTS.md` (en esta misma carpeta) y el
 > script `scripts/construir_short.py`. El principio rector de abajo aplica a AMBOS formatos.
+>
+> **Multiplataforma:** esta fase (editar) funciona igual en macOS, Windows y Linux — mismas
+> herramientas (ffmpeg, whisper.cpp, python, yt-dlp). Los comandos y rutas de abajo son los de la
+> máquina macOS; para Windows/Linux (instalación, nombre del binario de whisper, rutas, GPU, cómo
+> correr los `.sh` con Git Bash/WSL) usa `../PORTABILIDAD.md`. Las rutas `~/Desktop/editor/...` que
+> aparecen son ejemplos: hoy el proyecto vive en `cutly/editor/` y puede estar en cualquier sitio.
 
 ## Principio rector: precisión por encima de coste (tokens/tiempo)
 

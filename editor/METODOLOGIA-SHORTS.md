@@ -8,6 +8,11 @@
 > Validado montando el short "ClickFix en Mac" (intro de activación pirata de Windows +
 > ejercicio de robo por copiar-y-pegar). Sigue esto al pie de la letra salvo que el usuario
 > pida otra cosa.
+>
+> **Multiplataforma:** todo aquí es ffmpeg/ffprobe/python puro, así que funciona igual en macOS,
+> Windows y Linux. Los comandos de ejemplo son de shell POSIX (macOS/Linux); en Windows úsalos en
+> **Git Bash/WSL**, o usa directamente `scripts/construir_short.py` (Python, portable). Instalación
+> y GPU por sistema: `../PORTABILIDAD.md`.
 
 ---
 

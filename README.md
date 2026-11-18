@@ -9,6 +9,12 @@ El objetivo final siempre es el mismo: **sacar clips cortos y pulidos** (formato
 YouTube y formato **Short** vertical) a partir de demostraciones técnicas, con gancho y
 limpios de relleno.
 
+> **Multiplataforma:** esta metodología funciona en **macOS, Windows y Linux**. Los documentos
+> muestran los comandos tal cual se usaron en la máquina de desarrollo (macOS); el equivalente
+> para Windows y Linux (instalación, control del ordenador, rutas, GPU) está en
+> **[`PORTABILIDAD.md`](PORTABILIDAD.md)**. La Fase 2 (editar) es casi idéntica en todos lados;
+> la Fase 1 (controlar el ordenador) es la que más cambia de un sistema a otro.
+
 ---
 
 ## 🧭 Las dos mitades del proceso
@@ -44,6 +50,7 @@ se deja en `editor/crudo/` para que la Fase 2 lo convierta en clip.
 ```
 cutly/
 ├── README.md                         ← ESTE archivo (empieza aquí)
+├── PORTABILIDAD.md                   ← cómo usar todo en macOS / Windows / Linux
 │
 ├── crear-shorts/                     ← FASE 1: la IA controla el Mac y graba la demo
 │   ├── README.md                     ←   índice + estado de la máquina + permiso maestro
@@ -90,12 +97,15 @@ Sí se versiona todo lo demás: documentación, scripts, transcripciones de ejem
 ## 🚀 Si eres un agente de IA que retoma este trabajo — lee en este orden
 
 1. **Este README** (visión global).
-2. ¿Vas a **grabar/generar** una demo nueva controlando el Mac?
-   → `crear-shorts/README.md` y luego `crear-shorts/METODOLOGIA/01…04`.
-3. ¿Vas a **editar** una grabación en clips?
+2. **`PORTABILIDAD.md`** si NO estás en macOS (o si quieres los comandos de tu sistema):
+   instalación, control del ordenador, rutas y GPU para Windows y Linux.
+3. ¿Vas a **grabar/generar** una demo nueva controlando el ordenador?
+   → `crear-shorts/README.md` y luego `crear-shorts/METODOLOGIA/01…04`
+   (en macOS tal cual; en Windows/Linux, con los equivalentes de `PORTABILIDAD.md`).
+4. ¿Vas a **editar** una grabación en clips?
    → `editor/CLAUDE.md` (clips 16:9 desde un directo) **y**
    `editor/METODOLOGIA-SHORTS.md` (shorts verticales 9:16 con hueco para la cara).
-4. Mira siempre `editor/videos-editados/_cortes.log` antes de tocar un clip ya hecho:
+5. Mira siempre `editor/videos-editados/_cortes.log` antes de tocar un clip ya hecho:
    contiene los tramos exactos (en segundos) de cada clip construido.
 
 ### Reglas de oro heredadas (válidas en todo el repo)
@@ -109,12 +119,17 @@ Sí se versiona todo lo demás: documentación, scripts, transcripciones de ejem
 
 ---
 
-## 🛠️ Herramientas base (ya instaladas en la máquina de trabajo)
+## 🛠️ Herramientas base
 
-- **ffmpeg / ffprobe** (Homebrew) — todo el corte, recodificación y análisis.
-- **whisper.cpp** (Homebrew) + modelos en `~/.whisper-models/` — transcripción con timestamps.
-- **cliclick** (Homebrew), **OCR propio** y `mousepos` (Swift + Vision) — control del Mac.
-- **yt-dlp** — descargar directos si se parte de una URL.
+Comunes a los tres sistemas (instalación por SO en [`PORTABILIDAD.md`](PORTABILIDAD.md)):
 
-Máquina de referencia: **Apple Silicon (Metal)**, macOS, pantalla 1280×832 lógico (Retina 2×),
-menús en español.
+- **ffmpeg / ffprobe** — todo el corte, recodificación y análisis (Fase 2).
+- **whisper.cpp** + modelos en `~/.whisper-models/` — transcripción con timestamps (Fase 2).
+- **yt-dlp** — descargar directos si se parte de una URL (Fase 2).
+- **Kit de control del ordenador** (Fase 1) — cursor, teclado, ventanas y OCR; cambia según el SO:
+  macOS `cliclick` + OCR/`mousepos` propios; Windows AutoHotkey/PowerShell/nircmd + Tesseract;
+  Linux `xdotool`/`wmctrl`/`scrot`/`xclip`/`tesseract` (X11) o `ydotool`/`grim`/`wl-clipboard` (Wayland).
+
+Máquina donde se desarrolló la metodología: **Apple Silicon (Metal)**, macOS, pantalla 1280×832
+lógico (Retina 2×), menús en español. Por eso los ejemplos son de macOS — su equivalente para los
+demás sistemas está en `PORTABILIDAD.md`.

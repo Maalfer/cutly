@@ -1,5 +1,9 @@
 # 04 — Flujo de toma de video (protocolo completo)
 
+> **Independiente del sistema operativo.** Las fases, el pacing cinematográfico, la toma única
+> "sin tocar" y la verificación post-toma valen igual en macOS, Windows y Linux. Solo los comandos
+> concretos del ejemplo son de macOS; su equivalente está en `../../PORTABILIDAD.md` §2.
+
 ## El modelo de trabajo
 
 ```

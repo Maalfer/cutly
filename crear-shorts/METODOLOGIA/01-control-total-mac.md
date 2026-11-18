@@ -1,9 +1,14 @@
-# 01 — Control total del Mac desde un agente de IA
+# 01 — Control total del ordenador desde un agente de IA
 
-## El concepto
+> **Este documento detalla la implementación en macOS** (cliclick, AppleScript, OCR con Vision).
+> El concepto y la metodología valen igual en **Windows y Linux**; la equivalencia de cada comando
+> (mover cursor, teclear, ventanas, OCR, captura, portapapeles, permisos) está en la tabla de
+> **`../../PORTABILIDAD.md` §2**. Lee aquí el *porqué*; traduce cada comando a tu SO con esa tabla.
+
+## El concepto (idéntico en cualquier sistema)
 
 El usuario pide cosas → el agente de IA **controla cursor, teclado, ventanas y apps**
-del MacBook → el usuario solo graba la pantalla → luego edita el video con su cara y voz.
+del ordenador → el usuario solo graba la pantalla → luego edita el video con su cara y voz.
 
 ## Lo que hace falta (en orden de importancia)
 
