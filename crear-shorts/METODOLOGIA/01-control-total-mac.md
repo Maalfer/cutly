@@ -59,23 +59,30 @@ Si el usuario ejecuta desde otra app (Terminal.app, iTerm), hay que añadir ESA 
 
 El bucle de cada acción:
 ```
-ACCIÓN → screencapture → OCR/análisis → ¿coincide con lo esperado? → siguiente fase
+ACCIÓN → screencapture → MIRAR la captura (+ OCR para coordenadas) → ¿coincide? → siguiente fase
 ```
 
-El agente de esta sesión NO puede ver imágenes directamente (el modelo no soporta
-input de imagen), por eso se construyó un OCR con el framework Vision de macOS
-(100% local, offline, gratis) que devuelve texto CON COORDENADAS en píxeles físicos.
-En Retina 2x: **punto lógico (cliclick) = píxel físico / 2**.
+### 4. Cómo VE la IA (como un humano) + las coordenadas exactas
 
-### 4. Cómo "ve" el agente sin ojos
+El objetivo es que la IA **vea la pantalla igual que la vería una persona** y además pueda clicar
+con precisión de píxel. Se combinan cuatro vías, en este orden:
 
-1. **OCR con coordenadas** (`ocr`): lee TODO el texto de pantalla + posición exacta
-2. **Análisis de píxeles** (PIL + Python): detectar colores de botones, estados, ventanas
-3. **Enumeración UI de AppleScript**: `tell app "System Events" to get every window of process X`
-   con posición, tamaño y nombre — el "árbol de ventanas" sin capturar nada
-4. **AppleScript de app**: `count windows`, `bounds of window`, `name of tabs` — estado interno
+1. **VISIÓN directa (la principal).** Un modelo con visión (p. ej. **Claude**) abre la captura
+   `screencapture` y la **mira como un humano**: entiende el layout, qué app está delante, si una
+   ventana tapa a otra, si un botón está activo, si la página cargó. Es la percepción primaria.
+   > Si el modelo que estés usando **no** tiene visión, se apoya en las vías 2-4 (OCR + geometría);
+   > por eso se construyeron. Pero con un modelo con visión, **mira la imagen siempre** — es lo que
+   > más se parece a navegar como un humano.
+2. **OCR con coordenadas** (`ocr`, Vision de macOS; Tesseract en otros SO): da el texto de pantalla
+   **con su caja en píxeles**, para convertir "ese botón" en un `cliclick c:x,y` exacto. La visión
+   dice *qué* hacer; el OCR da el *dónde* al píxel.
+3. **Enumeración de ventanas** (AppleScript / `wmctrl` / PowerShell): posición y tamaño de cada
+   ventana → el "árbol de ventanas" para montar el layout y **detectar solapamientos** (doc 03).
+4. **Análisis de píxeles / estado de app** (color de un botón, `bounds`, `name of tabs`): detalles
+   finos cuando la visión o el OCR no bastan.
 
-Con estas 4 vías el agente tiene percepción completa del escritorio.
+Con estas cuatro vías la IA tiene percepción completa del escritorio: **ve** como un humano y
+**acierta** al píxel. (Retina 2×: punto lógico de `cliclick` = píxel físico del OCR / 2 — §5.)
 
 ### 5. Configuración de pantalla (importante para coordenadas)
 

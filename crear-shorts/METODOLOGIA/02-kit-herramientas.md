@@ -3,8 +3,8 @@
 > **macOS.** Equivalente de cada herramienta (cursor, teclado, OCR, captura, ventanas,
 > portapapeles) para Windows y Linux en `../../PORTABILIDAD.md` §2, con cómo instalarlas.
 
-Ubicación en vivo: `~/Desktop/ctrl-kit/` (compilados y funcionando)
-Copias del código fuente: `~/Desktop/crear-shorts/herramientas/`
+Ubicación en vivo (macOS): `~/Desktop/ctrl-kit/` (compilados y funcionando)
+Copias del código fuente: `crear-shorts/herramientas/` (dentro de este repo)
 
 ## Herramienta 1: `ocr` — Leer texto de pantalla CON coordenadas
 
@@ -128,3 +128,29 @@ pbpaste | head -c 60        # verificar su contenido
 ```
 **Lección:** tras simular un "copiar" en una web, SIEMPRE verificar con pbpaste
 que el JS realmente cargó el portapapeles antes de continuar.
+
+## Herramienta 8: `solapes.py` — detectar ventanas superpuestas (multiplataforma)
+
+Garantiza que ninguna ventana tape a otra antes de grabar (el fallo que más estropea un vídeo).
+Lee por stdin la lista de ventanas (`etiqueta x y w h`) y avisa de las que se solapan; con
+`--exit-code` sirve de "puerta" (no grabar hasta `0 solapamientos`). La matemática es universal;
+solo cambia el comando que enumera las ventanas en cada SO.
+
+```bash
+# macOS (enumerar + comprobar). Linux X11: wmctrl -lG | awk '...'; Windows: PowerShell. Ver PORTABILIDAD §2.
+osascript <<'EOF' | python3 crear-shorts/herramientas/solapes.py --min-pct 80 --exit-code
+tell application "System Events"
+  set out to ""
+  repeat with p in (every process whose visible is true and background only is false)
+    try
+      repeat with w in (every window of p)
+        set out to out & (name of p) & "\t" & (item 1 of (position of w)) & "\t" & (item 2 of (position of w)) & "\t" & (item 1 of (size of w)) & "\t" & (item 2 of (size of w)) & "\n"
+      end repeat
+    end try
+  end repeat
+  return out
+end tell
+EOF
+```
+
+Procedimiento completo (gate anti-solape) en `03-gestion-ventanas.md`.

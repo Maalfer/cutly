@@ -144,6 +144,8 @@ toda la toma.
 
 - [ ] Todas las apps necesarias **instaladas y probadas** (end-to-end) antes de grabar.
 - [ ] Layout fijo decidido; cada ventana en su sitio; franjas de foco visibles.
+- [ ] **Gate anti-solape pasado** (doc 03): ninguna ventana enterrada, confirmado por `solapes.py`
+      **y** mirando la captura (visión).
 - [ ] Datos/entorno de laboratorio listos (nada real sin autorización — ver los ejemplos DEMO-*).
 - [ ] `wait_for` definido para cada arranque/carga; nada de sleeps fijos a ciegas.
 - [ ] Anuncio "NO TOQUES EL MAC HASTA CORTEN" y OBS confirmado grabando (doc 04).

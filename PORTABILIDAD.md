@@ -99,7 +99,9 @@ la que está detallada en `crear-shorts/METODOLOGIA/`; las otras dos son su equi
 | **Abrir app / archivo** | `open -a App f` | `Start-Process App` · `start f` | `xdg-open f` / binario | `xdg-open f` |
 | **Posicionar ventana** | AppleScript `set bounds` | `nircmd win move title "X" x y w h` · PowerShell+`MoveWindow` | `wmctrl -r :ACTIVE: -e 0,x,y,w,h` · `xdotool windowmove` | limitado (depende del compositor) |
 | **Ocultar / minimizar ventana** | `set visible to false` | `nircmd win hide title "X"` · `ShowWindow` | `xdotool windowminimize` · `wmctrl` | limitado |
-| **Enumerar ventanas** | System Events (AppleScript) | PowerShell `Get-Process \| ? MainWindowTitle` · `EnumWindows` | `wmctrl -l` · `xdotool search --name` | limitado |
+| **Enumerar ventanas (solo títulos)** | System Events (AppleScript) | PowerShell `Get-Process \| ? MainWindowTitle` · `EnumWindows` | `wmctrl -l` · `xdotool search --name` | limitado |
+| **Geometría de ventanas (x,y,w,h)** — para el detector de solapes | AppleScript `position`/`size` de cada ventana | PowerShell + `GetWindowRect` (user32, P/Invoke) | **`wmctrl -lG`** (da id, x, y, w, h, título) | compositor (p. ej. `swaymsg -t get_tree`) |
+| **Ver la pantalla como un humano** | captura + **el modelo con visión la mira** (Claude); OCR para coords | igual (captura + visión + Tesseract para coords) | igual | igual |
 | **Portapapeles** | `pbcopy` / `pbpaste` | `Set-Clipboard` / `Get-Clipboard` · `… \| clip` | `xclip -selection clipboard` · `xsel -b` | `wl-copy` / `wl-paste` |
 | **Permiso para automatizar** | TCC → **Accesibilidad** (obligatorio) | normalmente sin permiso extra (ojo UAC/apps elevadas) | X11 lo permite de serie | **restringido**: input por `uinput` (ydotool + daemon), captura por portal |
 
@@ -140,6 +142,27 @@ tesseract captura.png salida --oem 1 --psm 11 -l spa+eng tsv
 > Recuerda el factor de escala Retina/HiDPI: si capturas a resolución física y el clic va en puntos
 > lógicos, divide las coordenadas por el factor de escala de la pantalla (en macOS Retina = 2;
 > en Windows/Linux depende del "scale"/DPI configurado). Verifica siempre con un clic de prueba.
+
+### Detectar ventanas superpuestas (gate anti-solape) en cada sistema
+
+El detector `crear-shorts/herramientas/solapes.py` es **universal** (matemática de rectángulos);
+solo cambia el comando que enumera las ventanas con su geometría. Alimenta el script con líneas
+`etiqueta x y w h`:
+
+```bash
+# macOS  — AppleScript (ver 03-gestion-ventanas.md para el bucle completo)
+osascript ...enum... | python3 crear-shorts/herramientas/solapes.py --min-pct 80 --exit-code
+
+# Linux X11 — wmctrl -lG da columnas: id desktop x y w h host titulo...
+wmctrl -lG | awk '{print $8"\t"$3"\t"$4"\t"$5"\t"$6}' | python3 crear-shorts/herramientas/solapes.py --min-pct 80 --exit-code
+
+# Windows — PowerShell: EnumWindows + GetWindowRect -> "titulo`tx`ty`tw`th" por ventana visible,
+#           y canalizar a: python crear-shorts\herramientas\solapes.py --min-pct 80 --exit-code
+```
+
+Con `--exit-code`, el script devuelve un código distinto de cero si hay algún solape: úsalo como
+**puerta** que impide grabar hasta que el layout esté limpio. Complétalo **mirando la captura**
+(visión) para confirmar a ojo que ninguna ventana tapa a otra.
 
 ---
 

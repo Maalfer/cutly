@@ -110,6 +110,54 @@ osascript -e 'tell application "System Events" to keystroke "a" using {command d
 osascript -e 'tell application "System Events" to key code 51'  # Delete
 ```
 
+## 🚦 Gate anti-solape (verificación OBLIGATORIA antes de grabar)
+
+El fallo que más arruina un vídeo es que **una ventana quede ENTERRADA** detrás de otra (invisible).
+Antes de CADA toma, pasa este control: enumerar ventanas → detectar solapes → reubicar/ocultar →
+**volver a comprobar**. Combínalo SIEMPRE con la **visión** (doc 01 §4): mira la captura como un
+humano y confirma que todo lo que debe verse, se ve.
+
+**Solape malo vs. solape intencional (clave para no tener falsos positivos):**
+- **Enterrada (malo):** una ventana cubierta casi por completo (≈ ≥80-100 %) → invisible, hay que
+  reubicarla. El caso 100 % (dos apps en la misma posición) es siempre malo.
+- **Capa intencional (bueno):** a veces quieres una ventana DELANTE y otras detrás asomando por una
+  franja (p. ej. Safari al frente con las dos terminales peek en los laterales, layout ClickFix).
+  Ahí hay solape parcial *a propósito* y es correcto, siempre que la franja necesaria quede visible.
+
+Por eso el gate automático usa un **umbral alto** (`--min-pct 80`): salta solo ante ventanas
+prácticamente enterradas. Los solapes parciales los juzgas **con la vista** (¿se ve la franja que
+necesito?). Nunca te fíes solo del número: mira la captura.
+
+```bash
+# 1) Enumerar ventanas visibles con geometría (macOS). Equivalente por SO en PORTABILIDAD.md §2:
+#    Linux X11: wmctrl -lG | awk '{print $8"\t"$3"\t"$4"\t"$5"\t"$6}'
+#    Windows  : PowerShell (EnumWindows + GetWindowRect) -> "titulo\tx\ty\tw\th"
+osascript <<'EOF' | python3 ~/Desktop/cutly/crear-shorts/herramientas/solapes.py --min-pct 80 --exit-code
+tell application "System Events"
+  set out to ""
+  repeat with p in (every process whose visible is true and background only is false)
+    try
+      repeat with w in (every window of p)
+        set pos to position of w
+        set sz to size of w
+        set out to out & (name of p) & "\t" & (item 1 of pos) & "\t" & (item 2 of pos) & "\t" & (item 1 of sz) & "\t" & (item 2 of sz) & "\n"
+      end repeat
+    end try
+  end repeat
+  return out
+end tell
+EOF
+# Si devuelve código !=0 (hay solape) → reubica/oculta (lecciones 2 y 3) y repite.
+```
+
+`solapes.py` (en `herramientas/`) calcula la intersección de cada par de rectángulos y avisa de los
+que se solapan por encima de un umbral; con `--exit-code` sirve de "puerta": no grabes hasta que dé
+`0 solapamientos`. La matemática es **universal**; solo cambia el comando que enumera las ventanas.
+
+> **Probado:** en una máquina real este gate detectó al instante dos apps a pantalla completa
+> apiladas en `(0,29) 1280×708` con **100% de solape** — exactamente el caso que deja una ventana
+> invisible detrás de otra. Reubicadas en paralelo (sin solape), el gate da `0` y luz verde.
+
 ## Layout de pantalla que funcionó (1280×832 lógico)
 
 ```

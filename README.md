@@ -68,7 +68,8 @@ cutly/
 │   └── herramientas/                 ←   código fuente de las herramientas
 │       ├── ocr.swift                 ←   OCR con Vision de macOS (texto + coordenadas)
 │       ├── mousepos.swift            ←   posición real del cursor
-│       └── find_button.py            ←   localizar botones por color
+│       ├── find_button.py            ←   localizar botones por color
+│       └── solapes.py                ←   detector de ventanas superpuestas (multiplataforma)
 │
 └── editor/                           ← FASE 2: editar la grabación en clips
     ├── CLAUDE.md                     ←   METODOLOGÍA PRINCIPAL de edición (directo → clips 16:9)

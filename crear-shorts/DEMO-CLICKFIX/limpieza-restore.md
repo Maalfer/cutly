@@ -40,7 +40,7 @@ El usuario recupera su sesión tal cual estaba (Cmd+H reversible, nada se cerró
 ### Archivos de proyecto (NO borrar — son el material de la demo):
 - `~/Desktop/clickfix-demo/` — toda la demo (página, payload, C2, decoys)
 - `~/Desktop/ctrl-kit/` — herramientas del agente
-- `~/Desktop/crear-shorts/` — esta documentación
+- `~/Desktop/cutly/crear-shorts/` — esta documentación
 
 Si el usuario quiere borrar la demo entera:
 ```bash

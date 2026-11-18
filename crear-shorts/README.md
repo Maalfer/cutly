@@ -31,33 +31,22 @@ navegador, ir a una ruta, loguear, abrir Burp, interceptar, modificar y reenviar
 
 ---
 
-## ⚠️ ESTADO ACTUAL DE LA MÁQUINA (leer primero)
+## ⚠️ Estado de la máquina: verifícalo en CADA sesión (no es fijo)
 
-Fecha: miércoles 18 de noviembre de 2026, ~20:00
+Antes de empezar y al terminar una toma, **comprueba el estado real de la máquina** — no asumas
+nada de una sesión anterior. Rutina al **abrir** sesión:
 
-### Apps OCULTAS (ocultadas por el agente — RESTAURAR con `set visible to true`):
-- `stable` (ventana del TUI de OpenCode — "Demostración ClickFix en Mac")
-- `Warp` (terminal que aloja OpenCode)
-- `Brave Browser`
-- `WhatsApp`
-- `OBS` (la grabadora del usuario — si estaba grabando, SIGUE grabando)
+1. **Verifica el control** (permiso + herramientas): mueve el cursor y léelo
+   (`cliclick m:300,600 && ~/Desktop/ctrl-kit/mousepos`); si no se mueve, ver doc 01 / `PORTABILIDAD.md`.
+2. **Enumera ventanas y pasa el gate anti-solape** (doc 03): que ninguna tape a otra.
+3. **Mira una captura** (visión, doc 01 §4): confirma a ojo qué hay abierto y el layout.
 
-### Proceso activo:
-- `python3 c2_server.py` corriendo en una ventana de Terminal (id ~2489, posición {10,80→630,750})
-  escuchando en `http://127.0.0.1:4444/upload`
+Al **cerrar** una toma, deja la máquina como estaba: restaura apps ocultas
+(`set visible to true`), cierra ventanas que creaste, mata procesos de la demo y borra datos de
+prueba (cada ejemplo trae su limpieza, p. ej. `DEMO-CLICKFIX/limpieza-restore.md`).
 
-### Escenario visible en pantalla:
-- Safari con la página falsa "Mac Cleaner Pro" (~/Desktop/clickfix-demo/fake-page.html) en {290,40→990,790}
-- Terminal víctima (id ~2487) en {650,80→1270,750} — ya ejecutó el payload
-- Terminal C2 (id ~2489) en {10,80→630,750} — muestra el botín exfiltrado
-- Botín en `~/Desktop/clickfix-demo/c2_loot/` (zip con datos decoy)
-
-### PENDIENTE (cuando el usuario lo pida):
-1. Restaurar apps ocultas
-2. Matar C2: `pkill -f c2_server.py`
-3. Cerrar ventanas de Terminal y Safari
-4. Borrar botín: `rm -rf ~/Desktop/clickfix-demo/c2_loot`
-5. Verificar limpieza: `launchctl list | grep systemcheck` (debe salir vacío — v1 ya limpiada)
+> Si en una sesión dejas algo a medias (apps ocultas, un servidor corriendo), **anótalo en una nota
+> de scratch de esa sesión**, no aquí: este README es metodología permanente, no el estado de un día.
 
 ---
 
@@ -80,7 +69,7 @@ Fecha: miércoles 18 de noviembre de 2026, ~20:00
 |------|-----------|
 | `DEMO-CLICKFIX/demo-completa.md` · `reproducir-paso-a-paso.md` · `limpieza-restore.md` | Demo ClickFix v2 (exfiltración por copiar-y-pegar): contexto, arquitectura, reproducción y limpieza |
 | `DEMO-IDOR/ejemplo-idor-con-burp.md` | **Demo de IDOR** conduciendo navegador + Burp Suite, de principio a fin |
-| `herramientas/` | Código fuente de las herramientas (copias) |
+| `herramientas/` | Código de las herramientas: `ocr.swift`, `mousepos.swift`, `find_button.py` y **`solapes.py`** (detector de ventanas superpuestas, multiplataforma) |
 
 ## 📂 Carpetas del proyecto fuera de esta doc
 

@@ -9,7 +9,7 @@
 > **Multiplataforma:** esta fase (editar) funciona igual en macOS, Windows y Linux — mismas
 > herramientas (ffmpeg, whisper.cpp, python, yt-dlp). Los comandos y rutas de abajo son los de la
 > máquina macOS; para Windows/Linux (instalación, nombre del binario de whisper, rutas, GPU, cómo
-> correr los `.sh` con Git Bash/WSL) usa `../PORTABILIDAD.md`. Las rutas `~/Desktop/editor/...` que
+> correr los `.sh` con Git Bash/WSL) usa `../PORTABILIDAD.md`. Las rutas `~/Desktop/cutly/editor/...` que
 > aparecen son ejemplos: hoy el proyecto vive en `cutly/editor/` y puede estar en cualquier sitio.
 
 ## Principio rector: precisión por encima de coste (tokens/tiempo)
@@ -74,20 +74,20 @@ cortar fragmentos concretos es un paso aparte que el usuario pide después, vien
 - El objetivo final siempre es el mismo: sacar fragmentos temáticos autocontenibles, limpios
   de muletillas/tangentes/interrupciones, para subir como clips independientes a YouTube.
 
-### Estructura de carpetas (toda la metodología vive en `~/Desktop/editor/`)
+### Estructura de carpetas (toda la metodología vive en `~/Desktop/cutly/editor/`)
 
-- **`~/Desktop/editor/crudo/`** — vídeos fuente en bruto (`directoN-completo.mp4`). Cuando el
+- **`~/Desktop/cutly/editor/crudo/`** — vídeos fuente en bruto (`directoN-completo.mp4`). Cuando el
   usuario pasa un directo nuevo (archivo ya puesto ahí, o un enlace de YouTube/Twitch que hay
   que descargar primero en máxima calidad con `yt-dlp`), el .mp4 final vive en esta carpeta.
   La transcripción (`.srt`/`.txt`) se guarda **junto al vídeo, en esta misma carpeta** — debe
   persistir entre sesiones, no es un archivo temporal de scratchpad.
-- **`~/Desktop/editor/videos-editados/`** — carpeta de salida de los clips ya montados
+- **`~/Desktop/cutly/editor/videos-editados/`** — carpeta de salida de los clips ya montados
   (créala si no existe). Aquí va también `_cortes.log` (registro de cortes, ver sección de
   errores de proceso). El usuario vacía esta carpeta cuando ya ha subido los clips a
   YouTube — que esté vacía NO significa que no se haya hecho nada antes, solo que ya se
   subieron.
 - El flujo nunca descarga ni escribe directamente en `~/Desktop/` a secas — todo el trabajo
-  (crudo y editado) vive dentro de `~/Desktop/editor/`.
+  (crudo y editado) vive dentro de `~/Desktop/cutly/editor/`.
 - **Nomenclatura de los clips**: `<directoN>_<Titulo-Tipo-YouTube>_editado.mp4`. La parte
   `<Titulo-Tipo-YouTube>` debe poder servir directamente como propuesta de título real para
   subir el vídeo a YouTube — no un resumen telegráfico tipo `cve_propio`, sino algo con gancho
@@ -269,7 +269,7 @@ Si el usuario pasa una URL (YouTube, Twitch VOD, etc.) en vez de un `.mp4` ya co
 yt-dlp -F "<url>"
 yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
   --merge-output-format mp4 \
-  -o "~/Desktop/editor/crudo/directoN-completo.mp4" "<url>"
+  -o "~/Desktop/cutly/editor/crudo/directoN-completo.mp4" "<url>"
 ```
 
 Lánzalo siempre en background (son descargas de varios minutos/GB) y **nunca lo trates como
@@ -281,7 +281,7 @@ quedar un `.part`/`.ytdl` a medias en vez del `.mp4` completo.
 ### 1. Transcribir el directo completo con timestamps
 
 Usa siempre el directorio de scratchpad de la sesión para el audio intermedio (es grande y
-desechable), pero guarda la transcripción resultante **junto al vídeo en `~/Desktop/editor/crudo/`**
+desechable), pero guarda la transcripción resultante **junto al vídeo en `~/Desktop/cutly/editor/crudo/`**
 (debe persistir entre sesiones, no es un archivo temporal).
 
 ```bash
@@ -290,17 +290,17 @@ desechable), pero guarda la transcripción resultante **junto al vídeo en `~/De
 # (sin redirigir a >&2), $MODEL queda corrupto y whisper-cli falla silenciosamente
 # imprimiendo su --help en vez de transcribir (bug real que ocurrió una vez, ya corregido
 # en el script, pero vuelve a comprobarlo con `echo "[$MODEL]"` si añades algo nuevo al script).
-MODEL=$(~/Desktop/editor/scripts/asegurar_mejor_modelo.sh)
+MODEL=$(~/Desktop/cutly/editor/scripts/asegurar_mejor_modelo.sh)
 
 # Extraer audio (en el scratchpad de la sesión, es temporal)
-ffmpeg -y -i ~/Desktop/editor/crudo/<directo>.mp4 -ar 16000 -ac 1 -c:a pcm_s16le audio.wav
+ffmpeg -y -i ~/Desktop/cutly/editor/crudo/<directo>.mp4 -ar 16000 -ac 1 -c:a pcm_s16le audio.wav
 
 # Transcribir con timestamps (salida persistente junto al vídeo, en crudo/)
 # -mc 0 es OBLIGATORIO en la transcripcion inicial de un directo completo: evita que una
 # alucinacion puntual (p.ej. sobre una intro sin voz clara) "envenene" el resto del archivo
 # por arrastre de contexto (ver "Errores de proceso" mas abajo).
 whisper-cli -m "$MODEL" -f audio.wav -l es -mc 0 \
-  -osrt -of ~/Desktop/editor/crudo/<directo>_transcripcion --output-txt
+  -osrt -of ~/Desktop/cutly/editor/crudo/<directo>_transcripcion --output-txt
 ```
 
 Esto genera `<directo>_transcripcion.srt` (con timestamps `HH:MM:SS,mmm`) y `.txt` (texto
@@ -414,7 +414,7 @@ habla continua). Nunca cortes directamente en el timestamp del segmento — siem
 
 ```bash
 # 1. Detección de silencio alrededor del punto aproximado (ventana de ~6-8s)
-ffmpeg -ss <aprox-3> -t 8 -i ~/Desktop/editor/crudo/<directo>.mp4 \
+ffmpeg -ss <aprox-3> -t 8 -i ~/Desktop/cutly/editor/crudo/<directo>.mp4 \
   -af silencedetect=noise=-22dB:d=0.1 -f null - 2>&1 | grep silence
 ```
 
@@ -426,7 +426,7 @@ Si el punto es ambiguo (varias palabras seguidas sin pausa clara, tartamudeo rea
 streamer), transcribe esa ventana concreta con precisión palabra por palabra:
 
 ```bash
-ffmpeg -y -ss <inicio> -t <dur> -i ~/Desktop/editor/crudo/<directo>.mp4 \
+ffmpeg -y -ss <inicio> -t <dur> -i ~/Desktop/cutly/editor/crudo/<directo>.mp4 \
   -ar 16000 -ac 1 -c:a pcm_s16le tmp.wav
 whisper-cli -m ~/.whisper-models/ggml-large-v3.bin -f tmp.wav -l es -ml 1 \
   2>&1 | grep -E "^\[00"
@@ -453,8 +453,8 @@ solo sirve para recortar la cola final sin cortes intermedios). Patrón para N s
 mantener:
 
 ```bash
-SRC=~/Desktop/editor/crudo/<directo>.mp4
-OUT=~/Desktop/editor/videos-editados/directo_<tema>_editado.mp4
+SRC=~/Desktop/cutly/editor/crudo/<directo>.mp4
+OUT=~/Desktop/cutly/editor/videos-editados/directo_<tema>_editado.mp4
 ffmpeg -y -i "$SRC" -filter_complex \
 "[0:v]trim=start=T0i:end=T0f,setpts=PTS-STARTPTS[v0];[0:a]atrim=start=T0i:end=T0f,asetpts=PTS-STARTPTS[a0]; \
  [0:v]trim=start=T1i:end=T1f,setpts=PTS-STARTPTS[v1];[0:a]atrim=start=T1i:end=T1f,asetpts=PTS-STARTPTS[a1]; \
@@ -685,7 +685,7 @@ Sospecha solo de silencios mucho más largos o patrones raros.
 ### 9. Limpieza
 
 Borra los `.wav` temporales de verificación del scratchpad al terminar cada clip. **Nunca
-borres** la transcripción `.srt`/`.txt` de `~/Desktop/editor/crudo/` (sirve para futuros
+borres** la transcripción `.srt`/`.txt` de `~/Desktop/cutly/editor/crudo/` (sirve para futuros
 fragmentos del mismo directo) ni el modelo de `~/.whisper-models/`.
 
 ## Ver fotogramas del vídeo (no estás completamente a ciegas)
