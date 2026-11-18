@@ -143,6 +143,25 @@ tesseract captura.png salida --oem 1 --psm 11 -l spa+eng tsv
 > lógicos, divide las coordenadas por el factor de escala de la pantalla (en macOS Retina = 2;
 > en Windows/Linux depende del "scale"/DPI configurado). Verifica siempre con un clic de prueba.
 
+### Entrada humana (tecleo y ratón realistas) en cada sistema
+
+El **plan** (qué tecla, cuándo, con qué retardo; y los puntos del trayecto del ratón) es lógica
+pura en Python y vale igual en los tres sistemas: `tipear.py` (`plan()`) y `mover.py` (`trayecto()`).
+Solo cambia el **emisor** que ejecuta ese plan:
+
+| SO | Emisor del plan | Notas |
+|---|---|---|
+| **macOS** | `teclear` (Swift, eventos CGEvent Unicode y ratón) | ✅ probado. `keystroke` de AppleScript pierde las tildes con Spanish-ISO; `cliclick m:` cuesta ~100 ms por punto |
+| **Windows** | AutoHotkey v2: `SendText`/`Send` por carácter con `Sleep`, y `MouseMove x, y, 0` por punto con `Sleep`; o PowerShell `SendKeys` | ⚠️ sin probar. `SendText` envía Unicode (tildes OK) |
+| **Linux X11** | `xdotool key --delay` / `xdotool type --delay 0 "x"` por carácter con `sleep`; ratón: `xdotool mousemove x y` por punto | ⚠️ sin probar. `xdotool type` maneja Unicode, pero comprueba las tildes |
+| **Linux Wayland** | `ydotool type`/`ydotool mousemove` con `sleep` entre llamadas | ⚠️ sin probar. Más lento por proceso; medir el coste por llamada |
+
+Antes de fiarte del emisor de tu SO: **mide el coste fijo por evento** (en macOS, `cliclick` tardaba
+~100 ms/punto) y **comprueba las tildes** (`á é ú ü ñ ¿ €`) con el teclado real de la máquina. Protocolo
+P16-P18 en `crear-shorts/METODOLOGIA/07-auditoria-de-pruebas.md`.
+
+---
+
 ### Medir qué ve realmente una persona (gate anti-solape) en cada sistema
 
 `crear-shorts/herramientas/visibilidad.py` es **universal** (rasteriza y pinta ventanas de atrás

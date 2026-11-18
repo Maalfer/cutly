@@ -71,8 +71,15 @@ Tabla con cada momento, qué se ve y su duración — para que edite rápido:
 
 ## Reglas de pacing (cine, no teatro)
 
+0. **Entrada HUMANA siempre (regla nº 0 del vídeo):** el texto que aparece de golpe y el cursor que
+   salta al botón delatan que es una máquina. Mientras OBS graba:
+   - **Teclear:** `type_human "App" "texto"` (ritmo variable, pausas tras espacios/signos, algún error
+     corregido con retroceso). **Nunca** `type_in`/`keystroke` con texto (es instantáneo).
+   - **Mover/clicar:** `mover_humano X Y` / `clic_humano X Y` / `click_text` (trayecto curvo, lento-
+     rápido-lento, 0,5-1,8 s según distancia). **Nunca** `cliclick m:` a pelo (salta de golpe).
+   - Velocidad: `--wpm 55` por defecto; **bájala (35-45)** para que se lea cada comando en un short.
 1. **Pauses de lectura:** 4s en pantallas con texto denso (el espectador lee)
-2. **Cursor glided:** mover en 3-4 saltos hacia el objetivo, no teletransporte
+2. **Cursor glided:** `mover_humano` ya traza el trayecto; no hace falta trocearlo a mano
 3. **Pausa pre-Enter:** el momento antes de ejecutar el peligro = tensión máxima
 4. **El "reveal" con clic:** traer el resultado al frente CON un clic deliberado
    ("veamos qué tiene el atacante...") — mucho más cinematográfico que ⌘Tab

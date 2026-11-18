@@ -177,3 +177,38 @@ detrás asomando): por eso mide *visibilidad*, no solape.
 para los fallos reales que motivaron cada una.
 
 Procedimiento completo (gate anti-solape) en `03-gestion-ventanas.md`.
+
+## Herramienta 9: entrada HUMANA — `tipear.py`, `mover.py` y el emisor `teclear` (para grabar vídeo)
+
+Para que lo grabado parezca una persona: el texto se escribe tecla a tecla con ritmo variable y el
+cursor viaja con trayecto curvo. Funciones en `mac-control.sh`: **`type_human`**, **`mover_humano`**,
+**`clic_humano`** (y `click_text`, que ya usa el cursor humano).
+
+```bash
+source crear-shorts/herramientas/mac-control.sh
+type_human "Terminal" "curl -s https://lab.local/cuenta?id=1002" --wpm 45 --typos 0.015 --seed 7
+mover_humano 700 400            # ~0,5-1,8 s según la distancia, llega EXACTO al punto
+click_text "Guardar" 1 c TextEdit
+```
+- **`tipear.py`** genera el plan de pulsaciones: velocidad media (`--wpm`, def. 55) con variación
+  aleatoria, pausa tras espacio, más tras `. , ; : ! ?`, más tras salto de línea, pausas de "pensar"
+  cada 6-14 palabras, letras repetidas más rápidas, y errores simulados (`--typos`, def. 0.015:
+  pulsa una tecla vecina, se "da cuenta", retrocede y corrige). `--seed` hace el ritmo reproducible;
+  `--dry-run` imprime la duración estimada. **Mide** y valida: con 3-5 % de errores el texto final
+  salió idéntico al pedido (Terminal, comparación exacta).
+- **`mover.py`** traza una curva de Bézier con perfil lento-rápido-lento y microtemblor; el último
+  punto es exacto (6 de 6 destinos al píxel, incluso a 1 px).
+- **`teclear`** (Swift, `teclear.swift`) es el emisor: envía eventos de teclado **Unicode** y de ratón.
+  ```bash
+  cd ~/Desktop/ctrl-kit && swiftc -O -o teclear teclear.swift     # una vez; mismo permiso de Accesibilidad
+  ```
+
+> **Por qué un emisor propio (medido):** (1) `keystroke "á"` de AppleScript escribe **`a`** con teclado
+> Spanish-ISO (las tildes se pierden; solo `ñ ¿` sobreviven): inaceptable en español. `teclear`
+> envía el carácter Unicode y funciona con `á é ú ü ñ ¿ € | ~ $`. (2) `cliclick m:` cuesta **~103 ms
+> por movimiento** (da igual `-w`): trazar un trayecto de 40 puntos tardaba 4 s. `teclear` lo hace en
+> ~1 s. (3) Sin una micropausa (6 ms) entre eventos, la app **pierde pulsaciones**.
+
+> **Cuidado con las apps con autocorrector** (TextEdit: mayúscula inicial y comillas tipográficas
+> “ ”). El tecleo es correcto pero el *texto final* cambia. Para verificar texto exacto usa Terminal o
+> un editor plano; en un vídeo, desactiva la autocorrección de esa app.

@@ -88,7 +88,8 @@ cuenta", la petición es `GET /cuenta?id=1001`. Si cambiamos a `id=1002`, salen 
 10. Captura final de verificación.  "CORTEN."
 ```
 
-Cada paso = ciclo del doc 05 (localizar por OCR/atajo → actuar → **verificar**). Los `wait_for`
+Cada paso = ciclo del doc 05 (localizar por OCR/atajo → actuar → **verificar**). **Todo el tecleo y el
+movimiento del cursor con entrada humana** (`type_human`, `mover_humano`, `click_text`; doc 04, regla 0). Los `wait_for`
 y las pausas de lectura marcan el pacing; el movimiento del cursor, "glided" (doc 04).
 
 ---

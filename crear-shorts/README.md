@@ -70,7 +70,7 @@ prueba (cada ejemplo trae su limpieza, p. ej. `DEMO-CLICKFIX/limpieza-restore.md
 |------|-----------|
 | `DEMO-CLICKFIX/demo-completa.md` · `reproducir-paso-a-paso.md` · `limpieza-restore.md` | Demo ClickFix v2 (exfiltración por copiar-y-pegar): contexto, arquitectura, reproducción y limpieza |
 | `DEMO-IDOR/ejemplo-idor-con-burp.md` | **Demo de IDOR** conduciendo navegador + Burp Suite, de principio a fin |
-| `herramientas/` | Código de las herramientas: `ocr.swift`, `mousepos.swift`, `find_button.py` **`winlist.swift`** + **`visibilidad.py`** (qué ve realmente una persona: enterrada/cortada/overlay), `ocr_buscar.py` y **`mac-control.sh`** (funciones que hacen y verifican) |
+| `herramientas/` | Código de las herramientas: `ocr.swift`, `mousepos.swift`, `find_button.py` **`winlist.swift`** + **`visibilidad.py`** (qué ve realmente una persona: enterrada/cortada/overlay), `ocr_buscar.py` **`mac-control.sh`** (funciones que hacen y verifican) y la **entrada humana**: `tipear.py`, `mover.py`, `teclear.swift` |
 
 ## 📂 Carpetas del proyecto fuera de esta doc
 

@@ -92,20 +92,36 @@ textedit_una_ventana() {
 
 # ---------- ratón / teclado ----------
 
-# Clic en una PALABRA concreta de la pantalla (OCR por palabra). click_text "Guardar" [n-ésima=1] [dc]
+# Clic en una PALABRA concreta de la pantalla (OCR por palabra, cursor humano).
+#   click_text "Guardar" [n-ésima=1] [modo=c|dc] [APP]
+# - APP (muy recomendado): busca SOLO dentro de la ventana superior de esa app. Sin APP se busca en toda
+#   la pantalla y se clica la primera coincidencia, que puede ser de OTRA ventana (error real medido:
+#   la palabra también aparecía en el terminal de fondo y el clic fue allí).
+# - Reintenta hasta $CLICK_TEXT_TIMEOUT s (def. 5) por si el texto aún no se ha pintado.
 # Lección: el OCR por LÍNEA da la caja de toda la frase; su centro NO es la palabra. Aquí se usa --words.
 click_text() {
-  local word="$1" n="${2:-1}" mode="${3:-c}"
-  screencapture -x "$_TMP/_ct.png"
-  local scale; scale=$(screen_scale)
-  local xy
-  xy=$("$CTRL_KIT/ocr" --words "$_TMP/_ct.png" | python3 "$_HERR/ocr_buscar.py" "$word" "$n" "$scale") || {
-    _err "no encontré la palabra '$word' (coincidencia $n) en pantalla"; return 1; }
-  cliclick m:"$xy"; sleep 0.3; cliclick "$mode":"$xy"
+  # (todas las variables se declaran AQUÍ: en zsh, un `local x` dentro de un bucle imprime "x=valor")
+  local word="$1" n="${2:-1}" mode="${3:-c}" app="${4:-}" max="${CLICK_TEXT_TIMEOUT:-5}" t=0 xy="" region="" scale=""
+  if [ -n "$app" ]; then
+    # Un clic en otra ventana la sube al frente y entierra la tuya: asegúrate de que la app está delante.
+    ensure_front "$app" || return 1
+    sleep 0.3
+    region=$("$CTRL_KIT/winlist" | awk -F'\t' -v a="$app" '$2==a && $8==0 {printf "%d,%d,%d,%d",$4,$5,$6,$7; exit}')
+    [ -n "$region" ] || { _err "no hay ventana visible de '$app'"; return 1; }
+  fi
+  while [ "$t" -le "$max" ]; do
+    screencapture -x "$_TMP/_ct.png"
+    scale=$(screen_scale)
+    xy=$("$CTRL_KIT/ocr" --words "$_TMP/_ct.png" | python3 "$_HERR/ocr_buscar.py" "$word" "$n" "$scale" "$region") && break
+    xy=""; sleep 0.5; t=$((t+1))
+  done
+  [ -n "$xy" ] || { _err "no encontré la palabra '$word' (coincidencia $n${app:+ en $app}) tras ${max}s"; return 1; }
+  mover_humano "${xy%,*}" "${xy#*,}"; sleep 0.25; cliclick "$mode":.
   echo "$xy"
 }
 
-# Escribe texto SOLO si el foco es el esperado. type_in "TextEdit" "hola mundo"
+# Escribe texto INSTANTÁNEO solo si el foco es el esperado. type_in "TextEdit" "hola mundo"
+# Para VÍDEO usa type_human (ritmo humano). OJO: keystroke pierde las tildes con teclado Spanish-ISO.
 # Lección: keystroke va a la app con el foco; si no lo compruebas, el texto cae en otra ventana.
 type_in() {
   local app="$1" text="$2" f; f=$(front)
@@ -122,6 +138,25 @@ hotkey() {
   local app="$1" key="$2" mod="${3:-command}" f; f=$(front)
   [ "$f" = "$app" ] || { _err "FOCO INCORRECTO: '$f' (esperado '$app') — NO envío el atajo"; return 1; }
   osascript -e "tell application \"System Events\" to keystroke \"$key\" using {$mod down}"
+}
+
+# --- Entrada HUMANA (para grabar vídeos): usa esto, no type_in, mientras OBS graba -------------------
+
+# Mueve el cursor con trayecto curvo y velocidad variable (1-2 s según distancia). mover_humano X Y [seg]
+mover_humano() {
+  python3 "$_HERR/mover.py" "$1" "$2" ${3:+--dur "$3"}
+}
+
+# Clic humano en un punto: mueve como una persona, hace una pequeña pausa y clica. clic_humano X Y
+clic_humano() { mover_humano "$1" "$2" && sleep 0.2 && cliclick c:.; }
+
+# Teclea como una persona (ritmo variable, pausas, errores corregidos) SOLO si el foco es el esperado.
+#   type_human "Terminal" "curl -s https://..." [--wpm 55] [--typos 0.015] [--seed N]
+# Usa el emisor `teclear` (Unicode): á é ú ü ñ ¿ € funcionan; `keystroke` de AppleScript pierde las tildes.
+type_human() {
+  local app="$1" text="$2" f; shift 2; f=$(front)
+  if [ "$f" != "$app" ]; then _err "FOCO INCORRECTO: '$f' (esperado '$app') — NO escribo"; return 1; fi
+  python3 "$_HERR/tipear.py" "$text" "$@"
 }
 
 key_return() { osascript -e 'tell application "System Events" to key code 36'; }

@@ -1,5 +1,9 @@
 # 06 — Conducir el navegador y herramientas GUI (Burp Suite, etc.)
 
+> **Entrada humana:** en los ejemplos, el texto se teclea con `type_human` y el cursor se mueve con
+> `mover_humano`/`click_text` (ver doc 02, herramienta 9). Los atajos (`Cmd+T`, `Cmd+L`…) siguen
+> siendo pulsaciones sueltas y no necesitan ritmo.
+>
 > Patrones concretos para las dos cosas que más aparecen en una demo de seguridad web: el
 > **navegador** y una **herramienta GUI compleja** (aquí Burp Suite como ejemplo denso). Se apoya
 > en el ciclo universal del doc 05. Comandos de ejemplo en macOS; equivalentes por sistema en
@@ -17,7 +21,7 @@ osascript -e 'tell application "Google Chrome" to activate'
 # Nueva pestaña y foco a la barra de direcciones:
 osascript -e 'tell application "System Events" to keystroke "t" using {command down}'   # Cmd+T
 osascript -e 'tell application "System Events" to keystroke "l" using {command down}'   # Cmd+L (barra URL)
-osascript -e 'tell application "System Events" to keystroke "https://lab.local/cuenta"'
+type_human "Google Chrome" "https://lab.local/cuenta" --wpm 45   # ritmo humano; NO keystroke (instantáneo)
 osascript -e 'tell application "System Events" to keystroke return'
 wait_for "Mi cuenta" 15      # esperar a que la página cargue (texto que solo sale cargada)
 ```
@@ -38,9 +42,9 @@ Sin texto (iconos): posición relativa a algo con texto, color (`find_button.py`
 ```bash
 # Clic en el primer campo (o Tab para saltar entre campos), teclear, Tab, teclear, enviar:
 cliclick c:CAMPO_USUARIO_X,Y
-osascript -e 'tell application "System Events" to keystroke "usuarioA"'
+type_human "Google Chrome" "usuarioA" --wpm 40
 osascript -e 'tell application "System Events" to keystroke tab'
-osascript -e 'tell application "System Events" to keystroke "Passw0rd!"'
+type_human "Google Chrome" "Passw0rd!" --wpm 40 --typos 0   # sin errores simulados en contraseñas
 osascript -e 'tell application "System Events" to keystroke return'      # enviar
 wait_for "Bienvenido usuarioA" 10                                        # VERIFICAR que entró
 ```

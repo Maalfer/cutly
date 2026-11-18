@@ -33,6 +33,13 @@
 | 16 | La doc decía que el agente "no puede ver imágenes" | Texto obsoleto | Corregido: visión primero; OCR solo para el dónde exacto |
 | 17 | El gate marcó **OVERLAY** al abrir una app: era `StatusIndicator` | Es el indicador de privacidad/grabación de macOS en la barra de menús (aparece con `screencapture`/OBS); no tapa contenido | Se ignora lo que está ≥ 80 % dentro de la barra de menús; una notificación real sigue detectándose |
 | 18 | Mi primer arreglo del #17 **seguía fallando**: el indicador llega a x=1282 y la barra acaba en 1280 | Comprobaba contención estricta | Proporción de solape (≥ 80 %), tolera 1-2 px de borde. Lo destapó una prueba sintética con las medidas reales |
+| 19 | `keystroke "á"` escribió **`a`** (á é ú ü → a; solo ñ y ¿ sobrevivieron) | Teclado Spanish-ISO: AppleScript pierde las vocales con tilde | Emisor `teclear` (eventos Unicode); `tipear.py` avisa si no existe |
+| 20 | Trazar un trayecto de ratón de 40 puntos con `cliclick` tardó **4 s** | `cliclick m:` cuesta ~103 ms fijos por movimiento, sea cual sea `-w`; `-e` solo llega a 0,3 s | `teclear` acepta `m x y` (eventos de ratón directos): 1,8 s para 1.100 px |
+| 21 | El emisor Swift **perdía pulsaciones** (`ñáéú` y se cortaba) | Sin pausa entre eventos y el proceso terminaba antes de que la app los consumiera | Micropausa de 6 ms por evento + espera final de 150 ms |
+| 22 | `click_text "cuatro"` clicó a veces **otra ventana** (y una vez seleccionó vacío) | Busca en toda la pantalla y toma la primera coincidencia: la palabra también estaba en el terminal de fondo | `click_text PALABRA N MODO APP`: busca solo en la ventana de esa app |
+| 23 | Tras el clic erróneo, **todo lo siguiente falló en cadena** ("no encontré la palabra") | Clicar otra ventana la sube al frente y entierra la tuya; el OCR ya no ve su texto | `click_text` con APP hace `ensure_front` primero; probado: enterrada a propósito, recupera 4/4 |
+| 24 | La salida de `click_text` se llenó de `scale=2.0` (solo en zsh) | En zsh, `local x` repetido dentro de un bucle **imprime** `x=valor` | Declarar todas las variables locales al inicio de la función |
+| 25 | El texto verificado en TextEdit no coincidía (`Curl`, comillas “ ”) | Autocorrector de TextEdit (mayúscula inicial, comillas tipográficas) | No es un fallo del tecleo: verificar en Terminal/editor plano o desactivar la autocorrección |
 
 ### Lo que **sí** funcionó a la primera (medido)
 - **Control del cursor:** `cliclick m:300,600` → `mousepos` devuelve `300,600` exacto.
@@ -78,10 +85,13 @@ Usa solo ventanas **creadas por ti** (no toques las apps del usuario) y límpial
 | P13 | **Gate: fuera de pantalla** | ventana que sobresale del borde | marca "% FUERA DE PANTALLA" |
 | P14 | **Gate: overlay** | provoca una notificación (o simula una línea de capa alta) | aparece como OVERLAY |
 | P15 | **Limpieza** | cierra tus ventanas/documentos | solo quedan las ventanas originales |
+| P16 | **Tecleo humano** | teclea una frase con tildes, `€`, `¿`, comillas, `\|`, `~` y errores simulados (3-5 %); compara el texto final **exacto** en un editor sin autocorrector; mide cuánto tardó y que aparece **progresivamente** | texto idéntico, duración ≈ estimada, y a mitad se ve a medias |
+| P17 | **Ratón humano** | mueve a 6 destinos (incluido uno a 1 px del anterior); muestrea la posición durante un trayecto largo | llega exacto 6/6; el muestreo pasa por puntos intermedios con perfil lento-rápido-lento; < 2 s |
+| P18 | **Clic dirigido a una app con texto repetido** | repite una palabra en dos ventanas; `click_text` con la app; entierra la ventana a propósito | clica en la ventana correcta 4/4 y la recupera del fondo |
 
-Resultado en **macOS**: P1-P13 y P15 ejecutadas sobre ventanas reales; **P14 (overlay) solo con datos
+Resultado en **macOS**: P1-P13 y P15-P18 ejecutadas sobre ventanas reales; **P14 (overlay) solo con datos
 sintéticos** (no se provocó una notificación real del sistema, por no molestar al usuario). Los fallos
-1-18 de la tabla se encontraron y corrigieron.
+1-25 de la tabla se encontraron y corrigieron.
 Resultado en **Windows / Linux X11 / Linux Wayland**: ⏳ pendiente — ejecutar el protocolo, anotar
 fallos aquí y construir el kit equivalente a `mac-control.sh`.
 

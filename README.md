@@ -73,7 +73,10 @@ cutly/
 │       ├── winlist.swift             ←   ventanas en pantalla CON z-order (CGWindowList)
 │       ├── visibilidad.py            ←   % realmente visible por ventana: enterrada/cortada/overlay (universal)
 │       ├── ocr_buscar.py             ←   localiza una palabra del OCR y devuelve el punto de clic
-│       └── mac-control.sh            ←   funciones que HACEN y VERIFICAN (foco, colocar, clic, esperar); bash y zsh
+│       ├── mac-control.sh            ←   funciones que HACEN y VERIFICAN (foco, colocar, clic, esperar); bash y zsh
+│       ├── tipear.py                 ←   teclea como una persona (ritmo variable, pausas, errores corregidos)
+│       ├── mover.py                  ←   mueve el cursor como una persona (curva, lento-rápido-lento)
+│       └── teclear.swift             ←   emisor de teclado Unicode y ratón (tildes OK; sin el coste de cliclick)
 │
 └── editor/                           ← FASE 2: editar la grabación en clips
     ├── CLAUDE.md                     ←   METODOLOGÍA PRINCIPAL de edición (directo → clips 16:9)
