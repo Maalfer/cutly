@@ -60,7 +60,8 @@ cutly/
 │   │   ├── 03-gestion-ventanas.md    ←   z-order, apps fullscreen, direccionar por ID
 │   │   ├── 04-flujo-toma-video.md    ←   protocolo de toma: fases, pacing, verificación
 │   │   ├── 05-controlar-aplicaciones.md        ←  conducir CUALQUIER app: abrir/esperar/enfocar/cerrar, multi-app
-│   │   └── 06-navegador-y-herramientas-gui.md  ←  navegador + herramientas GUI (Burp Suite)
+│   │   ├── 06-navegador-y-herramientas-gui.md  ←  navegador + herramientas GUI (Burp Suite)
+│   │   └── 07-auditoria-de-pruebas.md          ←  fallos reales hallados probando + protocolo de pruebas por SO
 │   ├── DEMO-CLICKFIX/                ←   ejemplo: demo ClickFix (exfiltración por copiar-y-pegar)
 │   │   ├── demo-completa.md · reproducir-paso-a-paso.md · limpieza-restore.md
 │   ├── DEMO-IDOR/                    ←   ejemplo: demo de IDOR con navegador + Burp Suite
@@ -69,7 +70,10 @@ cutly/
 │       ├── ocr.swift                 ←   OCR con Vision de macOS (texto + coordenadas)
 │       ├── mousepos.swift            ←   posición real del cursor
 │       ├── find_button.py            ←   localizar botones por color
-│       └── solapes.py                ←   detector de ventanas superpuestas (multiplataforma)
+│       ├── winlist.swift             ←   ventanas en pantalla CON z-order (CGWindowList)
+│       ├── visibilidad.py            ←   % realmente visible por ventana: enterrada/cortada/overlay (universal)
+│       ├── ocr_buscar.py             ←   localiza una palabra del OCR y devuelve el punto de clic
+│       └── mac-control.sh            ←   funciones que HACEN y VERIFICAN (foco, colocar, clic, esperar); bash y zsh
 │
 └── editor/                           ← FASE 2: editar la grabación en clips
     ├── CLAUDE.md                     ←   METODOLOGÍA PRINCIPAL de edición (directo → clips 16:9)

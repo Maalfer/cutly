@@ -14,24 +14,38 @@ cd ~/Desktop/ctrl-kit && swiftc -O -o ocr ocr.swift
 # Requiere Command Line Tools: xcode-select --install
 ```
 
-**Uso:**
+**Dos modos:**
 ```bash
-~/Desktop/ctrl-kit/ocr captura.png
-# Salida: <texto>\t[x,y WxH] en píxeles FÍSICOS (Retina: /2 para cliclick)
+~/Desktop/ctrl-kit/ocr captura.png            # una línea por BLOQUE de texto:  <texto>\t[x,y WxH]
+~/Desktop/ctrl-kit/ocr --words captura.png    # una línea por PALABRA:          <palabra>\t[x,y WxH]
+# Coordenadas en píxeles FÍSICOS. Punto lógico para cliclick = px / ESCALA (Retina = 2).
 ```
 
-**Ejemplo real de esta sesión:**
+> **⚠️ Lección medida en pruebas reales:** el modo por línea da la caja de **toda la frase**, y su
+> centro **NO es la palabra que buscas**. Con la línea "uno dos tres cuatro cinco seis siete ocho",
+> clicar el centro de la línea acertó solo "cinco" (la del medio); con `--words` se acertaron las 5
+> palabras probadas. **Para clicar una palabra o un enlace dentro de una frase, usa `--words`.**
+> El modo por línea sirve para *comprobar que un texto existe* (p. ej. `wait_for`), no para clicar.
+
+**Clicar una palabra (lo normal): usa `click_text`** de `herramientas/mac-control.sh`:
+```bash
+source crear-shorts/herramientas/mac-control.sh
+click_text "Guardar"        # 1ª coincidencia; click_text "Guardar" 2  -> la 2ª; click_text "X" 1 dc -> doble clic
 ```
-$ ocr /tmp/stage_v3.png | grep -iE "COPIAR"
-• COPIAR COMANDO DE LIMPIEZA (%C)   [956,1314 643x33]
-# → centro del botón = (956+643/2)/2 = 639 lógico x, 1314+16)/2 ≈ 684 lógico y
-# → cliclick c:639,684
+Ignora mayúsculas, tildes y puntuación ("Sesión:" == "sesion") y calcula la escala Retina real.
+
+**Ejemplo manual (botón de una sola palabra o frase corta):**
+```
+$ ocr --words /tmp/stage_v3.png | grep -iE "^COPIAR"
+COPIAR   [956,1314 130x33]
+# centro lógico = (956+130/2)/2 , (1314+33/2)/2  ->  cliclick c:510,665
 ```
 
 **Trucos aprendidos:**
 - Filtra por zona con awk: `awk -F'\t' '$0 ~ /\[(9[7-9][0-9],/'` (columna x)
 - El OCR confunde algunos símbolos (% por ⌘, v por ✓) — el texto correcto está casi siempre
-- `recognitionLanguages = ["es-ES", "en-US"]` — ya configurado para español
+- `recognitionLanguages = ["es-ES", "en-US"]` — ya configurado para español (tildes y ñ funcionan)
+- Rendimiento medido: captura + OCR de pantalla completa Retina ≈ 0,3 s
 
 ## Herramienta 2: `mousepos` — Posición exacta del cursor
 
@@ -129,28 +143,37 @@ pbpaste | head -c 60        # verificar su contenido
 **Lección:** tras simular un "copiar" en una web, SIEMPRE verificar con pbpaste
 que el JS realmente cargó el portapapeles antes de continuar.
 
-## Herramienta 8: `solapes.py` — detectar ventanas superpuestas (multiplataforma)
+## Herramienta 8: `winlist` + `visibilidad.py` — qué ve REALMENTE una persona (anti-solape)
 
-Garantiza que ninguna ventana tape a otra antes de grabar (el fallo que más estropea un vídeo).
-Lee por stdin la lista de ventanas (`etiqueta x y w h`) y avisa de las que se solapan; con
-`--exit-code` sirve de "puerta" (no grabar hasta `0 solapamientos`). La matemática es universal;
-solo cambia el comando que enumera las ventanas en cada SO.
+**El problema:** el fallo que más arruina un vídeo es que una ventana quede tapada/enterrada, o se
+salga de la pantalla, o le caiga encima una notificación.
 
+**`winlist`** (Swift, API `CGWindowList`) lista TODAS las ventanas en pantalla **en orden de capas**
+(z-order, la primera = la de más arriba) con su geometría, capa y proceso. Mejor que enumerar con
+AppleScript, que **no da el z-order** y solo ve apps con Accesibilidad completa.
 ```bash
-# macOS (enumerar + comprobar). Linux X11: wmctrl -lG | awk '...'; Windows: PowerShell. Ver PORTABILIDAD §2.
-osascript <<'EOF' | python3 crear-shorts/herramientas/solapes.py --min-pct 80 --exit-code
-tell application "System Events"
-  set out to ""
-  repeat with p in (every process whose visible is true and background only is false)
-    try
-      repeat with w in (every window of p)
-        set out to out & (name of p) & "\t" & (item 1 of (position of w)) & "\t" & (item 2 of (position of w)) & "\t" & (item 1 of (size of w)) & "\t" & (item 2 of (size of w)) & "\n"
-      end repeat
-    end try
-  end repeat
-  return out
-end tell
-EOF
+cd ~/Desktop/ctrl-kit && swiftc -O -o winlist winlist.swift      # una sola vez
+~/Desktop/ctrl-kit/winlist      # z \t app \t título \t x \t y \t w \t h \t layer \t pid
 ```
+
+**`visibilidad.py`** calcula el **% realmente visible de cada ventana** (pinta de atrás hacia delante
+sobre una rejilla), detecta lo **enterrado**, lo que **sobresale de la pantalla** y los **overlays**
+(notificaciones…). Dos ventanas solapadas pueden verse perfectas (la de delante completa y la de
+detrás asomando): por eso mide *visibilidad*, no solape.
+```bash
+~/Desktop/ctrl-kit/winlist | python3 crear-shorts/herramientas/visibilidad.py \
+    --only Terminal,TextEdit --need Terminal=95 --need TextEdit=95 --exit-code
+#   2   100.0%  TextEdit | ...
+#   3   100.0%  Terminal | ...
+#   4     9.3%  Warp | ...   (fondo, ignorada)
+```
+- `--only A,B` juzga solo las ventanas del layout; las de fondo tapan pero no cuentan como error.
+- `--need App=PCT` exige un mínimo (p. ej. una terminal que debe asomar por una franja ≥ 25 %).
+- `--exit-code` devuelve ≠ 0 si algo falla → úsalo como **puerta antes de grabar**.
+
+**`mac-control.sh`** reúne funciones que **hacen y verifican**: `ventanas` (gate), `place_window`,
+`ensure_front`, `type_in`/`hotkey` (se niegan a escribir si el foco no es el esperado),
+`click_text`, `wait_for`, `screen_scale`. Funciona en **bash y zsh**. Ver `07-auditoria-de-pruebas.md`
+para los fallos reales que motivaron cada una.
 
 Procedimiento completo (gate anti-solape) en `03-gestion-ventanas.md`.

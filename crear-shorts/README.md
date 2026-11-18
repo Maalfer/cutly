@@ -62,6 +62,7 @@ prueba (cada ejemplo trae su limpieza, p. ej. `DEMO-CLICKFIX/limpieza-restore.md
 | `METODOLOGIA/04-flujo-toma-video.md` | Protocolo de toma: fases, pacing, verificación, "no tocar" |
 | `METODOLOGIA/05-controlar-aplicaciones.md` | **Patrón general para conducir CUALQUIER app**: abrir/esperar/enfocar/cerrar, multi-app, sincronización, robustez |
 | `METODOLOGIA/06-navegador-y-herramientas-gui.md` | **Navegador** (URL, clics, formularios, pestañas, leer) y **herramientas GUI** (Burp Suite como caso) |
+| `METODOLOGIA/07-auditoria-de-pruebas.md` | **Fallos reales** encontrados probando la navegación + **protocolo de pruebas** para validar el control en cualquier SO |
 
 **EJEMPLOS** (demos completas de referencia):
 
@@ -69,7 +70,7 @@ prueba (cada ejemplo trae su limpieza, p. ej. `DEMO-CLICKFIX/limpieza-restore.md
 |------|-----------|
 | `DEMO-CLICKFIX/demo-completa.md` · `reproducir-paso-a-paso.md` · `limpieza-restore.md` | Demo ClickFix v2 (exfiltración por copiar-y-pegar): contexto, arquitectura, reproducción y limpieza |
 | `DEMO-IDOR/ejemplo-idor-con-burp.md` | **Demo de IDOR** conduciendo navegador + Burp Suite, de principio a fin |
-| `herramientas/` | Código de las herramientas: `ocr.swift`, `mousepos.swift`, `find_button.py` y **`solapes.py`** (detector de ventanas superpuestas, multiplataforma) |
+| `herramientas/` | Código de las herramientas: `ocr.swift`, `mousepos.swift`, `find_button.py` **`winlist.swift`** + **`visibilidad.py`** (qué ve realmente una persona: enterrada/cortada/overlay), `ocr_buscar.py` y **`mac-control.sh`** (funciones que hacen y verifican) |
 
 ## 📂 Carpetas del proyecto fuera de esta doc
 

@@ -76,8 +76,9 @@ con precisión de píxel. Se combinan cuatro vías, en este orden:
 2. **OCR con coordenadas** (`ocr`, Vision de macOS; Tesseract en otros SO): da el texto de pantalla
    **con su caja en píxeles**, para convertir "ese botón" en un `cliclick c:x,y` exacto. La visión
    dice *qué* hacer; el OCR da el *dónde* al píxel.
-3. **Enumeración de ventanas** (AppleScript / `wmctrl` / PowerShell): posición y tamaño de cada
-   ventana → el "árbol de ventanas" para montar el layout y **detectar solapamientos** (doc 03).
+3. **Enumeración de ventanas CON z-order** (`winlist` en macOS vía `CGWindowList`; `wmctrl`/PowerShell
+   en otros SO): posición, tamaño y **qué tapa a qué** → montar el layout y medir el **% realmente
+   visible** de cada ventana (`visibilidad.py`, doc 03). AppleScript no da el z-order.
 4. **Análisis de píxeles / estado de app** (color de un botón, `bounds`, `name of tabs`): detalles
    finos cuando la visión o el OCR no bastan.
 

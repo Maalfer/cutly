@@ -112,51 +112,52 @@ osascript -e 'tell application "System Events" to key code 51'  # Delete
 
 ## 🚦 Gate anti-solape (verificación OBLIGATORIA antes de grabar)
 
-El fallo que más arruina un vídeo es que **una ventana quede ENTERRADA** detrás de otra (invisible).
-Antes de CADA toma, pasa este control: enumerar ventanas → detectar solapes → reubicar/ocultar →
-**volver a comprobar**. Combínalo SIEMPRE con la **visión** (doc 01 §4): mira la captura como un
-humano y confirma que todo lo que debe verse, se ve.
-
-**Solape malo vs. solape intencional (clave para no tener falsos positivos):**
-- **Enterrada (malo):** una ventana cubierta casi por completo (≈ ≥80-100 %) → invisible, hay que
-  reubicarla. El caso 100 % (dos apps en la misma posición) es siempre malo.
-- **Capa intencional (bueno):** a veces quieres una ventana DELANTE y otras detrás asomando por una
-  franja (p. ej. Safari al frente con las dos terminales peek en los laterales, layout ClickFix).
-  Ahí hay solape parcial *a propósito* y es correcto, siempre que la franja necesaria quede visible.
-
-Por eso el gate automático usa un **umbral alto** (`--min-pct 80`): salta solo ante ventanas
-prácticamente enterradas. Los solapes parciales los juzgas **con la vista** (¿se ve la franja que
-necesito?). Nunca te fíes solo del número: mira la captura.
+El fallo que más arruina un vídeo: una ventana **enterrada** detrás de otra (invisible), una ventana
+que **se sale de la pantalla** (sale cortada) o una **notificación** que cae encima. Antes de CADA
+toma: medir lo que se ve → corregir → **volver a medir** hasta que pase. Combínalo SIEMPRE con la
+**visión** (doc 01 §4): mira la captura como un humano y confirma que todo lo importante se ve.
 
 ```bash
-# 1) Enumerar ventanas visibles con geometría (macOS). Equivalente por SO en PORTABILIDAD.md §2:
-#    Linux X11: wmctrl -lG | awk '{print $8"\t"$3"\t"$4"\t"$5"\t"$6}'
-#    Windows  : PowerShell (EnumWindows + GetWindowRect) -> "titulo\tx\ty\tw\th"
-osascript <<'EOF' | python3 ~/Desktop/cutly/crear-shorts/herramientas/solapes.py --min-pct 80 --exit-code
-tell application "System Events"
-  set out to ""
-  repeat with p in (every process whose visible is true and background only is false)
-    try
-      repeat with w in (every window of p)
-        set pos to position of w
-        set sz to size of w
-        set out to out & (name of p) & "\t" & (item 1 of pos) & "\t" & (item 2 of pos) & "\t" & (item 1 of sz) & "\t" & (item 2 of sz) & "\n"
-      end repeat
-    end try
-  end repeat
-  return out
-end tell
-EOF
-# Si devuelve código !=0 (hay solape) → reubica/oculta (lecciones 2 y 3) y repite.
+source crear-shorts/herramientas/mac-control.sh
+# Juzga SOLO las ventanas del layout (las apps de fondo tapan, pero no cuentan como error):
+ventanas --only Safari,Terminal --need Safari=95 --need Terminal=25 --exit-code || echo "REUBICA y repite"
 ```
+`ventanas` = `winlist` (ventanas **con z-order**) → `visibilidad.py` (% realmente visible). Salida:
+```
+  z   visible  ventana
+  0    100.0%  Safari | ...
+  1     44.9%  Terminal | ...             <- asoma por una franja (intencional): OK con --need Terminal=25
+  5      0.0%  Brave | ...  (fondo, ignorada)
+```
+Marca como problema: **ENTERRADA** (< 15 % visible), **NO CUMPLE** (menos que tu `--need`),
+**FUERA DE PANTALLA** (sobresale; se autodetecta el tamaño de pantalla) y **OVERLAY** (ventana de
+capa alta que no es menú/Dock/cursor: notificación, aviso del sistema…; cierra o activa *No molestar*).
 
-`solapes.py` (en `herramientas/`) calcula la intersección de cada par de rectángulos y avisa de los
-que se solapan por encima de un umbral; con `--exit-code` sirve de "puerta": no grabes hasta que dé
-`0 solapamientos`. La matemática es **universal**; solo cambia el comando que enumera las ventanas.
+**Solape malo vs. capa intencional (clave para no tener falsos positivos):**
+- **Enterrada (malo):** casi sin visibilidad → no saldrá en el vídeo → reubicar. Dos apps en la
+  misma posición (100 % de solape) es siempre malo.
+- **Capa intencional (bueno):** una ventana DELANTE y otras asomando por una franja (layout
+  ClickFix). Es correcto si la franja necesaria queda visible → se expresa con `--need App=PCT`.
 
-> **Probado:** en una máquina real este gate detectó al instante dos apps a pantalla completa
-> apiladas en `(0,29) 1280×708` con **100% de solape** — exactamente el caso que deja una ventana
-> invisible detrás de otra. Reubicadas en paralelo (sin solape), el gate da `0` y luz verde.
+> **Probado en máquina real (macOS):** detectó Brave con **0 % visible** tras Warp (ambos en
+> `(0,29) 1280×708`); dio 100 % a dos ventanas colocadas en paralelo; marcó "55 % FUERA DE PANTALLA"
+> una ventana en `x=1000` con 620 de ancho; y un overlay sintético de capa 25 como problema.
+
+### Reglas que salieron de las pruebas (errores reales)
+
+1. **`do script` en una app OCULTA crea la ventana pero no la muestra.** El proceso queda
+   `visible=false`. Usa `place_window` (fuerza `visible=true`, activa y **comprueba los bounds**).
+2. **Cada `do script` crea una ventana NUEVA** y las anteriores quedan debajo (enterradas): guarda
+   el ID de cada una y ciérralas al terminar.
+3. **TextEdit: `activate` ya abre un documento; `make new document` crea un segundo.** Usa
+   `textedit_una_ventana` o no crees otro.
+4. **El texto va a la app que tiene el FOCO**, no a la que "querías". Se reprodujo a propósito:
+   teclear sin dar foco lo escribió en Terminal y 0 veces en TextEdit. Usa `type_in "App" "texto"`:
+   **se niega a escribir** si `front` no es la app esperada.
+5. **El nombre del proceso cambia según la API:** Warp es `Warp` en CGWindowList pero `stable` en
+   System Events. Comprueba el nombre que devuelve `front`/`winlist`, no el que supones.
+6. Algunas apps **no obedecen** los bounds (mínimos, rejilla de caracteres): `place_window` lee los
+   bounds reales y falla si difieren > 12 px.
 
 ## Layout de pantalla que funcionó (1280×832 lógico)
 

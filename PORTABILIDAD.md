@@ -143,26 +143,30 @@ tesseract captura.png salida --oem 1 --psm 11 -l spa+eng tsv
 > lógicos, divide las coordenadas por el factor de escala de la pantalla (en macOS Retina = 2;
 > en Windows/Linux depende del "scale"/DPI configurado). Verifica siempre con un clic de prueba.
 
-### Detectar ventanas superpuestas (gate anti-solape) en cada sistema
+### Medir qué ve realmente una persona (gate anti-solape) en cada sistema
 
-El detector `crear-shorts/herramientas/solapes.py` es **universal** (matemática de rectángulos);
-solo cambia el comando que enumera las ventanas con su geometría. Alimenta el script con líneas
-`etiqueta x y w h`:
+`crear-shorts/herramientas/visibilidad.py` es **universal** (rasteriza y pinta ventanas de atrás
+hacia delante). Solo cambia el comando que **enumera las ventanas con su z-order**. Acepta líneas
+`etiqueta x y w h` **ordenadas de la de MÁS ARRIBA a la de MÁS ABAJO** (también el formato completo
+de `winlist` en macOS). Nombre de app = la etiqueta (úsala luego en `--only`).
+
+| SO | Cómo enumerar con z-order | Estado |
+|---|---|---|
+| **macOS** | `winlist` (Swift, `CGWindowList`): ya da z-order, capa y geometría → `winlist \| visibilidad.py` | ✅ **probado** |
+| **Linux X11** | orden: `xprop -root _NET_CLIENT_LIST_STACKING` (de abajo a arriba → invertir); geometría: `xdotool getwindowgeometry` o `wmctrl -lG` por id | ⚠️ documentado, sin probar |
+| **Windows** | `EnumWindows` recorre de **arriba a abajo** (z-order); `GetWindowRect` da la geometría; filtra con `IsWindowVisible` | ⚠️ documentado, sin probar |
+| **Wayland** | depende del compositor (`swaymsg -t get_tree` en sway/Hyprland `hyprctl clients -j`) | ⚠️ documentado, sin probar |
 
 ```bash
-# macOS  — AppleScript (ver 03-gestion-ventanas.md para el bucle completo)
-osascript ...enum... | python3 crear-shorts/herramientas/solapes.py --min-pct 80 --exit-code
-
-# Linux X11 — wmctrl -lG da columnas: id desktop x y w h host titulo...
-wmctrl -lG | awk '{print $8"\t"$3"\t"$4"\t"$5"\t"$6}' | python3 crear-shorts/herramientas/solapes.py --min-pct 80 --exit-code
-
-# Windows — PowerShell: EnumWindows + GetWindowRect -> "titulo`tx`ty`tw`th" por ventana visible,
-#           y canalizar a: python crear-shorts\herramientas\solapes.py --min-pct 80 --exit-code
+# Linux X11 (esbozo): ids de arriba a abajo -> "etiqueta x y w h"
+for id in $(xprop -root _NET_CLIENT_LIST_STACKING | grep -o '0x[0-9a-f]*' | tac); do
+  eval "$(xdotool getwindowgeometry --shell $id)"; n=$(xdotool getwindowname $id | tr ' \t' '__')
+  printf '%s\t%s\t%s\t%s\t%s\n' "$n" "$X" "$Y" "$WIDTH" "$HEIGHT"
+done | python3 crear-shorts/herramientas/visibilidad.py --screen 1920x1080 --only Terminal --exit-code
 ```
-
-Con `--exit-code`, el script devuelve un código distinto de cero si hay algún solape: úsalo como
-**puerta** que impide grabar hasta que el layout esté limpio. Complétalo **mirando la captura**
-(visión) para confirmar a ojo que ninguna ventana tapa a otra.
+Indica `--screen WxH` en SO sin ventana "Dock" (la pantalla no se autodetecta). Con `--exit-code` el
+script devuelve ≠ 0 si algo está enterrado, cortado o no cumple `--need`: úsalo como **puerta**.
+Complétalo **mirando la captura** (visión) para confirmar a ojo que se ve lo que debe verse.
 
 ---
 

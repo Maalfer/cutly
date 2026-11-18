@@ -84,9 +84,10 @@ osascript -e 'tell application "Burp Suite Community Edition" to quit'   # o Cmd
 1. **Teclado antes que ratón, siempre que exista atajo.** Un atajo es 100% fiable; un clic por
    coordenada puede fallar si la app se movió. Ejemplos: barra de URL (`Cmd/Ctrl+L`), nueva
    pestaña (`Cmd/Ctrl+T`), enviar a Repeater en Burp (`Cmd/Ctrl+R`), menús por teclado.
-2. **Clic localizado por OCR** cuando no hay atajo: captura → `ocr` → busca el texto del
-   botón/enlace → calcula el **centro** de su caja → `cliclick` (recuerda el factor Retina/HiDPI:
-   coord física / factor de escala). Patrón completo en doc 02.
+2. **Clic localizado por OCR, PALABRA a palabra:** `click_text "Guardar"` (de `mac-control.sh`) usa
+   `ocr --words`, ignora tildes/mayúsculas y calcula la escala Retina real. **No clones el centro de
+   la caja de una LÍNEA**: es la mitad de la frase, no la palabra (medido: solo acertaba la palabra
+   del medio). Patrón completo en doc 02, herramienta 1.
 3. **Elementos sin texto** (iconos): (a) posición relativa conocida respecto a algo con texto,
    (b) análisis de color/forma (`find_button.py`, doc 02), o (c) si todo falla, posición fija
    medida una vez con una captura.
@@ -144,8 +145,8 @@ toda la toma.
 
 - [ ] Todas las apps necesarias **instaladas y probadas** (end-to-end) antes de grabar.
 - [ ] Layout fijo decidido; cada ventana en su sitio; franjas de foco visibles.
-- [ ] **Gate anti-solape pasado** (doc 03): ninguna ventana enterrada, confirmado por `solapes.py`
-      **y** mirando la captura (visión).
+- [ ] **Gate anti-solape pasado** (doc 03): `ventanas --only ... --exit-code` en verde (nada
+      enterrado, cortado ni con overlay) **y** confirmado mirando la captura (visión).
 - [ ] Datos/entorno de laboratorio listos (nada real sin autorización — ver los ejemplos DEMO-*).
 - [ ] `wait_for` definido para cada arranque/carga; nada de sleeps fijos a ciegas.
 - [ ] Anuncio "NO TOQUES EL MAC HASTA CORTEN" y OBS confirmado grabando (doc 04).

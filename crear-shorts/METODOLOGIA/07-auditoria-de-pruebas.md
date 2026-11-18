@@ -1,0 +1,90 @@
+# 07 — Auditoría de pruebas: fallos reales y protocolo para validar en cualquier sistema
+
+> Este documento nace de **probar de verdad** la navegación (abrir apps, colocar ventanas, dar foco,
+> clicar, escribir, esperar) en una máquina real y anotar **cada fallo**. Dos usos:
+> 1. **Catálogo de fallos reales** y cómo se evitan (cada uno ya tiene arreglo en el kit).
+> 2. **Protocolo de pruebas (§3)** que un agente debe pasar en CADA sistema nuevo antes de fiarse
+>    del control, para validar que "siguiendo estas instrucciones se controla bien el ordenador".
+>
+> Pruebas ejecutadas en: **macOS** (Apple Silicon, pantalla 1280×832 lógico, Retina 2×).
+> Windows y Linux: **pendientes de validar** (el protocolo §3 está pensado para ello).
+
+---
+
+## 1. Fallos encontrados y su arreglo
+
+| # | Fallo real (cómo se manifestó) | Causa | Arreglo en el kit |
+|---|---|---|---|
+| 1 | Brave al **0 %** visible tras Warp, ambos en `(0,29) 1280×708`; el vídeo no lo mostraría | Dos apps a pantalla completa apiladas; solo se ve la de arriba | `visibilidad.py` mide el % visible real con z-order |
+| 2 | El enumerador de AppleScript **no daba el orden de capas** y no veía todas las ventanas | System Events no expone el z-order; solo apps con Accesibilidad completa | `winlist` (CGWindowList): z-order, capa y geometría de **todas** |
+| 3 | `do script` creó una ventana de Terminal que **nunca se vio** | El proceso Terminal estaba `visible=false`; la ventana existe pero oculta | `place_window` fuerza `visible=true`, activa y verifica bounds |
+| 4 | La ventana nueva de Terminal salió **casi a pantalla completa** (1280×737) | Hereda el tamaño anterior | `place_window` la coloca por ID y comprueba los bounds reales |
+| 5 | TextEdit acabó con **2 ventanas** (una enterrada al 10 %) | `activate` ya abre un documento y `make new document` crea otro | Regla en doc 03 + `textedit_una_ventana` |
+| 6 | Cada `do script` dejaba una **Terminal más enterrada** (2,4 % visible) | `do script` crea ventana NUEVA cada vez | Guardar el ID de cada ventana y cerrarlas; el gate las detecta |
+| 7 | Texto tecleado **cayó en la ventana equivocada** (apareció en Terminal, 0 veces en TextEdit) | `keystroke` va a la app con el foco, no a la deseada | `type_in`/`hotkey` se **niegan** a escribir si `front` ≠ app esperada |
+| 8 | Clicar el **centro de la línea** de OCR solo acertaba la palabra del medio (1 de 5) | El OCR por línea devuelve la caja de toda la frase | `ocr --words` (caja por palabra) + `click_text`; los 5/5 aciertos |
+| 9 | La biblioteca **fallaba en zsh** (no encontraba `visibilidad.py`) | `BASH_SOURCE` no existe en zsh (shell por defecto de macOS) | `_SELF="${BASH_SOURCE[0]:-$0}"`; probado en bash y zsh |
+| 10 | `click_text` daba `SyntaxError` | Un `python3 - <<EOF` dentro de un pipe lee los datos del pipe **como si fueran el programa** | Script aparte `ocr_buscar.py` (nunca heredoc + pipe) |
+| 11 | Una ventana en `x=1000` de 620 de ancho salía **"100 % visible"** y se sale de la pantalla (1280) | El detector no conocía el borde de la pantalla | Autodetecta la pantalla (ventana "Dock") → "55 % FUERA DE PANTALLA" |
+| 12 | El gate marcaba **Warp y Brave** como error aunque eran apps de fondo irrelevantes | Juzgaba todas las ventanas | `--only` (juzga solo las del layout) |
+| 13 | Una **notificación** encima del vídeo no se detectaba | Es ventana de capa alta, no una "app" | El gate lista **OVERLAYS** (capa ≠ 0 que no es menú/Dock/cursor) |
+| 14 | Warp es `Warp` en una API y `stable` en otra | Cada API nombra el proceso distinto | Usar el nombre que devuelve `front`/`winlist`, no el supuesto |
+| 15 | La doc suponía **÷2** (Retina) a pelo | La escala depende de la pantalla | `screen_scale()` la calcula (píxeles físicos / ancho lógico) |
+| 16 | La doc decía que el agente "no puede ver imágenes" | Texto obsoleto | Corregido: visión primero; OCR solo para el dónde exacto |
+| 17 | El gate marcó **OVERLAY** al abrir una app: era `StatusIndicator` | Es el indicador de privacidad/grabación de macOS en la barra de menús (aparece con `screencapture`/OBS); no tapa contenido | Se ignora lo que está ≥ 80 % dentro de la barra de menús; una notificación real sigue detectándose |
+| 18 | Mi primer arreglo del #17 **seguía fallando**: el indicador llega a x=1282 y la barra acaba en 1280 | Comprobaba contención estricta | Proporción de solape (≥ 80 %), tolera 1-2 px de borde. Lo destapó una prueba sintética con las medidas reales |
+
+### Lo que **sí** funcionó a la primera (medido)
+- **Control del cursor:** `cliclick m:300,600` → `mousepos` devuelve `300,600` exacto.
+- **Clic por OCR + Retina:** clic en el punto calculado → el cursor cayó **exactamente** ahí.
+- **`wait_for`:** 0,3 s con el texto presente; entiende tildes/ñ; con texto inexistente da TIMEOUT y código 1.
+- **Foco por clic:** clicar una ventana cambia `frontmost` (verificado con System Events).
+- **Doble clic + Cmd+C + `pbpaste`:** forma fiable de comprobar *qué palabra* se seleccionó.
+
+---
+
+## 2. Reglas de oro que salen de estas pruebas
+
+1. **Verifica siempre, también el éxito.** Cada fallo anterior fue silencioso: no daba error, solo
+   un vídeo malo. Por eso las funciones del kit **comprueban** y **fallan en voz alta**.
+2. **El foco manda.** Antes de teclear/atajar, comprueba quién tiene el foco (`type_in` lo hace).
+3. **Mide lo que se ve, no lo que existe.** Una ventana puede existir, estar "abierta" y no verse
+   (oculta, enterrada, fuera de pantalla). Usa el gate (`ventanas`) **y** mira la captura.
+4. **Nombres y escalas se leen, no se suponen** (proceso, escala Retina, tamaño de pantalla).
+5. **Limpia al terminar** lo que creaste (ventanas de prueba, documentos sin guardar).
+
+---
+
+## 3. Protocolo de pruebas para un SO nuevo (Windows / Linux / otro Mac)
+
+Pasa estas pruebas en la máquina nueva, **en orden**, con tus equivalentes de `PORTABILIDAD.md` §2.
+Si alguna falla, **arregla el kit de ese SO y documenta el fallo en la tabla de arriba**.
+Usa solo ventanas **creadas por ti** (no toques las apps del usuario) y límpialas al acabar.
+
+| # | Prueba | Cómo | Pasa si |
+|---|---|---|---|
+| P1 | **Mover cursor** | mover a (300,600) y leer la posición | lee (300,600) |
+| P2 | **Escala** | captura → ancho físico / ancho lógico | obtienes el factor (1, 1.25, 1.5, 2…) |
+| P3 | **Ver** | captura de pantalla y mírala | identificas lo que hay abierto |
+| P4 | **OCR por palabra** | escribe "uno dos tres cuatro cinco" en un editor; OCR; clic en cada palabra con doble clic+copiar | las palabras seleccionadas = las pedidas (5/5) |
+| P5 | **Acentos** | texto "Contraseña sesión" → buscarlo | lo encuentra con tildes y sin ellas |
+| P6 | **Abrir + esperar** | abrir una app; `wait_for` un texto de su interfaz | aparece antes del timeout; con texto inexistente da TIMEOUT (código ≠ 0) |
+| P7 | **Colocar por ID/título** | crea 2 ventanas y colócalas lado a lado | los bounds reales coinciden (±12 px) |
+| P8 | **App oculta/minimizada** | oculta la app; crea ventana; colócala | queda **visible** tras colocarla |
+| P9 | **Foco** | clic en cada ventana; lee la ventana activa | la activa cambia a la clicada |
+| P10 | **Foco equivocado** | teclea con el foco en otra ventana (a propósito) | tu función **se niega** y el texto no cae donde no debe |
+| P11 | **Gate: enterrada** | pon dos ventanas en la misma posición | el gate da **≈ 0 %** a la de detrás y sale con código ≠ 0 |
+| P12 | **Gate: layout limpio** | ventanas en paralelo | ambas ≈ 100 % y código 0 |
+| P13 | **Gate: fuera de pantalla** | ventana que sobresale del borde | marca "% FUERA DE PANTALLA" |
+| P14 | **Gate: overlay** | provoca una notificación (o simula una línea de capa alta) | aparece como OVERLAY |
+| P15 | **Limpieza** | cierra tus ventanas/documentos | solo quedan las ventanas originales |
+
+Resultado en **macOS**: P1-P13 y P15 ejecutadas sobre ventanas reales; **P14 (overlay) solo con datos
+sintéticos** (no se provocó una notificación real del sistema, por no molestar al usuario). Los fallos
+1-18 de la tabla se encontraron y corrigieron.
+Resultado en **Windows / Linux X11 / Linux Wayland**: ⏳ pendiente — ejecutar el protocolo, anotar
+fallos aquí y construir el kit equivalente a `mac-control.sh`.
+
+> Pista para quien implemente el kit de otro SO: replica la **misma API** (`front`, `ventanas`,
+> `place_window`, `ensure_front`, `type_in`, `hotkey`, `click_text`, `wait_for`, `screen_scale`) para
+> que los documentos 05/06 y las demos funcionen sin cambios; solo cambia el cuerpo de cada función.

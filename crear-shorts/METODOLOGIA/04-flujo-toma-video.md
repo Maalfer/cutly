@@ -22,8 +22,8 @@ USUARIO: "haz X en video"
 2. **Probar el pipeline end-to-end** con un test que no ensucie la toma
    (borrar logs/loot del test antes de la toma real)
 3. Ocultar apps estorbosas, construir el escenario (orden back-to-front)
-4. **Pasar el gate anti-solape** (doc 03): enumerar ventanas → `solapes.py --min-pct 80 --exit-code`
-   → que ninguna quede enterrada. Y **mirar la captura** (visión): confirmar a ojo que todo lo que
+4. **Pasar el gate anti-solape** (doc 03): `ventanas --only <apps del layout> --exit-code` → que
+   ninguna quede enterrada, cortada por el borde ni tapada por una notificación. Y **mirar la captura** (visión): confirmar a ojo que todo lo que
    debe verse, se ve, y nada tapa lo importante.
 
 ### FASE 1 — El anuncio (crítico)
