@@ -94,6 +94,11 @@ la misma letra, el mismo color y el mismo comportamiento.
 | Aparición | el bloque aparece con su primera palabra y se queda hasta que empieza el siguiente |
 | Texto | bien escrito: mayúsculas, comas, puntos, tildes y términos técnicos (SSH, ID, Netcat, Kali, reverse shell) |
 
+**Alcance: siempre el vídeo ENTERO.** Subtitular o transcribir no recorta nada: se hace de principio a fin, llamada
+final incluida ("Si te gustan estas cosas, comenta…"). En el `ideal.mp4` faltaba esa llamada porque el usuario la
+quitó en esa exportación, cosa que hace solo a veces y por decisión propia. No es una regla: no la quites salvo que
+te lo pida.
+
 **Cómo se hacen:**
 ```bash
 python editor/scripts/subtitular.py preparar editor/videos-editados/short_<Titulo>_editado.mp4
