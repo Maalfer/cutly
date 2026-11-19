@@ -93,15 +93,16 @@ y al final se concatenan todos: `[v0][v1]…concat=n=N:v=1:a=0[outv]`.
 
 ### Dos maneras de encuadrar un plano
 
-1. **Rellenar el marco (lo normal).** Recorte con proporción **816×961** (≈ 0.85, igual que
+1. **Rellenar el marco.** Recorte con proporción **816×961** (≈ 0.85, igual que
    `1080×1272`): al escalar llena de 648 a 1920 sin bordes. Es el aspecto "nativo de short".
-   Se usa para terminales, ventanas, páginas… eligiendo `CX,CY` sobre la zona que importa.
+   Se usa para páginas, imágenes o un punto concreto, eligiendo `CX,CY` sobre la zona que importa.
 2. **Encajar entero (letterbox).** Si el contenido es apaisado (una imagen, un comando muy
    ancho) y recortarlo a 816 de ancho perdería información, se escala a 1080 de ancho con su
    alto natural (`DH < 1272`) y queda negro debajo. La banda de arriba **sigue en 648**.
 
-> Consejo: usa (1) siempre que puedas (llena mejor el móvil). Reserva (2) para cuando cortar
-> perdería algo esencial.
+> Consejo: (1) llena mejor el móvil, pero solo si SABES que todo lo importante cabe en 816 px. Una
+> **ventana de terminal va SIEMPRE en (2), entera** (el texto puede llegar al borde; medido: "22/tcp" salía
+> como "cp"), con la fuente del terminal a 24 pt para que se lea: es lo que hace `short_desde_toma.py`.
 
 ---
 
@@ -183,14 +184,14 @@ Igual que en `CLAUDE.md`: cada vez que termines (o revises) un short, añade (AP
 reescribir) una entrada con los tramos exactos en segundos de cada segmento, los parámetros de
 recorte `CX:CY:CW:CH`, el `padtop`, los paneos, y qué se descartó y por qué. Es lo único que
 permite auditar o rehacer el short después sin reconstruirlo desde cero. Si el log aparece
-ausente/truncado, es transitorio (mira `~/.Trash/`): nunca lo recrees desde cero.
+ausente/truncado, es transitorio (mira la Papelera): nunca lo recrees desde cero.
 
 ---
 
 ## 8. Checklist rápido de un short
 
 - [ ] `padtop` constante (medido) en todos los planos, incluidas imágenes.
-- [ ] Planos "nativos" a 816×961; letterbox solo si recortar perdería algo.
+- [ ] Terminales en letterbox de la ventana entera; recorte 816×961 solo si todo lo importante cabe.
 - [ ] Contenido ancho (comandos largos) → paneo lento a tamaño completo, no empequeñecido.
 - [ ] Ritmo holgado (pecar de lento); límites de trim verificados con fotograma.
 - [ ] Montaje en una pasada desde los originales; pista de audio muda para la voz en off.

@@ -47,7 +47,7 @@
 ```bash
 python vm_control.py prepare
 python vm_control.py take start idor-01          # abre editor/crudo/idor-01.steps.jsonl
-python vm_control.py rec start                   # ffmpeg dentro de la VM, cursor incluido
+python vm_control.py rec start                   # VirtualBox graba en el anfitrión, cursor incluido
 python vm_control.py mark "Acto 1: login legítimo"
 python vm_control.py typeurl "http://127.0.0.1:8765/cuenta?id=1001" --in "Mozilla Firefox"
 python vm_control.py labcheck "GET /cuenta?id=1001"   # verificación SIN OCR

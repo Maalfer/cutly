@@ -49,11 +49,8 @@ to_seconds() {
   # convierte HH:MM:SS(.ms) o un numero de segundos ya plano a segundos (float)
   local t="$1"
   if [[ "$t" == *:* ]]; then
-    python3 -c "
-t = '$t'.split(':')
-h, m, s = (float(x) for x in ([0]*(3-len(t)) + t))
-print(h*3600 + m*60 + s)
-"
+    # awk en vez de python3/bc: en Git Bash (Windows) no hay bc y "python3" es el alias roto de la Store
+    awk -v t="$t" 'BEGIN { OFMT = "%.3f"; n = split(t, p, ":"); s = 0; for (i = 1; i <= n; i++) s = s * 60 + p[i]; print s }'
   else
     echo "$t"
   fi
@@ -68,8 +65,8 @@ while [ "$#" -gt 0 ]; do
   START_RAW="$1"; END_RAW="$2"; shift 2
   START=$(to_seconds "$START_RAW")
   END=$(to_seconds "$END_RAW")
-  DUR=$(python3 -c "print($END - $START)")
-  FADE_OUT_ST=$(python3 -c "print(max(0, $DUR - $FADE))")
+  DUR=$(awk -v a="$START" -v b="$END" 'BEGIN { OFMT = "%.3f"; print b - a }')
+  FADE_OUT_ST=$(awk -v d="$DUR" -v f="$FADE" 'BEGIN { OFMT = "%.3f"; x = d - f; print (x > 0 ? x : 0) }')
 
   FILTERS="${FILTERS}[0:v]trim=start=${START}:end=${END},setpts=PTS-STARTPTS[v${N}];"
   FILTERS="${FILTERS}[0:a]atrim=start=${START}:end=${END},asetpts=PTS-STARTPTS,afade=t=in:d=${FADE},afade=t=out:st=${FADE_OUT_ST}:d=${FADE}[a${N}];"
@@ -81,14 +78,10 @@ done
 
 FILTERS="${FILTERS}${VALABELS}concat=n=${N}:v=1:a=1[outv][outa]"
 
-MAXRATE=$(python3 -c "
-v = '$VBITRATE'.upper().rstrip('M')
-print(f'{float(v) * 1.1}M')
-")
-BUFSIZE=$(python3 -c "
-v = '$VBITRATE'.upper().rstrip('M')
-print(f'{float(v) * 2}M')
-")
+# maxrate = 1,1x y bufsize = 2x el bitrate, conservando la unidad (5M -> 5.5M; 1500k -> 1650k)
+escala() { awk -v v="$1" -v f="$2" 'BEGIN { u = substr(v, length(v)); n = (u ~ /[0-9]/) ? v : substr(v, 1, length(v) - 1); if (u ~ /[0-9]/) u = ""; print n * f u }'; }
+MAXRATE=$(escala "$VBITRATE" 1.1)
+BUFSIZE=$(escala "$VBITRATE" 2)
 
 echo "--- construyendo $OUT con $N segmentos (bitrate video: $VBITRATE, audio: $ABITRATE) ---" >&2
 ffmpeg -y -i "$SRC" -filter_complex "$FILTERS" \

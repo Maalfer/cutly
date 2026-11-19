@@ -18,7 +18,7 @@ Estilo (medido píxel a píxel en el ideal):
   - Inter Bold 52 px; palabra ya dicha en BLANCO (255), palabra por decir en GRIS (80);
   - bloques de 1-5 palabras y como mucho ~24 caracteres; se corta tras . ? ! ; cada bloque ~1 s en pantalla;
   - cada palabra se pone blanca cuando empieza a decirse; el bloque aparece con su primera palabra y sigue hasta
-    que empieza el siguiente.
+    que entra el siguiente, en el mismo fotograma (sin parpadeo); tras una pausa > 0,8 s se retira a los 0,25 s.
 Se dibuja con Pillow (no con drawtext/libass de ffmpeg: en el build de Windows se cuelgan por fontconfig).
 """
 import argparse
@@ -202,21 +202,20 @@ def quemar(a):
                 ws.append([t, t + dd, x])
                 t += dd
         for k in range(len(ws) + 1):
-            if k == 0:
-                t = ws[0][0] - 0.03
-            else:
-                t = ws[k - 1][0]
-            if k == 0 and estados and t <= estados[-1][0] + 1e-3:
-                continue
+            # k=0: el bloque entra (todo gris) 30 ms antes de su primera palabra, EN EL MISMO instante en que se
+            # retira el anterior: sin hueco entre bloques (antes quedaba una caja vacía de 2-3 fotogramas = parpadeo).
+            t = ws[0][0] - 0.03 if k == 0 else ws[k - 1][0]
+            t = max(t, estados[-1][0])  # nunca antes de lo ya dibujado (palabras solapadas en la transcripción)
             ruta = os.path.join(tmp, f"b{bi:03d}_{k:02d}.png")
             estado_png(textos, k, f, e, ruta)
-            estados.append((max(0.0, t), ruta))
-        fin = bl[bi + 1]["palabras"][0][0] - 0.03 if bi + 1 < len(bl) else b["palabras"][-1][1] + 0.25
-        if bi + 1 < len(bl) and bl[bi + 1]["palabras"][0][0] - b["palabras"][-1][1] > 0.8:
-            fin = b["palabras"][-1][1] + 0.25  # pausa larga: el subtítulo no se queda colgado
-        estados.append((min(fin, dur), vacio))
-    # ffconcat con duraciones redondeadas a fotogramas
-    estados.sort(key=lambda x: x[0])
+            estados.append((t, ruta))
+        ult = ws[-1][1]
+        sig = bl[bi + 1]["palabras"][0][0] - 0.03 if bi + 1 < len(bl) else None
+        if sig is not None and sig - ult <= 0.8:
+            continue  # el bloque sigue hasta que entra el siguiente (que lo sustituye en ese mismo instante)
+        # último bloque o pausa larga: se retira 0,25 s tras su última palabra (no se queda colgado)
+        estados.append((max(min(ult + 0.25, dur), estados[-1][0]), vacio))
+    # ffconcat con duraciones redondeadas a fotogramas (los estados ya van en orden)
     q = lambda t: round(t * e["fps"]) / e["fps"]
     lista = os.path.join(tmp, "lista.txt")
     with open(lista, "w", encoding="utf-8") as fh:

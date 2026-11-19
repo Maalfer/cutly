@@ -9,7 +9,8 @@
 - Home: macOS/Linux `~`; Windows `%USERPROFILE%` (PowerShell `$env:USERPROFILE`; Git Bash `~`).
 - Whisper: `~/.whisper-models` (Windows: `%USERPROFILE%\.whisper-models`). Los `.py` usan `expanduser`.
 - Temporales: `vm_control.py` usa `tempfile.gettempdir()` (Windows `%TEMP%`, resto `/tmp`).
-- Scripts `.sh` del editor: en Windows, con **Git Bash** o **WSL**. Lo demás es Python y va en todos lados.
+- Scripts `.sh` del editor: en Windows, con **Git Bash** o **WSL**. Solo usan `awk` (no `bc` ni `python3`, que Git
+  Bash no trae o que en Windows es un alias de la Store). Lo demás es Python y va en todos lados.
 
 ---
 

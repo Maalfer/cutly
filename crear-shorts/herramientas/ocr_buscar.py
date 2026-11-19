@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-ocr_buscar.py — Dado el resultado de `ocr --words` (por stdin), devuelve el centro en PUNTOS
-LÓGICOS de la palabra buscada, listo para `cliclick`.
+ocr_buscar.py — Dado un OCR por palabras (por stdin, líneas "palabra<TAB>[x,y WxH]"), devuelve el centro en
+PUNTOS LÓGICOS de la palabra buscada, listo para hacer clic (`vm_control.py` lo usa como módulo, con escala 1).
 
-Uso:  ocr --words captura.png | python3 ocr_buscar.py <palabra> [n-ésima=1] [escala=2] [x,y,w,h] [subcadena]
+Uso:  <ocr por palabras> | python ocr_buscar.py <palabra> [n-ésima=1] [escala=1] [x,y,w,h] [subcadena]
 
 - Ignora mayúsculas, tildes y signos de puntuación ("Sesión:" == "sesion").
 - n-ésima: si la palabra aparece varias veces, cuál (1 = la primera, de arriba abajo; -1 = la última).
-- escala: factor físico/lógico (Retina = 2). Calcúlalo, no lo supongas (ver screen_scale()).
+- escala: factor físico/lógico. La VM es 1 (defecto); solo una pantalla Retina capturada en el anfitrión macOS es 2.
 - x,y,w,h (opcional, PUNTOS LÓGICOS): busca SOLO dentro de esa región (p. ej. la ventana de una app).
   Sin región se busca en toda la pantalla y se toma la primera coincidencia de arriba abajo, que puede
   estar en OTRA ventana si el texto se repite (error real detectado: el clic fue al texto de otra app).
@@ -61,10 +61,10 @@ def buscar(lineas, target, n, scale, reg, sub, modo, detail=False):
 
 def main():
     if len(sys.argv) < 2:
-        sys.exit("uso: ocr --words img | ocr_buscar.py <palabra> [n] [escala] [x,y,w,h] [subcadena]")
+        sys.exit("uso: <ocr por palabras> | ocr_buscar.py <palabra> [n] [escala=1] [x,y,w,h] [subcadena]")
     target = norm(sys.argv[1])
     n = int(sys.argv[2]) if len(sys.argv) > 2 else 1
-    scale = float(sys.argv[3]) if len(sys.argv) > 3 else 2.0
+    scale = float(sys.argv[3]) if len(sys.argv) > 3 else 1.0
     reg = tuple(float(v) for v in sys.argv[4].split(",")) if len(sys.argv) > 4 and sys.argv[4] else None
     sub = sys.argv[5] if len(sys.argv) > 5 else ""
     lineas = sys.stdin.readlines()

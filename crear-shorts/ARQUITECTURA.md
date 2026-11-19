@@ -55,7 +55,7 @@ de "quien edita" sin que pierdan información entre sí.
 | `METODOLOGIA/10` | Checklist/plantilla para que una demo de terminal salga bien a la primera | No sustituye probar el guion sin grabar antes (Fase 0) |
 
 Por qué importa esta separación: es lo que permite que una demo nueva, de **cualquier tema**, reutilice el
-95% del sistema (§ en la respuesta de hace un momento) — solo `demo_<tema>.py` es nuevo cada vez.
+95% del sistema — solo `demo_<tema>.py` es nuevo cada vez.
 
 ## 3. Estado de hoy: un único agente, de principio a fin
 

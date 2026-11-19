@@ -11,10 +11,7 @@ Plan = lista de eventos ("k",c) ("bs",) ("ret",) ("tab",) ("d",seg). Uso suelto,
     tipear.py "texto" [--wpm 55] [--typos 0.015] [--seed N]
 """
 import argparse
-import os
 import random
-import shutil
-import subprocess
 import sys
 
 # Vecinas en un teclado QWERTY (para simular un error "de dedo")

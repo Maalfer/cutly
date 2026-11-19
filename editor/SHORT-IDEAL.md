@@ -91,7 +91,7 @@ la misma letra, el mismo color y el mismo comportamiento.
 | Letra | Inter Bold ~52 px (la más parecida de 6 candidatas comparadas); en el repo: `editor/fuentes/Inter.ttf` (OFL) |
 | Karaoke | palabra ya dicha en BLANCO (255), palabra por decir en GRIS (80); cambia al empezar a decirla (±50 ms) |
 | Bloques | 1-5 palabras, ≤ ~24 caracteres, una sola línea; corte tras . ? !; ~1 s en pantalla (0,6-1,9 s) |
-| Aparición | el bloque aparece con su primera palabra y se queda hasta que empieza el siguiente |
+| Aparición | el bloque entra con su primera palabra y se queda hasta que entra el siguiente, sin hueco entre ambos (la caja no parpadea); tras una pausa de > 0,8 s se retira 0,25 s después de su última palabra |
 | Texto | bien escrito: mayúsculas, comas, puntos, tildes y términos técnicos (SSH, ID, Netcat, Kali, reverse shell) |
 
 **Alcance: siempre el vídeo ENTERO.** Subtitular o transcribir no recorta nada: se hace de principio a fin, llamada
@@ -116,7 +116,8 @@ python editor/scripts/subtitular.py quemar editor/videos-editados/short_<Titulo>
   encadenado). El resultado sale puntuado y con "Netcat", "Kali", "reverse shell" e "ID" bien escritos. Solo sobre
   el Short FINAL: encadenar contexto en una grabación con silencios provoca alucinaciones.
 - **`editor/glosario.json`** recoge las correcciones fijas de términos (por frase: "cal" solo es "Kali" detrás de
-  "máquina"). Cada error nuevo que veas al revisar se añade ahí.
+  "máquina"), y sus términos se pasan a Whisper como vocabulario. Cada término técnico nuevo que veas mal escrito
+  se añade ahí; un error de una frase concreta, no (se corrige en el `.subtitulos.json` al revisar).
 - **Se dibuja con Pillow** (`pip install pillow`) y se superpone con ffmpeg: el `drawtext`/libass de ffmpeg se
   cuelga en Windows por fontconfig.
 - **Revisión obligatoria antes de quemar:** un subtítulo mal escrito no se puede arreglar después sin rehacer el vídeo.
@@ -131,3 +132,4 @@ python editor/scripts/subtitular.py quemar editor/videos-editados/short_<Titulo>
 | Volumen a mano | saturación | `lufs` en el plan (−14 por defecto) |
 | Subtítulos del editor automático sin revisar | "desde otro servidor" en vez de "dentro del servidor" | `subtitular.py preparar` + revisión del JSON |
 | Transcribir los subtítulos en modo normal (con VAD) | sin puntos y con mayúsculas a mitad de frase | `transcribir.py --subtitulos` (lo usa `subtitular.py`) |
+| Retirar un bloque 30 ms antes de que entre el siguiente | la caja parpadeaba 2-3 fotogramas en cada cambio de bloque | el siguiente entra en el mismo fotograma en que sale el anterior (corregido en `subtitular.py`; medido: 0 huecos) |

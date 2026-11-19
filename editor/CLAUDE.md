@@ -17,9 +17,10 @@
 >
 > **Contexto del repo:** este documento vive en `cutly/editor/` y cubre el corte de un
 > directo/grabación en **clips 16:9**. Para la visión global del proyecto lee `../README.md`.
-> Para **Shorts verticales 9:16** (1080×1920 con hueco arriba para la cara, recorte, paneo de
-> contenido ancho y ritmo lento) usa `METODOLOGIA-SHORTS.md` (en esta misma carpeta) y el
-> script `scripts/construir_short.py`. El principio rector de abajo aplica a AMBOS formatos.
+> Para **Shorts verticales 9:16** (1080×1920 con hueco arriba para la cara, recorte y paneo de
+> contenido ancho) usa `METODOLOGIA-SHORTS.md` (en esta misma carpeta) y el script
+> `scripts/construir_short.py`. El principio rector de abajo aplica a AMBOS formatos. Ojo: las pausas
+> "naturales" que este documento deja en un clip 16:9 NO valen para un Short, que va sin pausas (`SHORT-IDEAL.md`).
 >
 > **Multiplataforma:** esta fase (editar) funciona igual en macOS, Windows y Linux — mismas
 > herramientas (ffmpeg, whisper.cpp, python, yt-dlp). Los comandos y rutas de abajo son los de la
@@ -249,14 +250,14 @@ cortar fragmentos concretos es un paso aparte que el usuario pide después, vien
 - **Si un sub-agente (fork) encargado de construir un clip encuentra `_cortes.log` ausente o con
   menos contenido del que debería tener, NUNCA debe asumir "el usuario vació la carpeta" y
   recrearlo desde cero.** Caso real: durante la construcción en paralelo de los clips de
-  "InfluencerHate", un fork encontró `_cortes.log` temporalmente ausente (por la app externa que
-  mueve archivos grandes a la Papelera, ya documentada arriba) y, sin verificarlo, reescribió el
+  "InfluencerHate", un fork encontró `_cortes.log` temporalmente ausente (una app externa del usuario
+  movía archivos grandes a la Papelera) y, sin verificarlo, reescribió el
   archivo entero con solo sus propias 2 entradas, borrando 11 entradas previas de otros directos
   y otros clips ya terminados por otros forks en la misma sesión. Se detectó y reconstruyó en la
   revisión final a partir del historial de la conversación, pero fue puro azar no perder
   información real. Instrucción obligatoria para cualquier sub-agente (y para el hilo principal)
   que vaya a tocar este archivo compartido: si aparece ausente o truncado, tratarlo como un
-  problema transitorio (comprobar primero `~/.Trash/`), nunca como una señal para recrearlo desde
+  problema transitorio (comprobar primero la Papelera: `~/.Trash/` en macOS, la Papelera de reciclaje en Windows), nunca como una señal para recrearlo desde
   cero — y si hay cualquier duda, reportarlo como hallazgo en la respuesta final en vez de
   sobrescribir sin confirmar. Al editar este archivo compartido desde varios agentes en paralelo,
   usar siempre APPEND (añadir al final), nunca Write/recreate.
@@ -415,7 +416,7 @@ leyendo el `.txt`), no lo trates como candidatos sueltos sin más — evalúa co
    sonar forzado (ambos deben ser variaciones de la misma idea, no ideas inconexas forzadas a
    encajar).
 4. Documenta en `_cortes.log` que es un montaje no lineal y por qué — precedente real: el
-   clip "CSRF Nivel 2" de Crossfi (ver `_cortes_historico_pre-reorganizacion.log`) y el clip
+   clip "CSRF Nivel 2" de Crossfi (registrado en el `_cortes.log` local de entonces) y el clip
    "Pingunius" de directo4 (2026-11-08): se unió la demo inicial de la app (~00:09:27) con un
    segundo ejemplo de uso ~13 minutos después (~00:24:26), sin incluir el tramo intermedio
    (que pertenecía a otro clip, el del CVE de OpenSSH).
@@ -706,8 +707,9 @@ Opcionalmente, revisa silencios anómalos en todo el clip terminado:
 ```bash
 ffmpeg -i <clip-final>.mp4 -af silencedetect=noise=-30dB:d=1.0 -f null - 2>&1 | grep silence
 ```
-Pausas naturales de 1-2.5s son normales (piensa, espera un comando, lee el chat, tartamudea).
-Sospecha solo de silencios mucho más largos o patrones raros.
+En un clip 16:9 de directo, pausas naturales de 1-2.5s son normales (piensa, espera un comando, lee el
+chat, tartamudea): sospecha solo de silencios mucho más largos o patrones raros. (En un Short no: ninguna
+pausa de más de 0,4 s, `SHORT-IDEAL.md`.)
 
 ### 9. Limpieza
 

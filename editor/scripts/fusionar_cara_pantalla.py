@@ -116,6 +116,8 @@ def main():
         fil.append(f"[0:v]trim=start={a0:.6f}:end={a1:.6f},setpts=PTS-STARTPTS,crop={W}:{padtop}:0:{cara_y}[f{i}]")
         if t["abajo"] == "pant":
             p0, p1 = q(t["p0"]), q(t["p1"])
+            if p1 <= p0:  # trozo de pantalla de menos de un fotograma: congela ese fotograma
+                p1 = p0 + 1 / FPS
             k = d / (p1 - p0)
             t["_vel"] = 1 / k
             fil.append(f"[1:v]trim=start={p0:.6f}:end={p1:.6f},setpts=PTS-STARTPTS,setpts=PTS*{k:.6f},fps={FPS},"
@@ -147,17 +149,18 @@ def main():
         fil.append("[ca]anull[outa]")
     os.makedirs(os.path.dirname(plan["salida"]), exist_ok=True)
     lufs = plan.get("lufs", -14)
-    tmp = plan["salida"] + ".tmp.mp4" if lufs else plan["salida"]
+    # con normalización: primero un intermedio con audio PCM (sin pérdida) y luego el AAC final ya normalizado
+    tmp = os.path.splitext(plan["salida"])[0] + ".tmp.mov" if lufs else plan["salida"]
     cmd = [FFMPEG, "-v", "error", "-y", "-i", plan["cara"], "-i", plan["pantalla"],
            "-filter_complex", ";".join(fil), "-map", "[outv]", "-map", "[outa]",
            "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-c:a", "pcm_s16le" if lufs else "aac", "-ar", "48000"]
     if not lufs:
         cmd += ["-b:a", "192k", "-movflags", "+faststart"]
-    subprocess.run(cmd + ([tmp.replace(".mp4", ".mov")] if lufs else [tmp]), check=True)
+    subprocess.run(cmd + [tmp], check=True)
     if lufs:
         # volumen del usuario: ~-14 LUFS (lo subió +5 dB a mano). Normalización LINEAL en dos pasadas (misma
         # ganancia en todo el vídeo, sin compresión) con techo de -1 dBTP para no saturar como el ajuste a mano.
-        src = tmp.replace(".mp4", ".mov")
+        src = tmp
         med = subprocess.run([FFMPEG, "-v", "info", "-i", src, "-vn", "-af",
                               f"loudnorm=I={lufs}:TP=-1:LRA=11:print_format=json", "-f", "null", "-"],
                              capture_output=True, text=True, encoding="utf-8", errors="replace").stderr

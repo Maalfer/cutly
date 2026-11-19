@@ -138,8 +138,9 @@ archivos del vídeo. Las plantillas genéricas van en `editor/plantillas/`.
 
 ### Reglas de oro heredadas (válidas en todo el repo)
 
-- **Precisión por encima de coste.** Mejor gastar más comprobaciones (o ir más lento en el
-  pacing del montaje) que dejar un corte mal hecho. Detalle en `editor/CLAUDE.md`.
+- **Precisión por encima de coste.** Mejor gastar más comprobaciones que dejar un corte mal hecho.
+  Detalle en `editor/CLAUDE.md`. (Precisión no es lentitud: el Short final va lo más al grano posible,
+  `editor/SHORT-IDEAL.md`.)
 - **Verifica, no asumas.** Tras cada acción (un clic en la Fase 1, un corte en la Fase 2),
   compruébala: con OCR/screenshot en la grabación, extrayendo fotogramas en la edición.
 - **Nunca toques `_cortes.log` a ciegas.** Si aparece ausente o truncado, es un problema

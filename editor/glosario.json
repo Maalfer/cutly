@@ -1,5 +1,5 @@
 {
- "_comentario": "Correcciones de Whisper para los subtítulos (regex sobre el texto en minúsculas, sin tildes en el patrón salvo que haga falta). Se aplican por frase para no romper palabras normales: 'cal' solo es 'Kali' detrás de 'máquina'. Añade aquí cada error nuevo que veas al revisar.",
+ "_comentario": "Correcciones de Whisper para los subtítulos: [regex, texto correcto]. La regex se busca sin distinguir mayúsculas sobre el texto de la transcripción. Se aplican por frase para no romper palabras normales: 'cal' solo es 'Kali' detrás de 'máquina'. Solo términos y errores GENERALES (que se repetirán en otros vídeos): un error de una frase concreta se corrige a mano en el .subtitulos.json al revisar. Los textos correctos de aquí se pasan además a Whisper como vocabulario en transcribir.py --subtitulos. Añade cada término nuevo que veas mal escrito.",
  "reemplazos": [
   ["\\b(reversell|reversal|riversale|reverse ?shel|reverseshell|reverse shell)\\b", "reverse shell"],
   ["\\bm[aá]quina (cal|kal|cali|calí)\\b", "máquina Kali"],
@@ -12,8 +12,6 @@
   ["\\bip\\b", "IP"],
   ["\\bnmap\\b", "nmap"],
   ["\\bsshpass\\b", "sshpass"],
-  ["\\bpowershell\\b", "PowerShell"],
-  ["\\bvulnerables m[aá]s rid[ií]culas\\b", "vulnerabilidades más ridículas"],
-  ["\\bm[aá]s peligros\\.", "más peligrosas."]
+  ["\\bpowershell\\b", "PowerShell"]
  ]
 }

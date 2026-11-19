@@ -8,11 +8,7 @@ tiempo sin deriva. Uso suelto, solo para inspeccionar:  mover.py X0 Y0 X Y [--du
 """
 import argparse
 import math
-import os
 import random
-import re
-import shutil
-import subprocess
 import sys
 
 

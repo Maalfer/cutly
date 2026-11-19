@@ -39,6 +39,23 @@ def srt_time(t):
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 
+def prompt_subtitulos():
+    """Texto de contexto para el modo subtítulos: frases BIEN PUNTUADAS (Whisper imita la puntuación y las mayúsculas
+    del contexto) + el vocabulario técnico de editor/glosario.json escrito como debe salir. Genérico a propósito:
+    nombrar comandos o puertos de un vídeo concreto sesga a Whisper hacia ellos en cualquier otro vídeo."""
+    terminos = []
+    try:
+        glos = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "glosario.json")
+        for _, bueno in json.load(open(glos, encoding="utf-8"))["reemplazos"]:
+            if bueno not in terminos:
+                terminos.append(bueno)
+    except (OSError, ValueError, KeyError):
+        pass
+    return ("Hola, ¿qué tal? Hoy os enseño una técnica de hacking ético, paso a paso. Primero miro qué tiene la máquina; "
+            "después, lanzo el ataque y, por último, compruebo que funciona." +
+            (" Vocabulario: " + ", ".join(terminos) + "." if terminos else ""))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("entrada")
@@ -68,11 +85,7 @@ def main():
         except Exception:
             dev = "cpu"
     modelo = WhisperModel(a.modelo, device=dev, compute_type="int8" if dev == "cpu" else "float16")
-    prompt = None
-    if a.subtitulos:
-        prompt = ("Hola, ¿qué tal? Hoy os enseño una técnica de hacking ético. Primero lanzo nmap, veo el puerto 22 con "
-                  "SSH abierto y uso sshpass. Después, con Netcat, escucho en el puerto 4444 y lanzo una reverse shell "
-                  "desde mi máquina Kali. Ejecuto el comando ID, veo la IP y entro en el servidor.")
+    prompt = prompt_subtitulos() if a.subtitulos else None
     segs, _ = modelo.transcribe(audio, language=a.idioma, word_timestamps=True, vad_filter=True,
                                 condition_on_previous_text=a.subtitulos, initial_prompt=prompt, beam_size=5)
     out = []

@@ -17,7 +17,7 @@ editor/videos-editados/*
 fusion_plan.json
 _cortes.log
 
-# Vídeo, audio e imágenes de trabajo
+# Vídeo y audio
 *.mp4
 *.mkv
 *.mov

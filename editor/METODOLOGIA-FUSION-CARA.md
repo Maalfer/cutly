@@ -152,21 +152,18 @@ python editor/scripts/subtitular.py quemar   editor/videos-editados/short_<Titul
 Estilo y reglas: `SHORT-IDEAL.md` §6. El entregable es `short_<Titulo>_editado_subtitulado.mp4`.
 
 ### 7. Verificar (obligatorio, con algo que pueda fallar)
-Primero, la especificación del Short ideal (formato, banda, arranque, pausas, final, volumen):
+Primero, la especificación medible del Short ideal (formato, banda de la cara, subtítulos, fundido, arranque,
+pausas > 0,4 s, final y volumen); todo eso lo mide el verificador, no hace falta repetirlo a mano:
 ```bash
-python editor/scripts/verificar_short.py editor/videos-editados/short_<Titulo>_editado_subtitulado.mp4
+python editor/scripts/verificar_short.py editor/videos-editados/short_<Titulo>_editado.mp4 --sin-subtitulos   # tras el paso 5
+python editor/scripts/verificar_short.py editor/videos-editados/short_<Titulo>_editado_subtitulado.mp4         # entregable
 ```
 Después, lo que el verificador no puede saber por sí solo:
 - [ ] **Duración** del resultado = la que imprime el script (vídeo y audio iguales).
-- [ ] **Banda de la cara**: ninguna fila negra en 638-647 en ningún fotograma (la cara llena los 648 px) y la
-      pantalla empieza en 648.
 - [ ] **Cada empalme de voz**: re-transcribe ±3,5 s alrededor de cada corte del vídeo FINAL. Ni palabras cortadas
       ni repetidas ni tomas fallidas.
 - [ ] **Cada punto de sincronía**: un fotograma en el instante en que se nombra cada momento clave. Lo que se dice
       debe estar en pantalla.
-- [ ] **Pausas** del resultado: ninguna de más de ~0,3 s (estilo del usuario); el audio arranca en la primera
-      sílaba y acaba con el fundido.
-- [ ] **Volumen** ≈ −14 LUFS y pico ≤ −1 dBTP (`loudnorm=print_format=json`).
 - [ ] **Ninguna palabra comida** por apretar: compara la transcripción del resultado con la del plan (un
       conector quitado a propósito sí; una palabra de contenido, nunca).
 - [ ] Entrada APPEND en `videos-editados/_cortes.log` con todos los tramos (voz, pantalla, velocidad, qué se descartó).

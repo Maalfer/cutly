@@ -10,21 +10,24 @@ Implementa la metodologia de 'editor/METODOLOGIA-SHORTS.md':
   - Pista de audio MUDA (el usuario graba la voz en off despues).
 
 NO es un CLI con mil flags: es una PLANTILLA. Edita las dos zonas marcadas (CONFIG y SEGS)
-y ejecutalo:  python3 construir_short.py
+y ejecutalo:  python construir_short.py
 
-Requiere: ffmpeg, ffprobe, python3.
+Requiere: ffmpeg, ffprobe (se localizan como en short_desde_toma.py), python 3.
 """
 
 import subprocess, os, sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from short_desde_toma import FFMPEG, FFPROBE, CRUDO, SALIDA  # rutas del repo, esté donde esté
+
 # ======================= CONFIG (editar) =======================
-OUT = os.path.expanduser("~/Desktop/cutly/editor/videos-editados/short_EJEMPLO_editado.mp4")
+OUT = os.path.join(SALIDA, "short_EJEMPLO_editado.mp4")
 
 # Fuentes: etiqueta -> ruta. La etiqueta se usa en SEGS.
 SOURCES = {
-    "intro": os.path.expanduser("~/Desktop/cutly/editor/crudo/intro.mkv"),
-    "main":  os.path.expanduser("~/Desktop/cutly/editor/crudo/editar.mkv"),
-    "img":   os.path.expanduser("~/Desktop/cutly/editor/crudo/imagen.jpg"),
+    "intro": os.path.join(CRUDO, "intro.mkv"),
+    "main":  os.path.join(CRUDO, "editar.mkv"),
+    "img":   os.path.join(CRUDO, "imagen.jpg"),
 }
 
 PADTOP   = 648     # altura de la banda negra superior (la cara). CONSTANTE. 648/1920 = tercio sup.
@@ -64,7 +67,6 @@ SEGS = [
 
 def main():
     # mapear etiquetas de fuente a indices de -i, imagenes aparte (se cargan con -loop)
-    vid_labels = [s for s in SOURCES]  # orden de inputs
     # separar: para imagenes usamos -loop 1; se anaden como inputs propios en orden de uso
     inputs = []          # lista de (args_de_input, label_para_ffmpeg)
     label_to_idx = {}
@@ -87,6 +89,9 @@ def main():
         cw, ch = seg["cw"], seg["ch"]
         dw = CANVAS_W
         dh = round(ch * dw / cw)               # alto escalado manteniendo proporcion
+        if dh > CANVAS_H - PADTOP:
+            sys.exit(f"segmento {n}: {cw}x{ch} escalado a 1080 mide {dh} px de alto y no cabe bajo la banda "
+                     f"({CANVAS_H - PADTOP} px): usa una proporcion cw:ch >= 816:961")
         pad = f"pad={CANVAS_W}:{CANVAS_H}:0:{PADTOP}:black"
         if "img_dur" in seg:
             si = f"[{img_seg_input[n]}:v]"
@@ -109,7 +114,7 @@ def main():
     F += f"{concat}concat=n={len(SEGS)}:v=1:a=0[outv]"
     tot = round(tot, 3)
 
-    cmd = ["ffmpeg", "-v", "error", "-y"]
+    cmd = [FFMPEG, "-v", "error", "-y"]
     for args, _ in inputs:
         cmd += args
     cmd += ["-f", "lavfi", "-t", str(tot), "-i", "anullsrc=r=48000:cl=stereo"]
@@ -121,7 +126,7 @@ def main():
 
     print(f"[construir_short] {len(SEGS)} segmentos, duracion esperada {tot}s -> {OUT}", file=sys.stderr)
     subprocess.run(cmd, check=True)
-    d = subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+    d = subprocess.check_output([FFPROBE, "-v", "error", "-show_entries", "format=duration",
                                  "-of", "default=nw=1:nk=1", OUT]).decode().strip()
     print(f"[construir_short] LISTO. Duracion real: {d}s", file=sys.stderr)
     print("[construir_short] VERIFICA: banda superior constante, uniones y paneos con fotogramas.", file=sys.stderr)

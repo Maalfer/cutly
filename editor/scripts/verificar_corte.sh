@@ -7,32 +7,41 @@
 #   ./verificar_corte.sh <video.mp4> <timestamp_segundos> [duracion_segundos]
 #
 # Ejemplo:
-#   ./verificar_corte.sh ~/Desktop/fragmentos-directos/clip.mp4 214.5 8
-#   (extrae de 211.5 a 219.5 y transcribe, centrado en el timestamp)
+#   ./verificar_corte.sh editor/videos-editados/clip.mp4 214.5 8
+#   (extrae de 210.5 a 218.5 y transcribe, centrado en el timestamp)
+#
+# Motor: whisper-cli (whisper.cpp) si esta instalado; si no, transcribir.py (faster-whisper),
+# que es lo que se usa en Windows. Mismo modelo en ambos: large-v3-turbo (../BENCHMARK-WHISPER.md).
+# Si la ventana sale ambigua, repitela con large-v3 como segunda opinion:
+#   MODEL=~/.whisper-models/ggml-large-v3.bin ./verificar_corte.sh ...   (whisper.cpp)
+#   MODELO=large-v3 ./verificar_corte.sh ...                              (faster-whisper)
 
 set -euo pipefail
 
 VIDEO="$1"
 T="$2"
 DUR="${3:-8}"
-# Modelo recomendado (large-v3-turbo, ver ../BENCHMARK-WHISPER.md). Si la ventana sale ambigua,
-# repitela con large-v3 como segunda opinion: MODEL=~/.whisper-models/ggml-large-v3.bin ./verificar_corte.sh ...
 MODEL="${MODEL:-$HOME/.whisper-models/ggml-large-v3-turbo.bin}"
-TMP="$(mktemp /tmp/verificar_corte_XXXXXX.wav)"
+MODELO="${MODELO:-large-v3-turbo}"
+DIR="$(cd "$(dirname "$0")" && pwd)"
+TMPD="$(mktemp -d)"
+trap 'rm -rf "$TMPD"' EXIT
 
-if [ ! -f "$MODEL" ]; then
-  echo "ERROR: no se encuentra el modelo whisper en $MODEL" >&2
-  exit 1
+# centra la ventana en el timestamp dado (mitad antes, mitad despues); awk y no bc (Git Bash no trae bc)
+START=$(awk -v t="$T" -v d="$DUR" 'BEGIN { s = t - d / 2; print (s < 0 ? 0 : s) }')
+END=$(awk -v s="$START" -v d="$DUR" 'BEGIN { print s + d }')
+
+echo "Ventana: ${START}s -> ${END}s (objetivo: ${T}s)"
+ffmpeg -v error -y -ss "$START" -t "$DUR" -i "$VIDEO" -ar 16000 -ac 1 -c:a pcm_s16le "$TMPD/v.wav"
+
+if command -v whisper-cli >/dev/null 2>&1; then
+  if [ ! -f "$MODEL" ]; then
+    echo "ERROR: no se encuentra el modelo whisper en $MODEL (ver asegurar_mejor_modelo.sh)" >&2
+    exit 1
+  fi
+  whisper-cli -m "$MODEL" -f "$TMPD/v.wav" -l es 2>&1 | grep -E "^\[00"
+else
+  # python (no python3): en Windows "python3" es un alias de la Store que no ejecuta nada
+  PY="$(command -v python || command -v python3)"
+  "$PY" "$DIR/transcribir.py" "$TMPD/v.wav" --modelo "$MODELO" --salida "$TMPD/v" | grep -E "^\["
 fi
-
-# centra la ventana en el timestamp dado (mitad antes, mitad despues)
-START=$(echo "$T - ($DUR / 2)" | bc)
-if (( $(echo "$START < 0" | bc -l) )); then
-  START=0
-fi
-
-echo "Ventana: ${START}s -> $(echo "$START + $DUR" | bc)s (objetivo: ${T}s)"
-ffmpeg -y -ss "$START" -t "$DUR" -i "$VIDEO" -ar 16000 -ac 1 -c:a pcm_s16le "$TMP" 2>&1 | tail -1
-whisper-cli -m "$MODEL" -f "$TMP" -l es 2>&1 | grep -E "^\[00"
-
-rm -f "$TMP"

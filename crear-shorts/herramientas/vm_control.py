@@ -22,7 +22,7 @@ CICLO DE VIDA
   res W H                               resolución del invitado (setvideomodehint) — p. ej. 1080 1920 para short
 VER
   shot [salida.png]                     captura del invitado (~0,08 s)
-  waitfor "texto" [seg]                 espera (OCR) a que aparezca un texto; código 1 si TIMEOUT
+  waitfor "texto" [seg] [--region x,y,w,h]  espera (OCR) a que aparezca un texto; código 1 si TIMEOUT
   waitstill [seg]                       espera a que la pantalla deje de cambiar
   focus X Y [W H] [motivo]              marca dónde/qué encuadrar (la edición del Short usa esto; waitfor lo hace solo).
                                          CON W H (región, p. ej. una ventana entera): letterbox, SIN recortar — úsalo
@@ -938,7 +938,7 @@ def prepare(cold=False):
     if not ssh_ok():
         die("la VM no responde por SSH (vm_control.py start)")
     if not _is_running("lab_idor.py"):
-        ssh("nohup python3 ~/lab/lab_idor.py >/tmp/lab.log 2>&1 &")
+        ssh("setsid python3 ~/lab/lab_idor.py </dev/null >/tmp/lab.log 2>&1 &")  # setsid: no cuelga el canal SSH (doc 09)
         time.sleep(1)
     burp_up()
     if not _is_running("firefox.*-P demo"):
@@ -999,7 +999,11 @@ def main():
         sys.exit(__doc__)
 
     def opt(n, d=None, c=str):
-        return c(a[a.index(n) + 1]) if n in a else d
+        if n not in a:
+            return d
+        if a.index(n) + 1 >= len(a):
+            die(f"falta el valor de {n}")
+        return c(a[a.index(n) + 1])
 
     cmd = a[0]
     if cmd == "start":
@@ -1058,7 +1062,9 @@ def main():
                   'n=$(xdotool getwindowname $w 2>/dev/null); [ -n "$n" ] && '
                   'echo "$w | $n | $(xdotool getwindowgeometry --shell $w | tr "\\n" " ")"; done; true', capture=True))
     elif cmd == "waitfor":
-        ok = waitfor(a[1], float(a[2]) if len(a) > 2 else 20)
+        reg = tuple(float(v) for v in opt("--region").split(",")) if "--region" in a else None
+        seg = float(a[2]) if len(a) > 2 and not a[2].startswith("--") else 20
+        ok = waitfor(a[1], seg, region=reg)
         print("OK" if ok else "TIMEOUT")
         sys.exit(0 if ok else 1)
     elif cmd == "dismiss":

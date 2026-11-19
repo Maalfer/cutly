@@ -9,7 +9,7 @@
 ```
 USUARIO: "haz X en video" 
    → AGENTE: monta escenario + anuncia 
-   → USUARIO: graba (OBS/QuickTime) SIN TOCAR 
+   → AGENTE: rec start (VirtualBox graba en el anfitrión; el usuario no toca nada)
    → AGENTE: ejecuta la secuencia completa con pacing cinematográfico
    → AGENTE: "CORTEN" + mapa de edición
    → USUARIO: edita, pone cara/voz
@@ -37,7 +37,7 @@ USUARIO: "haz X en video"
 Un script con todos los pasos, cada uno con su verificación, bajo un registro de toma:
 
 ```bash
-vm_control.py take start clip-01 && vm_control.py rec start     # registro + ffmpeg dentro de la VM
+vm_control.py take start clip-01 && vm_control.py rec start     # registro + grabación de VirtualBox en el anfitrión
 vm_control.py mark "Señuelo"        && sleep 4                  # pausa: leer
 vm_control.py clicktext "COPIAR"    && vm_control.py waitstill  # clic humano + esperar a que se pinte
 vm_control.py mark "El payload"
@@ -57,7 +57,7 @@ el nº de pasos. Se pasa tal cual a la edición (`editor/CLAUDE.md`).
 ## Reglas de pacing (cine, no teatro)
 
 0. **Entrada HUMANA siempre (regla nº 0 del vídeo):** el texto que aparece de golpe y el cursor que
-   salta al botón delatan que es una máquina. Mientras OBS graba:
+   salta al botón delatan que es una máquina. Mientras se graba:
    - **Teclear:** `vm_control.py type "texto" --in "Título"` (ritmo variable, pausas tras espacios/signos, algún error
      corregido con retroceso). **Nunca** pegar texto de golpe (es instantáneo).
    - **Mover/clicar:** `move X Y` / `clicktext PALABRA` (trayecto curvo, lento-
@@ -70,8 +70,8 @@ el nº de pasos. Se pasa tal cual a la edición (`editor/CLAUDE.md`).
    ("veamos qué tiene el atacante...") — mucho más cinematográfico que ⌘Tab
 5. **Un solo plano continuo:** nada de cortes del agente — el usuario corta al editar
 
-## Grabación del usuario
+## Grabación
 
-- Por defecto graba la VM (`rec start`, ffmpeg dentro del invitado, cursor incluido). Con OBS sobre la ventana de VirtualBox, comprueba antes que sale el cursor.
-- Verificar ANTES de la toma que la grabación está activa (`rec start` falla si ffmpeg no arranca)
+- Por defecto `rec start` usa la grabación nativa de VirtualBox en el anfitrión (cursor incluido, sin SSH). `rec start --guest` es la alternativa con ffmpeg dentro de la VM. OBS ya no hace falta.
+- Verificar ANTES de la toma que la grabación está activa (`rec start` falla si no arranca)
 - La toma es reproducible: si no se grabó, se rehace (todo el flujo es re-ejecutable)

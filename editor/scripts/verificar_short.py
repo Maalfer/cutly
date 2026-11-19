@@ -3,10 +3,13 @@
 verificar_short.py — Comprueba un Short FINAL contra la especificación del Short ideal aprobado por el usuario
 (editor/SHORT-IDEAL.md). Cada comprobación mide algo que puede fallar; no hay nada "a ojo".
 
-    python verificar_short.py VIDEO.mp4          # imprime OK/FALLA por punto; código de salida 1 si algo falla
+    python verificar_short.py VIDEO.mp4 [--sin-subtitulos]   # OK/FALLA por punto; código de salida 1 si algo falla
+
+--sin-subtitulos: para un paso intermedio (el Short montado, antes de subtitular.py quemar).
 
 Referencia: short_Entrar-Por-SSH-Sin-Saber-La-Contrasena_editado.mp4 (2026-11-19), que pasa todo.
 """
+import argparse
 import json
 import os
 import subprocess
@@ -28,7 +31,11 @@ def probe(v):
 
 
 def main():
-    v = sys.argv[1]
+    ap = argparse.ArgumentParser()
+    ap.add_argument("video")
+    ap.add_argument("--sin-subtitulos", action="store_true")
+    args = ap.parse_args()
+    v = args.video
     res = []
 
     def chk(ok, nombre, detalle):
@@ -54,9 +61,9 @@ def main():
     chk(malos == 0, "banda de la cara", f"{len(cuerpo)} fotogramas; con fila negra en {PADTOP - 10}-{PADTOP - 1}: {malos} "
         f"(la cara debe llenar exactamente 0-{PADTOP - 1})")
 
-    # subtítulos: la caja negra (filas 619-725, centrada) presente mientras se habla. Se mira la franja 621-648, que
-    # es caja sin letras (las letras van de ~652 a ~700): sin subtítulos ahí se ve la sudadera, nunca negro puro.
-    if "--sin-subtitulos" not in sys.argv:
+    # subtítulos: la caja negra (filas 619-725, centrada) presente mientras se habla. Se mira la franja 621-646, que
+    # es caja sin letras (las letras van de ~652 a ~700): sin subtítulos ahí se ve la cara, nunca negro puro.
+    if not args.sin_subtitulos:
         raw = subprocess.run([FFMPEG, "-v", "error", "-i", v, "-vf", "fps=5,crop=40:26:520:621", "-f", "rawvideo",
                               "-pix_fmt", "rgb24", "-"], capture_output=True, check=True).stdout
         s = np.frombuffer(raw, np.uint8).reshape(-1, 26 * 40 * 3)
