@@ -1,9 +1,13 @@
 # Editor de directos → clips para YouTube
 
-> **Antes de nada — ¿de dónde viene el vídeo? Dos caminos distintos:**
+> **Antes de nada — ¿de dónde viene el vídeo? Tres caminos distintos:**
 > - **Viene de `crear-shorts/` (un agente controló la VM y generó `editor/crudo/<toma>.steps.jsonl`):**
 >   el Short se construye SOLO con `editor/scripts/short_desde_toma.py <toma> --titulo ...` — no sigas
 >   leyendo este documento para eso, ni montes nada a mano. Ver `crear-shorts/ARQUITECTURA.md` §1.
+> - **El usuario pasa DOS vídeos verticales: el Short de pantalla (mudo, con el hueco negro arriba) y otro
+>   donde sale él arriba hablando (con su voz) → hay que juntarlos:** sigue `METODOLOGIA-FUSION-CARA.md`
+>   (`transcribir.py` → `analizar_fusion.py` → `fusionar_cara_pantalla.py`). Ahí la voz trae tomas repetidas
+>   y errores que hay que quitar, y la pantalla se sincroniza con la narración.
 > - **Es un directo/grabación SIN registro de pasos** (un stream real, un vídeo que no generó un agente):
 >   ese es el caso que cubre ESTE documento (clips 16:9) y `METODOLOGIA-SHORTS.md` (Shorts 9:16), a mano,
 >   con `scripts/construir_short.py`.
@@ -27,19 +31,21 @@ al máximo que los fragmentos extraídos tengan el menor número de errores posi
 suponga más tiempo de proceso y más consumo de tokens verificando. No recortes pasos de
 verificación para ir más rápido. En la práctica:
 
-- **Transcripción inicial: descarga siempre el MEJOR modelo Whisper que la máquina pueda mover
-  de forma razonable, no uno fijo por defecto.** No asumas que "large-v3" seguirá siendo el
-  mejor disponible — antes de transcribir un directo nuevo, comprueba qué modelos existen en
-  https://huggingface.co/ggerganov/whisper.cpp/tree/main (puede haber versiones más nuevas o
-  mejores, p. ej. large-v3-turbo u otras futuras) y ten en cuenta la potencia del host (RAM,
-  disco libre, si hay GPU/Metal disponible — ya se confirmó que esta máquina tiene Apple
-  Silicon con soporte Metal) para elegir el más grande/preciso que siga siendo viable en
-  tiempo razonable. Si ya existe un modelo mejor que el guardado en `~/.whisper-models/`,
-  descárgalo y adóptalo como nuevo por defecto para esa sesión y las siguientes.
-  `ggml-medium.bin` queda como modelo de respaldo rápido para transcripciones intermedias de
-  verificación (secciones 6.9, 7) si el modelo grande resultase demasiado lento para iterar,
-  pero si la precisión está en duda en una comprobación concreta, repite esa comprobación con
-  el modelo más preciso disponible en vez de conformarte con el rápido.
+- **Transcripción: el modelo MÁS PRECISO MEDIDO, que no es el más grande.** Medido el 2026-11-19
+  (`BENCHMARK-WHISPER.md`): **`large-v3-turbo`** tarda la mitad que `large-v3`, usa ~40 % menos
+  RAM y en narración real en español se equivocó MENOS (WER 1,2 % frente a 2,4 %). Es el modelo
+  por defecto para la transcripción base y para verificar cortes. `large-v3` queda como
+  **segunda opinión** para una ventana concreta que salga ambigua (cruza los dos resultados).
+  `medium` y `small` se retiran: más lentos o peores que turbo en términos técnicos.
+  Si aparece un modelo nuevo o cambia el material (otro idioma, mucho ruido, varias voces), **no
+  asumas que más grande = mejor**: mide 2-3 min de ese material como en el benchmark y decide
+  con los números.
+- **La precisión la dan la configuración y la verificación, no el tamaño del modelo:** VAD
+  siempre activado (sin él Whisper inventa "Gracias por ver el vídeo" en los silencios y se salta
+  voz real), sin arrastre de contexto (`-mc 0` / `condition_on_previous_text=False`) y los cortes
+  afinados con la energía del audio a 10 ms. **Los timestamps de cualquier modelo fallan entre 50 y
+  500 ms en algunas palabras**: nunca cortes directamente con ellos (caso real: el final de "pass"
+  llegó 280 ms antes de tiempo y el corte se comió la palabra).
 - **Verificación de cortes**: nunca te conformes con una sola comprobación si algo resulta
   ambiguo — repite con ventana más ancha, cruza con el método de probabilidad por token
   (sección 6.9), y si sigue sin estar claro, no cortes. Es preferible gastar más tool calls
@@ -120,19 +126,23 @@ cortar fragmentos concretos es un paso aparte que el usuario pide después, vien
   ```bash
   ls -la ~/.whisper-models/
   ```
-  - `ggml-large-v3.bin` (~3GB) — **modelo por defecto, úsalo para todo** (transcripción base
-    del directo entero y toda verificación/afinado de cortes). Más preciso que `medium`,
-    sobre todo en nombres técnicos, acrónimos y voz rápida/con ruido de fondo — justo donde
-    `medium` alucinaba o perdía palabras repetidas (ver principio rector al inicio del doc).
-  - `ggml-medium.bin` (~1.5GB) — solo como respaldo si `large-v3` no estuviera disponible.
+  - `ggml-large-v3-turbo.bin` (~1.6GB) — **modelo por defecto** (transcripción base y
+    verificación de cortes). Medido: igual o más preciso que `large-v3` en nuestro audio, al doble
+    de velocidad (`BENCHMARK-WHISPER.md`).
+  - `ggml-large-v3.bin` (~3GB) — **segunda opinión** para una ventana dudosa, no para todo el archivo.
+  - `ggml-medium.bin` — retirado (más lento que turbo y con más errores).
   Si falta alguno:
   ```bash
   mkdir -p ~/.whisper-models
+  curl -L -o ~/.whisper-models/ggml-large-v3-turbo.bin \
+    https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin
   curl -L -o ~/.whisper-models/ggml-large-v3.bin \
     https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin
-  curl -L -o ~/.whisper-models/ggml-medium.bin \
-    https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin
   ```
+- **Alternativa en Python, multiplataforma (la usada en Windows):** `pip install faster-whisper` +
+  `scripts/transcribir.py VIDEO` (turbo + VAD + timestamps por palabra → `.json`/`.srt`/`.txt`). Los
+  modelos van a la caché de Hugging Face (`~/.cache/huggingface`), no a `~/.whisper-models/`. En CPU
+  usa int8. GPU solo con NVIDIA (CUDA); con AMD, ver whisper.cpp + Vulkan en `../PORTABILIDAD.md`.
 - **ffmpeg / ffprobe** vía Homebrew — para todo el corte, recodificación y análisis de audio.
 
 ## Errores de proceso detectados en auditoría retrospectiva (no repetir)
@@ -317,10 +327,16 @@ decir, la línea N del `.txt` es el texto del segmento N del `.srt`. Esto es cla
 localizar timestamps a partir de una frase: busca la frase en el `.txt`, coge su número de
 línea, y haz `grep -n -A1 "^<numero>$" archivo.srt`.
 
-Para un directo de ~1h30min-2h con `large-v3`, tarda más que con `medium` (usa GPU vía Metal,
-pero el modelo es ~2x más grande) — es el coste aceptado por la directriz de priorizar
-precisión. Lánzalo siempre en background (`run_in_background: true`) y sigue trabajando o
-espera la notificación — nunca hagas polling activo del proceso.
+Referencia de tiempos medida en CPU (Ryzen de 6 núcleos, sin GPU utilizable): `large-v3-turbo`
+transcribe a ~1,7× tiempo real (un directo de 2 h ≈ 70 min); `large-v3` a ~0,9× (≈ 2 h 20 min) sin
+ganar precisión. Con GPU (Metal en Mac, CUDA o Vulkan) es varias veces más rápido. Lánzalo
+siempre en background (`run_in_background: true`) y sigue trabajando o espera la notificación;
+nunca hagas polling activo del proceso.
+
+**Con whisper.cpp, activa también el VAD** (`--vad --vad-model <ggml-silero-vad.bin>` en
+versiones recientes; comprueba `whisper-cli --help`). Si tu versión no lo tiene, vigila las
+alucinaciones típicas en silencios ("Gracias.", "Gracias por ver el vídeo", "Subtítulos por…") y
+contrástalas con la energía del audio: si el nivel en ese tramo es el ruido de fondo, no hay voz.
 
 Borra el `audio.wav` del scratchpad en cuanto termine la transcripción (es grande, ~200-250MB
 por hora de directo, y ya no hace falta una vez tienes el `.srt`/`.txt`).
@@ -436,7 +452,7 @@ streamer), transcribe esa ventana concreta con precisión palabra por palabra:
 ```bash
 ffmpeg -y -ss <inicio> -t <dur> -i ~/Desktop/cutly/editor/crudo/<directo>.mp4 \
   -ar 16000 -ac 1 -c:a pcm_s16le tmp.wav
-whisper-cli -m ~/.whisper-models/ggml-large-v3.bin -f tmp.wav -l es -ml 1 \
+whisper-cli -m ~/.whisper-models/ggml-large-v3-turbo.bin -f tmp.wav -l es -ml 1 \
   2>&1 | grep -E "^\[00"
 ```
 
@@ -504,7 +520,7 @@ una pausa legítima:
 
 ```bash
 ffmpeg -y -ss <t-3> -t 10 -i <clip>.mp4 -ar 16000 -ac 1 -c:a pcm_s16le tmp.wav
-whisper-cli -m ~/.whisper-models/ggml-large-v3.bin -f tmp.wav -l es 2>&1 | grep -E "^\[00"
+whisper-cli -m ~/.whisper-models/ggml-large-v3-turbo.bin -f tmp.wav -l es 2>&1 | grep -E "^\[00"
 ```
 
 Son pausas legítimas que **no** hay que tocar, aunque sean largas:
@@ -536,7 +552,7 @@ para muletillas/tartamudeos sino para cualquier punto de corte fino.
 
 ```bash
 ffmpeg -y -ss <inicio> -t <dur> -i <video> -ar 16000 -ac 1 -c:a pcm_s16le tmp.wav
-whisper-cli -m ~/.whisper-models/ggml-large-v3.bin -f tmp.wav -l es -ojf -of tmp_out
+whisper-cli -m ~/.whisper-models/ggml-large-v3-turbo.bin -f tmp.wav -l es -ojf -of tmp_out
 python3 -c "
 import json
 d = json.load(open('tmp_out.json'))
@@ -672,7 +688,7 @@ corte interno, final del clip):
 
 ```bash
 ffmpeg -y -ss <t-3> -t 8 -i <clip-final>.mp4 -ar 16000 -ac 1 -c:a pcm_s16le j.wav
-whisper-cli -m ~/.whisper-models/ggml-large-v3.bin -f j.wav -l es 2>&1 | grep -E "^\[00"
+whisper-cli -m ~/.whisper-models/ggml-large-v3-turbo.bin -f j.wav -l es 2>&1 | grep -E "^\[00"
 ```
 
 Lee el resultado: la frase debe fluir sin cortarse a medias ni repetir contenido. Si algo

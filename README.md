@@ -76,9 +76,14 @@ cutly/
 └── editor/                           ← FASE 2: editar la grabación en clips
     ├── CLAUDE.md                     ←   edición de un DIRECTO SIN registro → clips 16:9 (camino manual)
     ├── METODOLOGIA-SHORTS.md         ←   Shorts 9:16 a mano (camino manual, sin registro de pasos)
+    ├── METODOLOGIA-FUSION-CARA.md    ←   juntar el Short de pantalla con el vídeo de la cara+voz del usuario
+    ├── BENCHMARK-WHISPER.md          ←   qué modelo de transcripción usar y por qué (medido)
     ├── scripts/
     │   ├── short_desde_toma.py       ←   Short AUTOMÁTICO desde una toma de Fase 1 (el camino normal)
-    │   ├── asegurar_mejor_modelo.sh  ←   descarga/elige el mejor modelo Whisper disponible
+    │   ├── transcribir.py            ←   transcripción (faster-whisper: large-v3-turbo + VAD, timestamps por palabra)
+    │   ├── analizar_fusion.py        ←   mide cara/pantalla/voz y avisa de tomas repetidas antes de la fusión
+    │   ├── fusionar_cara_pantalla.py ←   mete cara+voz en la banda del Short y sincroniza pantalla con la narración
+    │   ├── asegurar_mejor_modelo.sh  ←   descarga el modelo Whisper recomendado (whisper.cpp)
     │   ├── construir_clip.sh         ←   construye un clip 16:9 a mano (trim+concat+micro-fade)
     │   ├── construir_short.py        ←   construye un SHORT 9:16 a mano (recorte+paneo+banda cara)
     │   ├── detectar_silencio.sh      ←   detección de silencios para afinar cortes
@@ -116,6 +121,8 @@ Sí se versiona todo lo demás: documentación, scripts, transcripciones de ejem
 5. ¿Vas a **convertir esa toma en Short**? → `editor/scripts/short_desde_toma.py <toma> --titulo ...`
    (automático). ¿Es un directo real sin registro de pasos? → `editor/CLAUDE.md` (16:9) y
    `editor/METODOLOGIA-SHORTS.md` (9:16), a mano.
+   ¿Te pasan el Short de pantalla + un vídeo con la cara y la voz del usuario para juntarlos? →
+   `editor/METODOLOGIA-FUSION-CARA.md`.
 6. Mira siempre `editor/videos-editados/_cortes.log` antes de tocar un clip ya hecho:
    contiene los tramos exactos (en segundos) de cada clip construido.
 
@@ -135,7 +142,8 @@ Sí se versiona todo lo demás: documentación, scripts, transcripciones de ejem
 Comunes a los tres sistemas (instalación por SO en [`PORTABILIDAD.md`](PORTABILIDAD.md)):
 
 - **ffmpeg / ffprobe** — todo el corte, recodificación y análisis (Fase 2).
-- **whisper.cpp** + modelos en `~/.whisper-models/` — transcripción con timestamps (Fase 2).
+- **Whisper** (whisper.cpp o faster-whisper), modelo **`large-v3-turbo`** — transcripción con timestamps (Fase 2).
+  Elegido midiendo, no por tamaño: `editor/BENCHMARK-WHISPER.md`.
 - **yt-dlp** — descargar directos si se parte de una URL (Fase 2).
 - **VirtualBox + ssh + `vm_control.py`** (Fase 1) — control de la VM, igual en los tres SO; OCR con Tesseract
   (en macOS puede usarse Vision).

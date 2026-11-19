@@ -7,7 +7,8 @@ Tú actúas y te mueves; el usuario solo graba. Entrada humana siempre (tecleo y
 - Empieza por `crear-shorts/METODOLOGIA/00-empezar-aqui-vm.md`, `crear-shorts/ARQUITECTURA.md` (qué es el
   sistema) y `PENDIENTE.md` (estado real). Demo de terminal nueva: `METODOLOGIA/10-plantilla-demo-terminal.md`.
 - La herramienta es `crear-shorts/herramientas/vm_control.py` (multiplataforma: Windows, macOS, Linux).
-- Edición posterior: `editor/CLAUDE.md` y `editor/METODOLOGIA-SHORTS.md`. El Short sale solo con
+- Edición posterior: `editor/CLAUDE.md` y `editor/METODOLOGIA-SHORTS.md`. Si el usuario pasa el Short de pantalla + un
+  vídeo con su cara y voz para juntarlos: `editor/METODOLOGIA-FUSION-CARA.md`. El Short sale solo con
   `editor/scripts/short_desde_toma.py` (banda negra superior FIJA de 648 px para la cara del usuario). La toma se graba con
   VirtualBox en el anfitrión (`rec start`), no con OBS ni dentro de la VM. La toma deja
   `editor/crudo/<toma>.mp4`, `.steps.jsonl` y `.mapa.md` para decidir los cortes.

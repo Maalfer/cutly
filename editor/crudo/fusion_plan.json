@@ -1,0 +1,21 @@
+{
+ "cara": "editor/crudo/cara.mp4",
+ "pantalla": "editor/crudo/pantalla.mp4",
+ "salida": "editor/videos-editados/short_Entrar-Por-SSH-Sin-Saber-La-Contrasena_editado.mp4",
+ "padtop": 648, "cara_alto": 758, "cara_y": 20,
+ "tramos": [
+  {"a0": 0.75,   "a1": 5.6,    "abajo": "pant", "p0": 0.0,   "p1": 22.5,  "nota": "gancho; tecleo de nmap acelerado"},
+  {"a0": 22.3,   "a1": 30.5,   "abajo": "pant", "p0": 22.5,  "p1": 30.5,  "nota": "puerto 22 abierto (resultado nmap ~25.0)"},
+  {"a0": 69.15,  "a1": 75.133, "abajo": "cara", "nota": "PowerShell del usuario; toma buena (C y D descartadas)"},
+  {"a0": 75.133, "a1": 77.3,   "abajo": "pant", "p0": 31.6,  "p1": 35.85, "nota": "una vez que tenga esta cadena"},
+  {"a0": 83.25,  "a1": 85.6,   "abajo": "pant", "p0": 35.85, "p1": 39.74, "nota": "me la guardo en la variable pass (F, 1a mitad)"},
+  {"a0": 89.85,  "a1": 93.2,   "abajo": "pant", "p0": 39.74, "p1": 46.3,  "nota": "toma corregida G"},
+  {"a0": 101.6,  "a1": 115.0,  "abajo": "pant", "p0": 46.3,  "p1": 87.3,  "nota": "H: voy a poder entrar; tecleo acelerado"},
+  {"a0": 132.35, "a1": 139.45, "abajo": "pant", "p0": 87.3,  "p1": 92.8,  "nota": "I: comando id y su respuesta"},
+  {"a0": 141.4,  "a1": 149.6,  "abajo": "pant", "p0": 92.8,  "p1": 102.9, "nota": "J: listener 4444"},
+  {"a0": 158.2,  "a1": 174.95, "abajo": "pant", "p0": 102.9, "p1": 157.0, "nota": "K: mismo comando, ejecuto (Enter ~156.6)"},
+  {"a0": 178.4,  "a1": 181.6,  "abajo": "pant", "p0": 157.0, "p1": 163.5, "nota": "espera tras ejecutar"},
+  {"a0": 181.6,  "a1": 188.6,  "abajo": "pant", "p0": 163.5, "p1": 171.0, "nota": "L: intrusion, ya estamos dentro"},
+  {"a0": 193.35, "a1": 201.3,  "abajo": "pant", "p0": 171.0, "p1": 179.5, "nota": "M: cierre ('Tal.' en falso descartado)"}
+ ]
+}

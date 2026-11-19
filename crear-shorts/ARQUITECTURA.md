@@ -22,6 +22,18 @@ crear-shorts/                                 editor/
   editor/videos-editados/_cortes.log                  (registro append-only de cada short construido)
 ```
 
+**Último paso: la cara y la voz.** El Short sale mudo y con el hueco negro. El usuario graba aparte su cara
+narrando (vídeo vertical con su voz) y el agente lo FUSIONA: quita sus tomas repetidas, mete la cara en la
+banda de 648 px y re-temporiza la pantalla para que cada frase caiga sobre su momento
+(`editor/METODOLOGIA-FUSION-CARA.md`):
+
+```
+  short_<Titulo>_editado.mp4 (mudo) + crudo/cara.mp4 (cara + voz)
+        │ transcribir.py → analizar_fusion.py → fusion_plan.json → fusionar_cara_pantalla.py
+        ▼
+  editor/videos-editados/short_<Titulo>_editado.mp4   (cara en la banda, voz limpia, pantalla sincronizada)
+```
+
 El contrato es el `.steps.jsonl`: cualquier pieza de Fase 2 (o un agente verificador) puede reconstruir
 qué pasó, cuándo y si falló, sin tener que mirar el vídeo. Es lo que hace posible separar "quien actúa"
 de "quien edita" sin que pierdan información entre sí.

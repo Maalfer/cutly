@@ -23,9 +23,13 @@
 5. Arquitectura multiagente (`crear-shorts/ARQUITECTURA.md` §4): diseñada, sin implementar como Workflow
    todavía — pendiente de que el usuario confirme que quiere ejecutarla así.
 6. Windows como invitado, Wayland.
+7. **Transcripción con la GPU AMD (RX 590):** faster-whisper solo usa CUDA, así que hoy va por CPU (~1,7× tiempo real
+   con turbo). Probar whisper.cpp compilado con Vulkan y medirlo como en `editor/BENCHMARK-WHISPER.md`.
 
 ## Referencia rápida
 - Herramienta de control: `crear-shorts/herramientas/vm_control.py`.
 - Generar el Short: `editor/scripts/short_desde_toma.py TOMA --titulo Titulo-Con-Gancho`.
+- Juntar el Short con la cara y la voz del usuario: `editor/METODOLOGIA-FUSION-CARA.md`.
+- Transcribir: `editor/scripts/transcribir.py` (large-v3-turbo + VAD; por qué: `editor/BENCHMARK-WHISPER.md`).
 - Demos de referencia (copiar su estructura para una nueva): `crear-shorts/DEMO-IDOR/`, `crear-shorts/DEMO-SSHOLE/`.
 - Fallos ya resueltos y por qué: `crear-shorts/METODOLOGIA/09-conducir-apps-kali.md`.

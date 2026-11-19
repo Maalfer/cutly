@@ -15,7 +15,9 @@ set -euo pipefail
 VIDEO="$1"
 T="$2"
 DUR="${3:-8}"
-MODEL="$HOME/.whisper-models/ggml-medium.bin"
+# Modelo recomendado (large-v3-turbo, ver ../BENCHMARK-WHISPER.md). Si la ventana sale ambigua,
+# repitela con large-v3 como segunda opinion: MODEL=~/.whisper-models/ggml-large-v3.bin ./verificar_corte.sh ...
+MODEL="${MODEL:-$HOME/.whisper-models/ggml-large-v3-turbo.bin}"
 TMP="$(mktemp /tmp/verificar_corte_XXXXXX.wav)"
 
 if [ ! -f "$MODEL" ]; then

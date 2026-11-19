@@ -1,10 +1,12 @@
 #!/bin/bash
-# Comprueba que el mejor modelo Whisper conocido esta disponible localmente en
+# Comprueba que el modelo Whisper RECOMENDADO esta disponible localmente en
 # ~/.whisper-models/, y lo descarga si falta. Implementa la directriz del CLAUDE.md:
-# "descarga siempre el MEJOR modelo que la maquina pueda mover de forma razonable".
+# usar el modelo MAS PRECISO MEDIDO, que no es el mas grande (ver ../BENCHMARK-WHISPER.md:
+# large-v3-turbo igualo o mejoro a large-v3 en nuestro audio, al doble de velocidad y
+# con ~40% menos RAM).
 #
-# Lista de prioridad (de mejor a peor). Si Hugging Face publica un modelo mejor que
-# large-v3 (p.ej. una version futura), anade su nombre AL PRINCIPIO de esta lista.
+# Lista de prioridad (de recomendado a respaldo). Un modelo nuevo solo sube AL PRINCIPIO
+# de esta lista si gana en una medicion como la del benchmark, no por ser mas grande.
 #
 # Uso:
 #   ./asegurar_mejor_modelo.sh          # descarga el mejor que falte, imprime su ruta
@@ -17,10 +19,8 @@ mkdir -p "$MODELS_DIR"
 
 # orden de prioridad: nombre_fichero
 PRIORITY=(
+  "ggml-large-v3-turbo.bin"
   "ggml-large-v3.bin"
-  "ggml-large-v2.bin"
-  "ggml-medium.bin"
-  "ggml-small.bin"
 )
 
 CHECK_ONLY=false
@@ -35,12 +35,12 @@ BEST="${PRIORITY[0]}"
 BEST_PATH="$MODELS_DIR/$BEST"
 
 if [ -f "$BEST_PATH" ]; then
-  echo "Ya tienes el mejor modelo conocido: $BEST_PATH" >&2
+  echo "Ya tienes el modelo recomendado: $BEST_PATH" >&2
   echo "$BEST_PATH"
   exit 0
 fi
 
-echo "Falta el mejor modelo conocido ($BEST)." >&2
+echo "Falta el modelo recomendado ($BEST)." >&2
 if [ "$CHECK_ONLY" = true ]; then
   echo "Modo --check: no se descarga nada." >&2
   # informa cual es el mejor que SI esta disponible localmente, por si hace falta usarlo mientras tanto
@@ -55,7 +55,7 @@ if [ "$CHECK_ONLY" = true ]; then
   exit 1
 fi
 
-echo "Descargando $BEST desde Hugging Face (puede tardar varios minutos, ~3GB)..." >&2
+echo "Descargando $BEST desde Hugging Face (puede tardar varios minutos, ~1.6GB)..." >&2
 curl -L -o "$BEST_PATH" "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${BEST}"
 echo "Descarga completa: $BEST_PATH" >&2
 echo "$BEST_PATH"

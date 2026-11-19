@@ -216,3 +216,22 @@ Segmentos (todos padtop=648; salida 1080x1920@60, 8M, audio silencioso):
   plano 23: 163.63-171.09s  crop 816:961 x 702->702 y 0  [Acto 3c: shell interactiva en el listener]
   plano 24: 171.09-178.54s  crop 816:961 x 702->702 y 0  [Acto 3c: shell interactiva en el listener]
   plano 25: 178.54-179.53s  crop 816:961 x 702->702 y 0  [Cierre]
+
+[2026-11-19 16:05] short_Entrar-Por-SSH-Sin-Saber-La-Contrasena_editado.mp4  (FUSIÓN cara+voz sobre pantalla; editor/scripts/fusionar_cara_pantalla.py editor/crudo/fusion_plan.json)
+  fuentes: crudo/cara.mp4 (1080x1920@60, cara en filas 0-757, 202.28s) + crudo/pantalla.mp4 (Short previo de la toma sshole, banda 648, 179.5s)
+  cara: crop 1080x648 desde y=20 (sin escalar) -> banda 0-647 exacta (medida: 453 fotogramas, 0 fallos). Salida 90.50s, audio AAC 192k de cara.mp4
+  la VOZ manda; cada tramo de voz lleva debajo el rango de pantalla del que habla, re-temporizado:
+  tramo  1: voz 0.75-5.60    | pantalla 0.00-22.50 x4.64  | gancho (tecleo nmap acelerado; silencio 5.6-22.3 = ruido de fondo, cortado)
+  tramo  2: voz 22.30-30.50  | pantalla 22.50-30.50 x0.98 | "puerto 22" (24.75) cae sobre resultado nmap (25.0)
+  tramo  3: voz 69.15-75.133 | PARTE INFERIOR DE cara.mp4 (PowerShell del usuario, print('A'*300)) | tomas fallidas C 54.7-58.5 y D 62.9-67.7 descartadas; chasquido 68.76 fuera
+  tramo  4: voz 75.133-77.30 | pantalla 31.60-35.85 x1.96 | "una vez que tenga esta cadena"
+  tramo  5: voz 83.25-85.60  | pantalla 35.85-39.74 x1.96 | "me la guardo en la variable pass" (corte tras la sibilante de 'pass', 85.60; 1er intento 85.233 se comía 'pass' -> corregido y re-verificado con whisper)
+  tramo  6: voz 89.85-93.20  | pantalla 39.74-46.30 x1.96 | toma corregida "entonces dentro de esta variable..." (2a mitad de F 85.6-88.1 descartada)
+  tramo  7: voz 101.60-115.00| pantalla 46.30-87.30 x3.06 | "voy a poder entrar" (tecleo sshpass acelerado)
+  tramo  8: voz 132.35-139.45| pantalla 87.30-92.80 x0.77 | "comando id... veo la respuesta" (silencio 115-132.3 cortado)
+  tramo  9: voz 141.40-149.60| pantalla 92.80-102.90 x1.23| listener 4444
+  tramo 10: voz 158.20-174.95| pantalla 102.90-157.00 x3.23| "ejecuto este comando" = Enter (~156.6)
+  tramo 11: voz 178.40-181.60| pantalla 157.00-163.50 x2.03| espera de la conexión (pausa 175-178.4 recortada)
+  tramo 12: voz 181.60-188.60| pantalla 163.50-171.00 x1.07| "ya estamos dentro"
+  tramo 13: voz 193.35-201.30| pantalla 171.00-179.50 x1.07| cierre; "Tal." en falso 191.7-192.0 descartado
+  verificación: whisper large-v3 sobre cada empalme del resultado (sin palabras cortadas ni repetidas), fotogramas en cada punto de sincronía.

@@ -1,5 +1,8 @@
 # Metodología de SHORTS verticales (9:16) con hueco para la cara
 
+> **¿Ya tienes el Short de pantalla y te pasan aparte el vídeo con la cara y la voz del usuario?** Eso es una
+> fusión: `METODOLOGIA-FUSION-CARA.md`.
+>
 > **¿La toma viene de `crear-shorts/` (un agente controló la VM)?** Entonces NO sigas este documento:
 > usa `editor/scripts/short_desde_toma.py <toma> --titulo ...`, que ya aplica todas estas reglas
 > (banda fija, letterbox sin recortar, verificación de píxeles) de forma automática a partir del
