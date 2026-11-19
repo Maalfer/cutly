@@ -17,9 +17,7 @@ Estado: implementado y probado con VBoxManage simulado (pruebas/test_canales.py)
 real cuando el usuario dé la contraseña (PENDIENTE.md).
 """
 import os
-import posixpath
 import re
-import shlex
 import subprocess
 import tempfile
 import uuid
@@ -30,8 +28,9 @@ from .base import ENTORNO, Canal, CanalTimeout, normalizar
 
 MAX_ARG = 6000                       # por encima, el script va por fichero
 MARCA_RC = "__CUTLY_RC="
-# las Guest Additions lanzan el proceso fuera de la sesión X del usuario: hay que darle su autorización de X
-ENTORNO_GC = ENTORNO + ' XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}"'
+# las Guest Additions lanzan el proceso fuera de la sesión X del usuario (hay que darle su autorización de X) y en
+# "/": se empieza en $HOME como con SSH, o las apps lanzadas (un terminal) abrirían en "/" (medido: prompt [/])
+ENTORNO_GC = ENTORNO + ' XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}"; cd "$HOME" 2>/dev/null'
 
 
 class CanalGuestControl(Canal):
@@ -114,18 +113,11 @@ class CanalGuestControl(Canal):
         return self._gc("copyfrom", *self._cred(), remoto, local, timeout=600).returncode == 0
 
     def enviar(self, local, remoto):
-        # copyto deja el fichero con SU nombre en --target-directory: si el destino se llama distinto, se renombra
+        # Medido en VirtualBox 7.2: `copyto ORIGEN /ruta/nombre` copia y renombra a la vez; `--target-directory`
+        # falla con "Destination ... already exists and is a directory".
         if remoto.endswith("/"):
-            dir_remoto, nombre = remoto.rstrip("/") or "/", os.path.basename(local)
-        else:
-            dir_remoto, nombre = posixpath.split(remoto)
-            dir_remoto = dir_remoto or "/tmp"
-        ok = self._gc("copyto", *self._cred(), "--target-directory", dir_remoto, local, timeout=600).returncode == 0
-        if ok and nombre != os.path.basename(local):
-            origen = posixpath.join(dir_remoto, os.path.basename(local))
-            ok = self.ejecutar(f"mv -f {shlex.quote(origen)} {shlex.quote(posixpath.join(dir_remoto, nombre))}",
-                               30)[0] == 0
-        return ok
+            remoto += os.path.basename(local)
+        return self._gc("copyto", *self._cred(), local, remoto, timeout=600).returncode == 0
 
     def enviar_texto(self, texto, remoto):
         d = tempfile.mkdtemp(prefix="cutly_gc_")

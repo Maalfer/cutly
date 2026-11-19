@@ -14,16 +14,9 @@
 
 ## Pendiente (en este orden)
 1. **Fiabilidad:** repetir una demo end-to-end 10-20 veces y medir (hoy: 1 ejecución limpia por demo).
-2. **Control sin SSH — medir en la VM real.** El canal con el invitado ya es intercambiable
-   (`crear-shorts/herramientas/vm/canales/`: `ssh` y `guestcontrol`; `VM_CANAL=auto|ssh|guestcontrol`), probado con
-   VBoxManage simulado y bash real (`pruebas/test_canales.py`). Falta medirlo contra la VM:
-   - `guestcontrol` necesita la contraseña del invitado, que da el usuario (`VM_GUEST_PASSFILE`). Medir latencia por
-     llamada frente a SSH y que xdotool funcione con la sesión iniciada (XAUTHORITY). Las Guest Additions del
-     invitado son 6.0.0 y el anfitrión 7.2: si fallan, actualizarlas.
-   - **Estado de esta máquina (2026-11-19):** no existe `~/.ssh/cutly_vm` y el sshd del invitado no responde tras el
-     arranque (cierra la conexión), con la VM en la pantalla de login. Para volver a SSH: iniciar sesión (lo hace el
-     usuario) y `vm_control.py bootstrap`.
-   - Siguiente canal posible: la API de VirtualBox (una clase más en `vm/canales/`).
+2. **Instalar Tesseract en este anfitrión** (`winget install UB-Mannheim.TesseractOCR`): `vm_control.py doctor` lo
+   marca como FALLA; sin él no hay `waitfor` ni `clicktext`. Lo demás de la integración con VirtualBox está medido
+   en vivo (2026-11-19, doc 08 §1): canales ssh y guestcontrol, login, grabación a la resolución real, maximizar.
 3. `suspend`/`resume`: medir tiempos y si las apps quedan bien al reanudar.
 4. Fichas de más apps de Kali (Wireshark, Metasploit, sqlmap…) en `METODOLOGIA/09-conducir-apps-kali.md`
    tras su primera sesión de reconocimiento con cada una.
@@ -34,6 +27,8 @@
    con turbo). Probar whisper.cpp compilado con Vulkan y medirlo como en `editor/comun/BENCHMARK-WHISPER.md`.
 
 ## Referencia rápida
+- **Antes de una demo:** `python crear-shorts/herramientas/vm_control.py doctor` (dice qué falta y cómo arreglarlo);
+  `vm_control.py start --login` arranca, inicia sesión con `VM_GUEST_PASSFILE` y espera al canal.
 - Pruebas (pásalas antes de cada commit): `python -m unittest discover -s pruebas -t pruebas`.
 - Estructura y dónde va cada cosa nueva: `README.md` ("Cómo crece el proyecto") y `editor/CLAUDE.md`.
 - Herramienta de control: `crear-shorts/herramientas/vm_control.py`.

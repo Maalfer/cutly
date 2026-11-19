@@ -9,9 +9,10 @@ ESTÁNDAR DEL REPO: todas las tomas se hacen DENTRO de la VM (ver METODOLOGIA/00
 Requisitos en el ANFITRIÓN: VBoxManage (se localiza solo, ver find_vboxmanage), ssh (OpenSSH; viene con
 Windows 10/11), python3 y un OCR (Tesseract en cualquier SO; Vision de macOS si existe ctrl-kit).
 Opcionales: Pillow (OCR por región), opencv-python (clickimg: búsqueda por plantilla).
-Requisitos en el INVITADO: Guest Additions, sshd, xdotool, xclip, ffmpeg (para grabar), sesión X11.
+Requisitos en el INVITADO: Guest Additions, sesión X11 iniciada, xdotool, xclip, x11-utils, wmctrl, python3;
+sshd para el canal ssh (ffmpeg solo para `rec start --guest`).
 
-Primera vez (una sola):  vm_control.py bootstrap
+Primera vez (una sola):  vm_control.py doctor  (dice qué falta y cómo arreglarlo)  ->  vm_control.py bootstrap
 Canal con el invitado: VM_CANAL=auto (defecto: ssh si responde, si no guestcontrol) | ssh | guestcontrol (vm/canales/)
 Variables: VM_NAME (kali) VM_KEY (~/.ssh/cutly_vm) VM_SSH_PORT (2222) VM_USER (kali) VBOXMANAGE (ruta)
            VM_OCR=tesseract (fuerza Tesseract) VM_GUEST_PASS (contraseña del invitado, SOLO si la das tú,
@@ -19,7 +20,13 @@ Variables: VM_NAME (kali) VM_KEY (~/.ssh/cutly_vm) VM_SSH_PORT (2222) VM_USER (k
            el script nunca adivina contraseñas)
 
 CICLO DE VIDA
-  start | stop | status | bootstrap
+  doctor                                diagnóstico completo (VirtualBox, Guest Additions, sesión, canal, grabación,
+                                         herramientas) con la solución de cada problema; código 1 si algo impide grabar
+  start [--headless] [--seg N] [--login]   arranca y espera POR FASES (Guest Additions -> sesión -> canal), diciendo
+                                         en cuál se queda; con la VM apagada deja antes la grabación configurada;
+                                         --login inicia la sesión si se queda en la pantalla de login
+  login                                 inicia la sesión del escritorio con TU contraseña (VM_GUEST_PASSFILE)
+  stop | status | bootstrap
   suspend | resume                      guardar el estado (savestate) y reanudarlo en segundos: no es un snapshot
   res W H                               resolución del invitado (setvideomodehint) — p. ej. 1080 1920 para short
 VER
@@ -45,6 +52,8 @@ TOMA: REGISTRO Y GRABACIÓN (conecta con la Fase 2: editar)
   take start NOMBRE                     abre el registro de la toma (JSONL con la hora de cada paso)
   mark "Acto 1: login"                  marca un momento del guion (aparece en el mapa de edición)
   rec start [W H FPS] [--guest] | rec stop   graba con VirtualBox en el ANFITRIÓN (cursor incluido, sin SSH); --guest: ffmpeg dentro
+                                         (antes comprueba que la grabación está a la resolución REAL del invitado)
+  rec config [W H]                      configura la grabación (resolución del invitado, 30 fps, 10 Mbps); mejor con la VM apagada
   take end                              cierra el registro, trae el vídeo y escribe el mapa de edición (.md)
   mapa NOMBRE                           regenera el mapa de edición desde el registro
 ESTADO DE PARTIDA
@@ -82,10 +91,14 @@ def main():
         return c(a[a.index(n) + 1])
 
     cmd = a[0]
-    if cmd == "start":
-        ok = start()
-        print("OK" if ok else "TIMEOUT: la VM no respondió por SSH")
+    if cmd == "doctor":
+        sys.exit(0 if doctor() else 1)
+    elif cmd == "start":
+        ok = start(opt("--seg", 150, float), headless="--headless" in a, login="--login" in a)
+        print("OK" if ok else "NO LISTA: mira la última fase de arriba (o `vm_control.py doctor`)")
         sys.exit(0 if ok else 1)
+    elif cmd == "login":
+        iniciar_sesion()
     elif cmd == "stop":
         print("apagada" if stop() else "no se apagó a tiempo (se dejó como está)")
     elif cmd == "suspend":
@@ -97,8 +110,14 @@ def main():
     elif cmd == "res":
         set_res(int(a[1]), int(a[2]))
     elif cmd == "status":
-        ok = ssh_ok()
-        print(f"VM {VM}: {vm_state()} | invitado: {'responde' if ok else 'no responde'} | canal: {describir()}")
+        r = info.resumen()
+        ok = r["estado"] == "running" and ssh_ok()
+        print(f"VM {VM}: {r['estado']} | invitado: {'responde' if ok else 'no responde'} | canal: {describir()}")
+        if r["estado"] == "running":
+            print(f"Guest Additions: {r['version_adiciones']} (nivel {r['nivel_adiciones']}) | sesión: "
+                  f"{r['usuarios'] or ('sí' if r['sesion'] else 'no' if r['sesion'] is False else '?')} | IP: {r['ip']}")
+        g = r["grabacion"]
+        print(f"grabación: {g['res']} @ {g['fps']} fps, {g['kbps']} kbps -> {g['fichero']}")
         if ok:
             print("pantalla:", ssh("xrandr | grep '\\*' | head -1", capture=True))
             print("ventana activa:", active_title())
@@ -111,7 +130,12 @@ def main():
     elif cmd == "mark":
         mark(a[1])
     elif cmd == "rec":
-        if a[1] == "start":
+        if a[1] == "config":
+            nums = [int(x) for x in a[2:] if x.isdigit()]
+            quedan = grabacion.configurar(tuple(nums[:2]) if len(nums) >= 2 else None)
+            print("grabación configurada" if not quedan else "NO se pudo: " + "; ".join(quedan))
+            sys.exit(0 if not quedan else 1)
+        elif a[1] == "start":
             nums = [x for x in a[2:] if x.isdigit()]
             rec_start(int(nums[0]) if len(nums) > 0 else None, int(nums[1]) if len(nums) > 1 else None,
                       int(nums[2]) if len(nums) > 2 else 30, guest="--guest" in a)

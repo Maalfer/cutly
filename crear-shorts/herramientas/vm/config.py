@@ -19,3 +19,13 @@ IS_WIN = os.name == "nt"
 
 def die(msg):
     sys.exit(f"[vm_control] {msg}")
+
+
+def contrasena_invitado():
+    """La contraseña del invitado SI el usuario la ha dado (VM_GUEST_PASSFILE, preferido, o VM_GUEST_PASS); si no,
+    None. Nunca se adivina ni se guarda en el repo."""
+    pf = os.environ.get("VM_GUEST_PASSFILE")
+    if pf:
+        with open(pf, encoding="utf-8") as f:
+            return f.read().rstrip("\r\n")
+    return os.environ.get("VM_GUEST_PASS") or None

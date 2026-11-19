@@ -34,9 +34,8 @@ class VBoxSimulado:
     def __call__(self, cmd, capture_output=True, timeout=None, **k):
         self.llamadas.append(cmd)
         sub = cmd[3]
-        if sub == "copyto":
-            destino = cmd[cmd.index("--target-directory") + 1]
-            shutil.copy(cmd[-1], self.local(destino))
+        if sub == "copyto":                       # copyto ORIGEN DESTINO (destino = ruta completa en el invitado)
+            shutil.copy(cmd[-2], self.local(cmd[-1]))
             return subprocess.CompletedProcess(cmd, 0, b"", b"")
         if sub == "copyfrom":
             shutil.copy(self.local(cmd[-2]), cmd[-1])
@@ -91,7 +90,7 @@ class GuestControl(unittest.TestCase):
         vb.limpiar()
         self.assertEqual((rc, out.strip()), (0, b"ok"))
 
-    def test_enviar_con_otro_nombre_renombra(self):
+    def test_enviar_con_otro_nombre(self):
         d = tempfile.mkdtemp()
         f = os.path.join(d, "origen.txt")
         with open(f, "w") as fh:

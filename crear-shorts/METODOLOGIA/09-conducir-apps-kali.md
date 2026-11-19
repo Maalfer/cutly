@@ -26,7 +26,7 @@
 | `waitstill` nunca terminaba | Gráfico de CPU del panel y cursor parpadeante | Comparar por **fracción de píxeles**, ignorando la franja superior |
 | `selecttext` falso éxito / fallo | Ctrl+C por xdotool no llega al portapapeles de Java; un valor viejo daba falsos éxitos | Verificar la selección **PRIMARY** de X11 (`xclip -selection primary -o`) con centinela previo. `xclip` siempre con `>/dev/null 2>&1` o retiene el SSH y cuelga el guion |
 | `F5` por xdotool se perdía | — | Usar `ctrl+r` |
-| Ventana con tamaño de otra máquina | Tamaños fijos | `maximize` con `wmctrl` (pantalla real) |
+| Ventana con tamaño de otra máquina | Tamaños fijos | `maximize` (pantalla real: wmctrl si está; si no, mensaje EWMH con python3, doc 08) |
 | `put /home/kali/x` falla en Git Bash | MSYS convierte rutas `/...` a Windows | Rutas relativas al home (`lab/x`) o `MSYS_NO_PATHCONV=1`; en PowerShell no pasa |
 | Tooltips/hover en el vídeo | El cursor se queda sobre un icono | Apartar el ratón tras clicar |
 | El foco no es el esperado | Diálogos casi homónimos | `--in "Título"` en `type`/`typeurl`; comprobar el título real, no solo que exista |

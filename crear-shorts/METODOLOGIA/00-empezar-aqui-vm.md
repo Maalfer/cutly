@@ -23,18 +23,22 @@
    (comandos por SO en `PORTABILIDAD.md`). `vm_control.py` localiza `VBoxManage` solo.
 2. **VM apagada:** `python vm_control.py bootstrap` añade la regla NAT `127.0.0.1:2222 → 22`
    (solo se puede con la VM apagada), crea la clave dedicada `~/.ssh/cutly_vm` y la autoriza:
-   - **Camino preferido:** define `VM_GUEST_PASS` con la contraseña **que tú le das** y se instala con
-     `VBoxManage guestcontrol`.
+   - **Camino preferido (medido):** `VM_GUEST_PASSFILE=<fichero con la contraseña que TÚ das>`: inicia sesión si hace
+     falta y autoriza la clave por `VBoxManage guestcontrol`.
    - **Alternativa:** teclea la clave en un terminal del invitado con `keyboardputscancode` (solo letras, con
      el teclado en US). Con tu sesión gráfica ya iniciada.
    - **El agente nunca adivina contraseñas** ni acepta acuerdos legales por ti (EULA de Burp: lo aceptas tú).
-   - **Sin SSH:** con `VM_CANAL=guestcontrol` y `VM_GUEST_PASSFILE=<fichero con la contraseña>`, todo el control va
-     por las Guest Additions (`vm/canales/guestcontrol.py`; pendiente de medir). Por defecto (`auto`) se usa SSH si
-     responde y, si no, guestcontrol si hay credenciales. `vm_control.py status` dice qué canal está activo.
-3. **Invitado:** `sudo apt install xdotool xclip wmctrl ffmpeg openssh-server` (X11, no Wayland), Guest Additions,
-   salvapantallas y bloqueo desactivados, "no molestar". Perfil Firefox `demo` (proxy a Burp, sin
-   autocompletado ni tráfico de fondo) y lab en `~/lab/lab_idor.py`.
-4. **Comprobar:** `python vm_control.py status` debe mostrar `ssh: sí`, la resolución y la ventana activa.
+   - **Sin SSH:** con `VM_CANAL=guestcontrol` y `VM_GUEST_PASSFILE`, todo el control va por las Guest Additions
+     (`vm/canales/guestcontrol.py`; medido: 0,38 s por llamada frente a 0,22 s de SSH). Por defecto (`auto`) se usa
+     SSH si responde y, si no, guestcontrol si hay credenciales.
+3. **Invitado:** `sudo apt install xdotool xclip x11-utils openssh-server` (X11, no Wayland; `ffmpeg` solo para
+   `rec start --guest`; `wmctrl` ya no hace falta), Guest Additions, salvapantallas y bloqueo desactivados, "no
+   molestar". Perfil Firefox `demo` (proxy a Burp, sin autocompletado ni tráfico de fondo) y lab en `~/lab/lab_idor.py`.
+4. **Comprobar todo de una vez:** `python vm_control.py doctor` (VirtualBox, Guest Additions, sesión, canal,
+   grabación, herramientas del anfitrión y del invitado), con la solución de cada problema. Debe acabar en
+   "todo listo para grabar una demo".
+5. **Arrancar para una demo:** `python vm_control.py start --login` (configura la grabación con la VM apagada,
+   arranca, inicia sesión si das `VM_GUEST_PASSFILE` y espera al canal, diciendo en qué fase se queda).
 
 ## 2. Estado de partida: rápido y repetible
 

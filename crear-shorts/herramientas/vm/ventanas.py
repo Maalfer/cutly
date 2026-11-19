@@ -62,12 +62,41 @@ def activate(title, seg=8):
     die(f"no pude dar foco a una ventana '{title}' (activa: '{active_title()}')")
 
 
+# Maximizar como lo hace wmctrl por dentro: un mensaje EWMH _NET_WM_STATE al gestor de ventanas, enviado con python3
+# + ctypes sobre libX11 (los dos vienen en Kali; wmctrl no, y su xdotool 3.2016 no tiene `windowstate`: medido).
+# Alternativas descartadas (medido): colocar la ventana en _NET_WORKAREA no descuenta la barra de título y la
+# ventana se sale por abajo; `key super+Up` depende de los atajos del escritorio.
+MAXIMIZAR_EWMH = r'''
+import ctypes, sys
+x = ctypes.cdll.LoadLibrary("libX11.so.6")
+x.XOpenDisplay.restype = ctypes.c_void_p
+x.XInternAtom.restype = ctypes.c_ulong
+x.XDefaultRootWindow.restype = ctypes.c_ulong
+d = ctypes.c_void_p(x.XOpenDisplay(None))
+if not d.value:
+    sys.exit("sin DISPLAY")
+atom = lambda n: x.XInternAtom(d, n.encode(), False)
+class Ev(ctypes.Structure):
+    _fields_ = [("type", ctypes.c_int), ("serial", ctypes.c_ulong), ("send_event", ctypes.c_int),
+                ("display", ctypes.c_void_p), ("window", ctypes.c_ulong), ("message_type", ctypes.c_ulong),
+                ("format", ctypes.c_int), ("l", ctypes.c_long * 5), ("pad", ctypes.c_long * 12)]
+def estado(accion):   # 0 quitar, 1 poner
+    e = Ev(type=33, send_event=1, window=int(sys.argv[1]), message_type=atom("_NET_WM_STATE"), format=32)
+    e.l[0], e.l[1], e.l[2], e.l[3] = accion, atom("_NET_WM_STATE_MAXIMIZED_VERT"), atom("_NET_WM_STATE_MAXIMIZED_HORZ"), 1
+    x.XSendEvent(d, ctypes.c_ulong(x.XDefaultRootWindow(d)), False, (1 << 20) | (1 << 19), ctypes.byref(e))
+    x.XFlush(d)
+estado(0); estado(1)
+'''
+
+
 def maximize(title):
-    """Maximiza a la pantalla REAL del invitado (no un tamaño fijo): wmctrl respeta panel y decoraciones."""
+    """Maximiza a la pantalla REAL del invitado (no un tamaño fijo), respetando panel y decoraciones: con wmctrl si
+    está; si no, con el mismo mensaje EWMH que usa wmctrl (MAXIMIZAR_EWMH)."""
     wid = _wid(title)
     if wid:
-        ssh(f"wmctrl -ir {wid} -b remove,maximized_vert,maximized_horz; wmctrl -ir {wid} -b add,maximized_vert,maximized_horz",
-            check=False)
+        ssh(f"if command -v wmctrl >/dev/null; then "
+            f"wmctrl -ir {wid} -b remove,maximized_vert,maximized_horz; wmctrl -ir {wid} -b add,maximized_vert,maximized_horz; "
+            f"else python3 -c {shlex.quote(MAXIMIZAR_EWMH)} {wid}; fi", check=False)
     return bool(wid)
 
 

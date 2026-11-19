@@ -21,9 +21,20 @@ def find_vboxmanage():
 
 
 def find_tesseract():
-    c = shutil.which("tesseract") or os.path.join(os.environ.get("ProgramFiles", ""), "Tesseract-OCR", "tesseract.exe")
-    return c if c and os.path.isfile(c) else None
+    """Tesseract: PATH, o las rutas del instalador de Windows (para todos los usuarios o solo para el actual)."""
+    cands = [shutil.which("tesseract")]
+    for base in (os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)"),
+                 os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs")):
+        if base:
+            cands.append(os.path.join(base, "Tesseract-OCR", "tesseract.exe"))
+    return next((c for c in cands if c and os.path.isfile(c)), None)
 
 
 def vbox(*args, check=True):
-    return subprocess.run([find_vboxmanage(), *args], capture_output=True, text=True, check=check)
+    """VBoxManage con sus argumentos. check=True: si falla, sale con SU mensaje de error (no con una traza de Python)."""
+    r = subprocess.run([find_vboxmanage(), *args], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if check and r.returncode:
+        detalle = (r.stderr or r.stdout).strip().splitlines()
+        die(f"VBoxManage {' '.join(str(a) for a in args[:3])} falló: " +
+            " | ".join(l for l in detalle if l.strip())[:300])
+    return r

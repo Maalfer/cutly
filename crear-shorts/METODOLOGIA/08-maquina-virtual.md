@@ -19,7 +19,9 @@
 | **Mover/clicar el ratón** | `VBoxManage` | ❌ **no existe ningún comando de ratón** en `controlvm` |
 | **Ratón + teclado reales** | **`xdotool` dentro del invitado, por SSH** | ✅ ver §2 |
 | **Ejecutar comandos / copiar ficheros** | SSH (`natpf` 2222→22) + `scp` | ✅ rápido y sin depender del teclado. Es el canal `ssh` de `vm/canales/` |
-| **Lo mismo SIN SSH** | `VBoxManage guestcontrol` (Guest Additions) con la contraseña que da el usuario | canal `guestcontrol` de `vm/canales/` (`VM_CANAL`); implementado y probado en simulación, **pendiente de medir** contra la VM |
+| **Lo mismo SIN SSH** | `VBoxManage guestcontrol` (Guest Additions) con la contraseña que da el usuario | ✅ medido: canal `guestcontrol` de `vm/canales/` (`VM_CANAL`). **0,38 s por llamada** (SSH: 0,22 s); xdotool, tecleo humano con tildes, scripts largos y copias de ficheros funcionan igual |
+| **Saber en qué punto está la VM** | `showvminfo` + `guestproperty` (sin credenciales) | ✅ estado, Guest Additions, usuarios con sesión, IP (`vm/info.py`, `vm_control.py status` / `doctor`) |
+| **Iniciar sesión** | `keyboardputstring` en la pantalla de login (teclado US) | ✅ medido con una contraseña de letras (`vm_control.py login` / `start --login`, con `VM_GUEST_PASSFILE`) |
 | **Grabar vídeo** | **grabación nativa de VirtualBox en el anfitrión** (`vm_control.py rec start`) | ✅ medido: cursor incluido, sin SSH. Alternativa: `rec start --guest` (`ffmpeg -f x11grab` dentro del invitado) |
 | **Resolución** | `controlvm setvideomodehint W H bpp` (`vm_control.py res W H`) | para fijar el formato del short antes de grabar |
 
@@ -126,3 +128,17 @@ macOS y, en el futuro, una VM Windows para lo de Windows.
   AT-SPI/`dogtail` para apps GTK. Se evaluarán cuando el flujo base esté medido en Windows.
 
 > Estos cambios **no están medidos todavía en Windows/x86**: la tabla de resultados de arriba es del Mac/ARM.
+
+## Integración con VirtualBox 7.2 medida en vivo (2026-11-19, anfitrión Windows, invitado Kali)
+
+| Hecho medido | Consecuencia en el código |
+|---|---|
+| La grabación de VirtualBox viene por defecto a **1024×768, 25 fps y 512 kbps**, y el nombre del fichero ya está relleno: el código antiguo solo configuraba si estaba vacío, así que habría grabado a 1024×768 | `vm/grabacion.py`: `start` la configura con la VM apagada (`modifyvm`) a la última resolución del invitado (`GUI/LastGuestSizeHint`); `rec start` compara con la resolución REAL (cabecera del PNG de la captura) y para si no cuadra. Probado: toma a 1920×976 @ 30 |
+| VirtualBox añade `-screen0` al nombre del fichero de grabación | se busca con comodín al parar |
+| La pantalla de login cuenta como usuario conectado (`LoggedInUsersList = 'lightdm'`) y el nivel de las Guest Additions se queda en 2 aunque haya sesión | `vm/info.py` descarta los usuarios de los gestores de login; la sesión se decide por usuarios reales |
+| `showvminfo` dice Guest Additions **6.0.0** (el driver empaquetado por Debian); la propiedad del servicio dice **7.2.20** (la real) | se usa la propiedad |
+| Nada más arrancar, el sshd del invitado cierra la conexión ("Connection closed"); unos segundos después ya responde | `start` espera por fases (Guest Additions → sesión → canal); `vm/canales/ssh.py` clasifica el fallo (sshd caído, clave no autorizada, sin regla NAT) con su solución |
+| `guestcontrol copyto --target-directory` falla ("already exists and is a directory"); `copyto ORIGEN /ruta/nombre` funciona | `enviar` usa el destino posicional |
+| Los procesos de `guestcontrol` arrancan en `/` (un terminal lanzado así abre en `[/]`) | el canal hace `cd "$HOME"` como SSH |
+| Kali no trae `wmctrl` y su xdotool (3.2016) no tiene `windowstate`; colocar la ventana en `_NET_WORKAREA` no descuenta la barra de título | `maximize` manda el mensaje EWMH `_NET_WM_STATE` con python3 + ctypes (lo mismo que hace wmctrl). Medido: `MAXIMIZED_HORZ, MAXIMIZED_VERT` |
+| `bootstrap` con `VM_GUEST_PASSFILE`: clave creada y autorizada por guestcontrol, SSH operativo a la primera | es el camino preferido para montar una máquina nueva |

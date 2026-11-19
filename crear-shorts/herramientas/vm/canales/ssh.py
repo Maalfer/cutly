@@ -3,6 +3,7 @@ Necesita el montaje de `vm_control.py bootstrap` (regla NAT + clave). Rápido (u
 
 El script viaja por stdin en BYTES con \\n (en Windows, text=True lo convertiría a \\r\\n y bash fallaría).
 """
+import os
 import subprocess
 
 from ..config import KEY, PORT, USER
@@ -44,3 +45,31 @@ class CanalSSH(Canal):
 
     def describir(self):
         return f"ssh ({USER}@127.0.0.1:{PORT})"
+
+
+def clasificar(stderr):
+    """Causa de un fallo de `ssh ... true` a partir de su mensaje (medido en este proyecto) -> (causa, solución)."""
+    e = stderr.lower()
+    if "permission denied" in e:
+        return "la clave dedicada no está autorizada en el invitado", "vm_control.py bootstrap"
+    if "connection refused" in e:
+        return ("nadie escucha en el puerto del anfitrión (¿VM apagada o sin la regla NAT?)",
+                "vm_control.py start (con la VM apagada añade la regla NAT)")
+    if "connection closed" in e or "kex_exchange_identification" in e or "connection reset" in e:
+        return ("VirtualBox acepta en el puerto pero el sshd del INVITADO no contesta (sin arrancar o sin habilitar)",
+                "en un terminal del invitado: sudo systemctl enable --now ssh (te pide TU contraseña); o "
+                "VM_GUEST_PASSFILE + bootstrap")
+    if "timed out" in e:
+        return "el invitado no contesta a tiempo (arrancando o colgado)", "espera y repite; mira `vm_control.py shot`"
+    return "desconocida: " + stderr.strip()[:160], "ssh -v -i <clave> -p <puerto> <usuario>@127.0.0.1"
+
+
+def diagnosticar():
+    """Por qué no funciona el canal SSH, con la solución (cadena legible)."""
+    if not os.path.exists(KEY):
+        return f"no existe la clave dedicada {KEY} -> vm_control.py bootstrap"
+    r = subprocess.run(_ssh_cmd(["true"]), capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if r.returncode == 0:
+        return "SSH funciona"
+    causa, solucion = clasificar(r.stderr)
+    return f"{causa} -> {solucion}"
