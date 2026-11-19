@@ -61,10 +61,12 @@ cutly/
 │   ├── audio.py · series.py          ←   energía a 10 ms, máscara de voz, LUFS; tramos de una máscara
 │   ├── formato.py                    ←   el lienzo del Short (1080x1920@60, banda de la cara 648)
 │   ├── toma.py                       ←   CONTRATO Fase 1 → Fase 2 (.steps.jsonl / .mapa.md)
+│   ├── material.py                   ←   el material arrastrado y el papel de cada archivo (material.json)
 │   ├── transcripcion.py · subtitulos.py  ← Whisper medido; texto y tiempos de los subtítulos
 │   └── cortes.py                     ←   _cortes.log (solo APPEND)
 ├── pruebas/                          ← python -m unittest discover -s pruebas -t pruebas
-├── estudio/                          ← INTERFAZ DE ESCRITORIO (PySide6): Claude Code dentro + pestañas VM/Shorts/Subtítulos
+├── estudio/                          ← INTERFAZ DE ESCRITORIO (PySide6): Claude Code dentro + pestañas Material, Fusión,
+│                                         Subtítulos, Directo, Shorts y VM; el material se ARRASTRA a cada pestaña
 │                                         (python -m estudio; ver estudio/ESTUDIO.md)
 ├── .claude/skills/                   ← los flujos de trabajo como skills (/preparar-vm, /fusionar-cara-pantalla…)
 │                                         = los botones de la interfaz
@@ -93,7 +95,7 @@ cutly/
     ├── shorts/                       ←   Short vertical: SHORT-IDEAL.md (CÓMO DEBE QUEDAR), fusión cara+pantalla,
     │                                     short_desde_toma.py, subtitular.py, verificar_short.py...
     ├── directos/                     ←   clips 16:9 de un directo: CLAUDE.md + construir_clip.sh
-    ├── crudo/                        ←   fuentes de trabajo (LOCAL, no se versiona)
+    ├── crudo/                        ←   el material arrastrado + material.json (LOCAL, no se versiona)
     └── videos-editados/              ←   resultados + _cortes.log (LOCAL, no se versiona)
 ```
 **¿Qué línea de la Fase 2?** La tabla de `editor/CLAUDE.md` lo decide en una línea: toma de `crear-shorts/` →

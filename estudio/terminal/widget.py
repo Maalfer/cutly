@@ -8,7 +8,7 @@ Es la misma interfaz y la misma sesión que en cualquier terminal: comandos, per
 """
 import os
 
-from PySide6.QtCore import QObject, QTimer, QUrl, Signal, Slot
+from PySide6.QtCore import QEvent, QObject, QTimer, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices, QGuiApplication
 import sys
 
@@ -76,6 +76,10 @@ class Puente(QObject):
         QDesktopServices.openUrl(QUrl(url))
 
 
+def _ficheros(mime):
+    return [u.toLocalFile() for u in mime.urls() if u.isLocalFile()] if mime.hasUrls() else []
+
+
 def _html():
     """terminal.html con qwebchannel.js DENTRO: una página local no puede cargarlo de qrc:/ (medido:
     "QWebChannel is not defined"), así que se lee de los recursos de Qt y se inserta."""
@@ -91,9 +95,18 @@ def _html():
 
 
 class _Pagina(QWebEnginePage):
-    """Lleva los mensajes de la consola de JavaScript a stderr (para diagnosticar la carga de xterm.js)."""
+    """La página del terminal: lleva la consola de JavaScript a stderr y NO navega nunca después de cargar (soltar un
+    vídeo encima la llevaría a ese fichero y el terminal desaparecería)."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.cargada = False
+        self.loadFinished.connect(lambda ok: setattr(self, "cargada", self.cargada or ok))
+
     def javaScriptConsoleMessage(self, nivel, mensaje, linea, origen):
         print(f"[terminal.html:{linea}] {mensaje}", file=sys.stderr)
+
+    def acceptNavigationRequest(self, url, tipo, principal):
+        return not (self.cargada and principal)
 
 
 class TerminalClaude(QWebEngineView):
@@ -111,6 +124,27 @@ class TerminalClaude(QWebEngineView):
         s = self.settings()
         s.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)   # xterm.js del CDN
         self.setHtml(_html(), QUrl.fromLocalFile(HTML))
+        self.page().loadFinished.connect(self._vigilar_arrastres)
+
+    # ---- soltar ficheros encima = pegar su ruta en la sesión (como en cualquier terminal)
+    def _vigilar_arrastres(self, _ok=True):
+        fp = self.focusProxy()          # el widget interno de WebEngine es el que recibe los arrastres
+        if fp is not None and not getattr(self, "_vigilando", False):
+            fp.installEventFilter(self)
+            self._vigilando = True
+
+    def eventFilter(self, obj, ev):
+        t = ev.type()
+        if t in (QEvent.Type.DragEnter, QEvent.Type.DragMove) and _ficheros(ev.mimeData()):
+            ev.acceptProposedAction()
+            return True
+        if t == QEvent.Type.Drop and _ficheros(ev.mimeData()):
+            rutas = " ".join(f'"{r}"' if " " in r else r for r in _ficheros(ev.mimeData()))
+            self.proceso.escribir("[200~" + rutas + " [201~")     # pegado: Claude Code lo trata como texto
+            ev.acceptProposedAction()
+            self.setFocus()
+            return True
+        return super().eventFilter(obj, ev)
 
     def enviar(self, texto, intro=True):
         """Escribe `texto` en la sesión (como si lo tecleara el usuario) y, si intro, pulsa Enter."""

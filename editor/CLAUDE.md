@@ -3,6 +3,10 @@
 Tres líneas de trabajo, cada una en su carpeta, sobre una librería común (`nucleo/`, en la raíz). **Antes de nada,
 ¿de dónde viene el vídeo?**
 
+**El material lo aporta el usuario arrastrándolo en cutly estudio** (o con `python editor/comun/material.py anadir`):
+vive en `editor/crudo/` con su papel (cara, pantalla, short, toma, directo…) en `material.json`. Mira primero
+`python editor/comun/material.py`.
+
 | Te pasan… | Línea | Empieza por |
 |---|---|---|
 | Una **toma de `crear-shorts/`** (hay `editor/crudo/<toma>.steps.jsonl`) | Short mudo automático | `python editor/shorts/short_desde_toma.py <toma> --titulo Titulo-Con-Gancho` |
@@ -20,6 +24,7 @@ editor/
 ├── comun/       lo que usan TODAS las líneas
 │   ├── transcribir.py            transcripción (large-v3-turbo + VAD, timestamps por palabra)
 │   ├── energia.py                energía a 10 ms (rms + alta frecuencia) para afinar un corte
+│   ├── material.py               el material aportado y el papel de cada archivo (material.json)
 │   ├── verificar_corte.sh        re-transcribe una ventana alrededor de un empalme
 │   ├── detectar_silencio.sh      silencios alrededor de un instante
 │   ├── asegurar_mejor_modelo.sh  modelo de whisper.cpp (si usas whisper.cpp en vez de faster-whisper)
@@ -40,7 +45,7 @@ editor/
 ├── directos/    clips 16:9 de un directo
 │   ├── CLAUDE.md                 metodología completa (transcribir, elegir, cortar, verificar)
 │   └── construir_clip.sh         trim + concat + micro-fundidos
-├── crudo/            fuentes de trabajo (LOCAL, no se versiona)
+├── crudo/            el material (LOCAL, no se versiona): lo llena la interfaz al arrastrar; material.json
 └── videos-editados/  resultados + _cortes.log (LOCAL; el log solo se AÑADE, nunca se recrea)
 ```
 

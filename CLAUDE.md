@@ -19,6 +19,10 @@ Tú actúas y te mueves; el usuario solo graba. Entrada humana siempre (tecleo y
 - El usuario puede estar usándote dentro de **cutly estudio** (`estudio/ESTUDIO.md`): misma sesión, pero con pestañas
   visuales al lado. Cuando una skill pida su revisión (p. ej. los subtítulos), la hace en la pestaña correspondiente y
   te escribe en la sesión cuando termina.
+- **El material ya no se coloca en carpetas:** el usuario ARRASTRA cada vídeo a su sitio en la interfaz (la ranura
+  "Cara", "Pantalla", "Short a subtitular", "Directo"...). Vive en `editor/crudo/` y el papel de cada archivo está en
+  `editor/crudo/material.json`. Para saber qué hay: `python editor/comun/material.py` (y `... ruta <papel>`). No
+  supongas nombres fijos como `cara.mp4`.
 
 ## Objetivo final: el Short ideal
 Cómo debe quedar TODO Short entregado (aprobado por el usuario, con especificación medible):

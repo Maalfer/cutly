@@ -31,9 +31,16 @@ class _Tarea(QRunnable):
 
     def run(self):
         try:
-            self.emisor.hecho.emit(self.fn())
+            resultado, error = self.fn(), None
         except BaseException as e:          # incluye SystemExit de die(): se muestra, no tumba la app
-            self.emisor.fallo.emit(str(e))
+            resultado, error = None, str(e)
+        try:
+            if error is None:
+                self.emisor.hecho.emit(resultado)
+            else:
+                self.emisor.fallo.emit(error)
+        except RuntimeError:                # la ventana se cerró mientras la tarea seguía: ya no hay a quién avisar
+            pass
 
 
 _VIVOS = set()       # emisores de tareas en curso: si Python los liberase antes de acabar, Qt perdería la señal
@@ -75,3 +82,10 @@ def ejecutar_cli(argv, salida, al_terminar=None, parent=None, env_extra=None):
     salida.appendPlainText(f"$ python {' '.join(os.path.relpath(a, REPO) if os.path.isabs(a) else a for a in argv)}")
     p.start(sys.executable, argv)
     return p
+
+
+def para_claude(ruta):
+    """Ruta como se la pasamos a Claude Code en un mensaje: relativa al repo, con /, entre comillas si tiene espacios."""
+    r = os.path.relpath(ruta, REPO) if os.path.isabs(ruta) and ruta.startswith(REPO) else ruta
+    r = r.replace(os.sep, "/")
+    return f'"{r}"' if " " in r else r

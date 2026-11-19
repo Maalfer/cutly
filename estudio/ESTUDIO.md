@@ -1,17 +1,18 @@
 # cutly estudio — la interfaz de escritorio
 
 Una ventana de PySide6 con **el Claude Code instalado dentro, con su interfaz completa**, y al lado las pestañas
-visuales de lo que el terminal hace mal: ver la VM, ver un vídeo, revisar subtítulos.
+visuales de lo que el terminal hace mal: aportar el material arrastrándolo, ver la VM, ver un vídeo, revisar
+subtítulos. **El material no se coloca en carpetas: se arrastra a la pestaña que toca.**
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
 │ Nueva sesión · Continuar la última │ Preparar VM · Grabar demo · Fusionar · Subtitular · …     │ ← un botón por skill
 ├────────────────────────────────────────────┬─────────────────────────────────────────────────┤
-│                                            │  VM │ Shorts │ Subtítulos                        │
-│   Claude Code (el de `claude`, de verdad)  │  estado sin credenciales, pantalla en directo,  │
-│   misma sesión, permisos, comandos /...    │  doctor / arrancar / login / apagar             │
-│                                            │  vídeos + verificar_short                       │
-│                                            │  revisar subtítulos con el vídeo sincronizado   │
+│                                            │ Material│Fusión│Subtítulos│Directo│Shorts│VM      │
+│   Claude Code (el de `claude`, de verdad)  │ ┌ Cara ─────────┐  ┌ Pantalla ─────┐           │
+│   misma sesión, permisos, comandos /...    │ │ suelta aquí   │  │ suelta aquí   │ ← ranuras │
+│   (soltar un archivo aquí pega su ruta)    │ └───────────────┘  └───────────────┘           │
+│                                            │ [Fusionar con Claude]                          │
 └────────────────────────────────────────────┴─────────────────────────────────────────────────┘
 ```
 
@@ -26,6 +27,23 @@ python -m estudio --continuar                # retoma la última conversación (
 Requisitos: Claude Code instalado y con sesión iniciada (`claude` en el PATH) y conexión a internet (Claude Code la
 necesita igual; xterm.js se carga de jsDelivr con la versión fijada). Para iniciar sesión en la VM desde la pestaña VM:
 `VM_GUEST_PASSFILE` en el entorno, como con `vm_control.py`.
+
+## Las pestañas
+
+| Pestaña | Para qué | Qué le pide a Claude |
+|---|---|---|
+| **Material** | la biblioteca: todo lo aportado, con miniatura, duración, resolución y **papel**; se arrastra dentro, y desde aquí a las ranuras | menú del botón derecho: el flujo que toque según el papel de lo seleccionado ("Fusionar cara + pantalla", "Subtitular", "Proponer clips", "Construir el Short de la toma"…) |
+| **Fusión** | ranuras **Cara** y **Pantalla** + título | `/fusionar-cara-pantalla <cara> <pantalla> [Título]` |
+| **Subtítulos** | ranura **Short a subtitular**; luego revisar el texto con el vídeo sincronizado | `/subtitular-short <short>` y, al revisar, "ya puedes quemarlos" |
+| **Directo** | ranura **Directo** (o un enlace) | `/directo-a-clips <directo o URL>` |
+| **Shorts** | los resultados: ver, verificar, abrir sus subtítulos | menú: subtitular, revisar, preguntar |
+| **VM** | estado, pantalla en directo, diagnóstico, arrancar, iniciar sesión, apagar | (CLIs de `vm_control.py`) |
+
+**El material**: soltar un archivo en una ranura lo trae a `editor/crudo/` (como **enlace**, sin copiar ni ocupar
+espacio, si está en el mismo disco; si no, se copia en segundo plano) y le fija ese papel en
+`editor/crudo/material.json` (`nucleo/material.py`). Soltarlo en cualquier otra parte de la ventana lo lleva a
+Material con el papel deducido (vertical mudo = pantalla, vertical con voz = cara o Short, horizontal largo con voz =
+directo…). Claude lo consulta con `python editor/comun/material.py`. Quitar algo del material no borra el original.
 
 ## Cómo funciona (y por qué así)
 
@@ -55,11 +73,17 @@ necesita igual; xterm.js se carga de jsDelivr con la versión fijada). Para inic
 | Caracteres no ASCII en la línea de órdenes del pseudo-terminal rompen el arranque del programa | `claude` no los lleva; la salida con tildes y € sí llega bien |
 | Python liberaba el emisor de una tarea en segundo plano antes de que terminase ("Signal source has been deleted") | `entorno._VIVOS` los mantiene hasta que acaban |
 | Resaltar la fila del subtítulo que suena marcaba la tabla como editada | el resaltado bloquea las señales de la tabla |
+| El Short de pantalla lleva una pista de audio (muda): por tener audio salía como "cara" | `material.describir` mide el pico (volumedetect): por debajo de −60 dB cuenta como mudo |
+| Soltar un vídeo sobre el terminal haría que la página navegase a ese fichero (y el terminal desaparecería) | la página no navega tras cargar; el soltar se intercepta y pega la ruta en la sesión |
+| Soltar en la ranura un vídeo de otra carpeta del mismo disco | entra como enlace duro: instantáneo y sin duplicar (medido: 2 nombres, 1 fichero) |
 
 ## Añadir cosas
 
 - **Un flujo nuevo:** una skill en `.claude/skills/<nombre>/SKILL.md` (frontmatter `name` + `description`). Sale como
   botón; si quieres rótulo u orden, añádela a `ROTULOS` en `estudio/flujos.py`.
-- **Una pestaña nueva:** un `QWidget` en `estudio/paneles/` que lea con `nucleo/` o `vm/` y actúe con
-  `entorno.ejecutar_cli` (CLIs del repo) o mandando texto a la sesión (`Ventana.enviar`); se añade en `ventana.py`.
+- **Una pestaña nueva:** un `QWidget` en `estudio/paneles/` que lea con `nucleo/` o `vm/`, actúe con
+  `entorno.ejecutar_cli` (CLIs del repo) y le pida cosas a Claude con una señal `pedir = Signal(str)` (la ventana la
+  conecta sola). Si necesita material con un papel, una `Ranura(papel, ...)` (`paneles/ranura.py`); un papel nuevo se
+  añade a `ROLES` en `nucleo/material.py`. Se registra en `ventana.py`.
+- Atajos: Ctrl+1…6 cambian de pestaña; Ctrl+` vuelve al terminal.
 - Las pruebas de la app están en `pruebas/test_estudio.py` (sin abrir ninguna sesión de Claude Code).

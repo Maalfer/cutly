@@ -114,7 +114,7 @@ class PanelSubtitulos(unittest.TestCase):
         p.tabla.item(1, 3).setText("a conocer")               # corrección del usuario
         self.assertTrue(p.sucio)
         mensajes = []
-        p.avisar.connect(mensajes.append)
+        p.pedir.connect(mensajes.append)
         p.revisado()                                          # guarda y avisa a Claude
         self.assertFalse(p.sucio)
         self.assertEqual(archivos.leer_json(self.json)["bloques"][1]["texto"], "a conocer")

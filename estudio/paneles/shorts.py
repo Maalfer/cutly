@@ -2,14 +2,14 @@
 reproducción y la verificación contra la especificación del Short ideal (verificar_short.py)."""
 import os
 
-from PySide6.QtCore import QFileSystemWatcher, Qt, QUrl
+from PySide6.QtCore import QFileSystemWatcher, Qt, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
-from PySide6.QtWidgets import (QHBoxLayout, QListWidget, QListWidgetItem, QPlainTextEdit, QPushButton, QSplitter,
-                               QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QHBoxLayout, QListWidget, QListWidgetItem, QMenu, QPlainTextEdit, QPushButton,
+                               QSplitter, QVBoxLayout, QWidget)
 
 from nucleo.rutas import SALIDA
 
-from ..entorno import REPO, ejecutar_cli
+from ..entorno import REPO, ejecutar_cli, para_claude
 from .reproductor import Reproductor
 
 VERIFICAR = os.path.join(REPO, "editor", "shorts", "verificar_short.py")
@@ -24,6 +24,9 @@ def videos():
 
 
 class PanelShorts(QWidget):
+    pedir = Signal(str)                 # mensaje para la sesión de Claude Code
+    revisar = Signal(str)               # abrir estos subtítulos en la pestaña Subtítulos
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._proc = None
@@ -31,6 +34,8 @@ class PanelShorts(QWidget):
         self.lista.setTextElideMode(Qt.TextElideMode.ElideMiddle)     # lo que distingue los nombres está en medio
         self.lista.setMinimumWidth(260)
         self.lista.currentItemChanged.connect(self._elegido)
+        self.lista.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.lista.customContextMenuRequested.connect(self._menu)
         self.rep = Reproductor()
         self.log = QPlainTextEdit(readOnly=True)
         self.log.setPlaceholderText("Informe de verificar_short.py")
@@ -76,6 +81,23 @@ class PanelShorts(QWidget):
     def _elegido(self, it, _prev=None):
         if it:
             self.rep.cargar(it.data(Qt.ItemDataRole.UserRole))
+
+    def _menu(self, pos):
+        it = self.lista.itemAt(pos)
+        if not it:
+            return
+        v = it.data(Qt.ItemDataRole.UserRole)
+        base = os.path.splitext(v)[0]
+        menu = QMenu(self)
+        if "_subtitulado" not in base:
+            menu.addAction("Subtitular con Claude", lambda: self.pedir.emit(f"/subtitular-short {para_claude(v)}"))
+        if os.path.exists(base + ".subtitulos.json"):
+            menu.addAction("Revisar sus subtítulos", lambda: self.revisar.emit(base + ".subtitulos.json"))
+        menu.addAction("Verificar contra el Short ideal", self.verificar)
+        menu.addAction("Preguntar a Claude por este vídeo…", lambda: self.pedir.emit(f"Mira el vídeo {para_claude(v)}: "))
+        menu.addSeparator()
+        menu.addAction("Abrir", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(v)))
+        menu.exec(self.lista.mapToGlobal(pos))
 
     def verificar(self):
         it = self.lista.currentItem()

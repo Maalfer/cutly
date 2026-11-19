@@ -6,7 +6,9 @@ argument-hint: "<directoN-completo.mp4 | URL>"
 
 # Directo -> clips 16:9
 
-Fuente: $ARGUMENTS. Sigue **`editor/directos/CLAUDE.md`** (metodología completa; es la fuente de verdad).
+Fuente: $ARGUMENTS (un archivo o una URL; si no se da, el material con papel `directo`:
+`python editor/comun/material.py ruta directo`). Sigue **`editor/directos/CLAUDE.md`** (metodología completa; es la
+fuente de verdad).
 
 Por defecto, al recibir un directo nuevo y sin pedir permiso para estos dos pasos:
 

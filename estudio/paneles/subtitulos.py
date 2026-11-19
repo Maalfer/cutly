@@ -12,15 +12,23 @@ from PySide6.QtGui import QColor, QFont, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QComboBox, QHBoxLayout, QHeaderView, QLabel, QMessageBox, QPushButton, QSplitter,
                                QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
-from nucleo import archivos
+from nucleo import archivos, material
 from nucleo.rutas import REPO, SALIDA
 
+from ..entorno import para_claude
+from .ranura import Ranura
 from .reproductor import Reproductor
 
 
 # ---------------------------------------------------------------- lógica (sin interfaz: pruebas/test_estudio.py)
+def carpetas():
+    """Donde puede haber subtítulos: junto a los Shorts montados por Claude y junto a los que se soltaron."""
+    return [SALIDA, material.carpeta()]
+
+
 def ficheros():
-    return sorted(glob.glob(os.path.join(SALIDA, "*.subtitulos.json")), key=os.path.getmtime, reverse=True)
+    fs = [f for c in carpetas() for f in glob.glob(os.path.join(c, "*.subtitulos.json"))]
+    return sorted(set(fs), key=os.path.getmtime, reverse=True)
 
 
 def video_de(ruta_json, datos):
@@ -51,7 +59,7 @@ def aplicar_textos(datos, textos):
 
 # ---------------------------------------------------------------- interfaz
 class PanelSubtitulos(QWidget):
-    avisar = Signal(str)          # mensaje para la sesión de Claude Code
+    pedir = Signal(str)           # mensaje para la sesión de Claude Code
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -60,6 +68,14 @@ class PanelSubtitulos(QWidget):
         self.sucio = False
         self._actual = -1
 
+        # 1) qué Short subtitular: se suelta en la ranura y se le pide a Claude
+        self.ranura = Ranura("short", "Short a subtitular", "el Short ya montado (con tu voz)")
+        self.ranura.cambiado.connect(lambda r: self.b_subtitular.setEnabled(bool(r)))
+        self.b_subtitular = QPushButton("Subtitular con Claude")
+        self.b_subtitular.setMinimumHeight(36)
+        self.b_subtitular.setEnabled(False)
+        self.b_subtitular.clicked.connect(lambda: self.pedir.emit(f"/subtitular-short {para_claude(self.ranura.ruta)}"))
+        # 2) revisión: el JSON que deja Claude
         self.combo = QComboBox()
         self.combo.currentIndexChanged.connect(lambda _: self.abrir(self.combo.currentData()))
         self.rep = Reproductor()
@@ -84,8 +100,11 @@ class PanelSubtitulos(QWidget):
         b_ok.clicked.connect(self.revisado)
         self.estado = QLabel()
 
+        pedir = QHBoxLayout()
+        pedir.addWidget(self.ranura, 1)
+        pedir.addWidget(self.b_subtitular)
         arriba = QHBoxLayout()
-        arriba.addWidget(QLabel("Subtítulos:"))
+        arriba.addWidget(QLabel("Revisar:"))
         arriba.addWidget(self.combo, 1)
         abajo = QHBoxLayout()
         abajo.addWidget(self.estado, 1)
@@ -102,12 +121,14 @@ class PanelSubtitulos(QWidget):
         div.addWidget(self.tabla)
         div.setSizes([380, 520])
         lay = QVBoxLayout(self)
+        lay.addLayout(pedir)
         lay.addLayout(arriba)
         lay.addWidget(div, 1)
         lay.addLayout(abajo)
 
-        os.makedirs(SALIDA, exist_ok=True)
-        self.vigia = QFileSystemWatcher([SALIDA], self)
+        for c in carpetas():
+            os.makedirs(c, exist_ok=True)
+        self.vigia = QFileSystemWatcher(carpetas(), self)
         self.vigia.directoryChanged.connect(lambda _: self.recargar_lista())
         self.vigia.fileChanged.connect(self._cambio_externo)
         self.recargar_lista()
@@ -125,8 +146,8 @@ class PanelSubtitulos(QWidget):
         if self.combo.currentData() != self.ruta:
             self.abrir(self.combo.currentData())
         if not self.combo.count():
-            self.estado.setText("No hay ningún .subtitulos.json en editor/videos-editados/ "
-                                "(lo crea /subtitular-short, paso 1)")
+            self.estado.setText("Aún no hay subtítulos que revisar: suelta un Short arriba y pulsa "
+                                "'Subtitular con Claude'; cuando los prepare aparecerán aquí.")
 
     # ---- abrir / mostrar
     def abrir(self, ruta):
@@ -203,7 +224,7 @@ class PanelSubtitulos(QWidget):
         if not self.datos or not self.guardar():
             return
         rel = os.path.relpath(self.ruta, REPO).replace(os.sep, "/")
-        self.avisar.emit(f"He revisado y guardado los subtítulos de {rel}. Ya puedes quemarlos y verificar el resultado.")
+        self.pedir.emit(f"He revisado y guardado los subtítulos de {rel}. Ya puedes quemarlos y verificar el resultado.")
         self.estado.setText("Avisado a Claude Code (mira la sesión a la izquierda).")
 
     def _cambio_externo(self, ruta):

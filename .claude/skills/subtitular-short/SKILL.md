@@ -6,8 +6,8 @@ argument-hint: "[editor/videos-editados/short_<Titulo>_editado.mp4]"
 
 # Subtitular un Short
 
-Vídeo: $ARGUMENTS (si no se da, el `short_*_editado.mp4` más reciente de `editor/videos-editados/` sin su
-`_subtitulado`). Estilo y reglas: `editor/shorts/SHORT-IDEAL.md` §6. **El vídeo ENTERO, llamada final incluida.**
+Vídeo: $ARGUMENTS (si no se da: el material con papel `short` —`python editor/comun/material.py ruta short`— o el
+`short_*_editado.mp4` más reciente de `editor/videos-editados/` sin su `_subtitulado`). Estilo y reglas: `editor/shorts/SHORT-IDEAL.md` §6. **El vídeo ENTERO, llamada final incluida.**
 
 1. `python editor/shorts/subtitular.py preparar <video>` -> escribe `<video>.subtitulos.json` y lo imprime.
 2. **Revisa el texto** tú primero (tildes, "cómo" interrogativo, términos técnicos, nombres) y corrige el campo

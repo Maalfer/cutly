@@ -3,7 +3,7 @@ ciclo de vida (doctor, arrancar con sesión, apagar, guardar estado). Las accion
 import os
 import tempfile
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (QCheckBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton,
                                QSizePolicy, QVBoxLayout, QWidget)
@@ -25,6 +25,8 @@ def _capturar():
 
 
 class PanelVM(QWidget):
+    resumen = Signal(str)               # una línea para la barra de estado de la ventana
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._proc = None
@@ -90,6 +92,8 @@ class PanelVM(QWidget):
         self.l["ip"].setText(r["ip"] or "—")
         g = r["grabacion"]
         self.l["grabacion"].setText(f"{g['res']} @ {g['fps']} fps, {g['kbps']} kbps" + ("  ● GRABANDO" if g["activa"] else ""))
+        self.resumen.emit(f"VM {r['estado']}" + (f" · sesión {r['usuarios']}" if r["usuarios"] else "")
+                          + (" · ● GRABANDO" if g["activa"] else ""))
         if not self._encendida:
             self.pantalla.setPixmap(QPixmap())
             self.pantalla.setText(f"(VM {r['estado']})")

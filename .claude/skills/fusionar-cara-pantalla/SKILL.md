@@ -1,12 +1,14 @@
 ---
 name: fusionar-cara-pantalla
-description: Junta el Short de pantalla (mudo, banda negra arriba) con el vídeo de la cara y la voz del usuario en un Short final al estilo del usuario. Úsala cuando haya editor/crudo/pantalla.mp4 + editor/crudo/cara.mp4 (o el usuario los nombre).
+description: Junta el Short de pantalla (mudo, banda negra arriba) con el vídeo de la cara y la voz del usuario en un Short final al estilo del usuario. Úsala cuando el usuario lo pida o lo lance desde la pestaña Fusión de cutly estudio (con los dos archivos como argumentos).
 argument-hint: "[cara.mp4] [pantalla.mp4] [Titulo-Con-Gancho]"
 ---
 
 # Fusionar cara + pantalla
 
-Argumentos (opcionales): $ARGUMENTS. Por defecto `editor/crudo/cara.mp4` y `editor/crudo/pantalla.mp4`.
+Argumentos: $ARGUMENTS (cara, pantalla y título opcional). Si faltan, el material con papel `cara` y `pantalla`:
+`python editor/comun/material.py ruta cara` / `... ruta pantalla` (el usuario los arrastra a la pestaña Fusión; nadie
+los coloca a mano en carpetas). Si hay varios candidatos, pregunta cuál.
 
 Sigue **`editor/shorts/METODOLOGIA-FUSION-CARA.md` al pie de la letra** (es la fuente de verdad; aquí solo el orden):
 
