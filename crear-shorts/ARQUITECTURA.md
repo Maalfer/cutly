@@ -8,8 +8,8 @@
 ```
 FASE 1 — GENERAR                              FASE 2 — EDITAR
 crear-shorts/                                 editor/
-  herramientas/vm_control.py                    scripts/short_desde_toma.py
-  DEMO-<tema>/demo_<tema>.py                    scripts/construir_clip.sh (16:9 desde un directo)
+  herramientas/vm_control.py (+ vm/)            shorts/short_desde_toma.py
+  DEMO-<tema>/demo_<tema>.py                    directos/construir_clip.sh (16:9 desde un directo)
         │                                             ▲
         │ produce                                     │ consume
         ▼                                             │
@@ -25,7 +25,7 @@ crear-shorts/                                 editor/
 **Último paso: la cara y la voz.** El Short sale mudo y con el hueco negro. El usuario graba aparte su cara
 narrando (vídeo vertical con su voz) y el agente lo FUSIONA: quita sus tomas repetidas, mete la cara en la
 banda de 648 px y re-temporiza la pantalla para que cada frase caiga sobre su momento
-(`editor/METODOLOGIA-FUSION-CARA.md`):
+(`editor/shorts/METODOLOGIA-FUSION-CARA.md`):
 
 ```
   short_<Titulo>_editado.mp4 (mudo) + crudo/cara.mp4 (cara + voz)
@@ -37,19 +37,33 @@ banda de 648 px y re-temporiza la pantalla para que cada frase caiga sobre su mo
   short_<Titulo>_editado_subtitulado.mp4   (subtítulos karaoke sobre la unión cara/pantalla)
         │ verificar_short.py
         ▼
-  cumple editor/SHORT-IDEAL.md  →  se entrega
+  cumple editor/shorts/SHORT-IDEAL.md  →  se entrega
 ```
 
-El contrato es el `.steps.jsonl`: cualquier pieza de Fase 2 (o un agente verificador) puede reconstruir
-qué pasó, cuándo y si falló, sin tener que mirar el vídeo. Es lo que hace posible separar "quien actúa"
-de "quien edita" sin que pierdan información entre sí.
+El contrato es el `.steps.jsonl`, definido en un único sitio: `nucleo/toma.py` (y probado de punta a punta en
+`pruebas/test_toma.py`). Cualquier pieza de Fase 2 (o un agente verificador) puede reconstruir qué pasó, cuándo y
+si falló, sin tener que mirar el vídeo. Es lo que hace posible separar "quien actúa" de "quien edita" sin que
+pierdan información entre sí.
+
+**Capas del código** (cada una solo depende de las de debajo; `pruebas/test_estructura.py` lo vigila):
+
+```
+  DEMO-<tema>/demo_<tema>.py      editor/shorts/*.py · editor/directos/* · editor/comun/*      ← guiones y CLIs
+  herramientas/vm_control.py      (fachada: CLI + API `import vm_control as v`)
+  herramientas/vm/                config → anfitrion → registro → conexion → pantalla → entrada → ventanas
+                                  → maquina → toma → escenario
+  herramientas/tipear.py · mover.py · ocr_buscar.py                       (lógica pura, sin VM)
+  nucleo/                         rutas, ffmpeg, medios, audio, series, formato, toma, cortes, archivos,
+                                  transcripcion, subtitulos                                  ← base común
+```
 
 ## 2. Piezas y su responsabilidad única
 
 | Pieza | Responsabilidad | NO hace |
 |---|---|---|
-| `vm_control.py` | Ver (captura/OCR), actuar (ratón/teclado humano), verificar en pantalla, grabar (VirtualBox), registrar pasos | No sabe nada del CONTENIDO de la demo (no conoce CVEs, comandos concretos) |
-| `DEMO-<tema>/demo_<tema>.py` | El GUION de una demo concreta: qué teclear, en qué orden, qué verificar, cuándo marcar | No reinventa control de bajo nivel (todo eso vive en `vm_control.py`) |
+| `vm_control.py` + `vm/` | Ver (`pantalla`), actuar con ritmo humano (`entrada`, `ventanas`), ciclo de vida de la VM (`maquina`), grabar y registrar la toma (`toma`, `registro`), estado de partida (`escenario`) | No sabe nada del CONTENIDO de la demo (no conoce CVEs, comandos concretos) |
+| `DEMO-<tema>/demo_<tema>.py` | El GUION de una demo concreta: qué teclear, en qué orden, qué verificar, cuándo marcar | No reinventa control de bajo nivel (todo eso vive en `vm/`) |
+| `nucleo/` | Lo común a las dos fases: rutas, ffmpeg, audio, formato del Short, contrato de la toma, transcripción, subtítulos | No conoce ninguna demo ni ninguna línea de edición concreta |
 | `short_desde_toma.py` | Construye el Short desde `.mp4` + `.steps.jsonl`, con las reglas de encuadre fijadas en `METODOLOGIA/10` | No sabe nada de la demo en sí: funciona igual para cualquier tema |
 | `METODOLOGIA/09` | Reglas y fichas de apps, medidas y con causa raíz | No es un tutorial paso a paso de una demo concreta |
 | `METODOLOGIA/10` | Checklist/plantilla para que una demo de terminal salga bien a la primera | No sustituye probar el guion sin grabar antes (Fase 0) |
@@ -102,7 +116,7 @@ sin tocar la VM) y DESPUÉS (verificación y edición, sobre ficheros ya grabado
            ▼
 ┌───────────────────┐
 │  4. EDITOR          │  short_desde_toma.py + el clip 16:9
-│                     │  (editor/CLAUDE.md)
+│                     │  (editor/CLAUDE.md: índice)
 └─────────────────────┘
 ```
 

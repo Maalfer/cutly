@@ -1,17 +1,16 @@
 # Metodología de SHORTS verticales (9:16) con hueco para la cara
 
 > **¿Ya tienes el Short de pantalla y te pasan aparte el vídeo con la cara y la voz del usuario?** Eso es una
-> fusión: `METODOLOGIA-FUSION-CARA.md`.
+> fusión: `editor/shorts/METODOLOGIA-FUSION-CARA.md`.
 >
 > **¿La toma viene de `crear-shorts/` (un agente controló la VM)?** Entonces NO sigas este documento:
-> usa `editor/scripts/short_desde_toma.py <toma> --titulo ...`, que ya aplica todas estas reglas
+> usa `editor/shorts/short_desde_toma.py <toma> --titulo ...`, que ya aplica todas estas reglas
 > (banda fija, letterbox sin recortar, verificación de píxeles) de forma automática a partir del
 > registro `.steps.jsonl`. Este documento manual es para un vídeo que **no** tiene ese registro (un
-> directo real, una grabación suelta). Ver el árbol de decisión en `editor/CLAUDE.md` y la arquitectura
+> directo real, una grabación suelta). Ver el índice `editor/CLAUDE.md` y la arquitectura
 > en `crear-shorts/ARQUITECTURA.md`.
 >
-> Complemento de `CLAUDE.md`. Aquel documento cubre el corte de un directo en **clips 16:9**.
-> Este cubre convertir una grabación (de pantalla, normalmente **muda** — la voz se pone
+> Los clips 16:9 de un directo están en `editor/directos/CLAUDE.md`. Este documento cubre convertir una grabación (de pantalla, normalmente **muda** — la voz se pone
 > después) en un **Short vertical 1080×1920** con un **hueco negro arriba** donde el usuario
 > superpone luego su cara/cámara, igual que en la maqueta `crudo/referencia.mp4`.
 >
@@ -21,8 +20,8 @@
 >
 > **Multiplataforma:** todo aquí es ffmpeg/ffprobe/python puro, así que funciona igual en macOS,
 > Windows y Linux. Los comandos de ejemplo son de shell POSIX (macOS/Linux); en Windows úsalos en
-> **Git Bash/WSL**, o usa directamente `scripts/construir_short.py` (Python, portable). Instalación
-> y GPU por sistema: `../PORTABILIDAD.md`.
+> **Git Bash/WSL**, o usa directamente `editor/shorts/construir_short.py` (Python, portable). Instalación
+> y GPU por sistema: `PORTABILIDAD.md` (raíz).
 
 ---
 
@@ -36,7 +35,7 @@
   la cara arriba y pista de audio **en silencio** (el usuario graba su voz en off luego).
 - **Nomenclatura:** `short_<Titulo-Tipo-YouTube>_editado.mp4` (Capitalized-Kebab-Case, sin
   acentos ni símbolos; el título debe servir tal cual como propuesta de título de YouTube).
-  Mismo criterio que en `CLAUDE.md`.
+  Mismo criterio que en `editor/directos/CLAUDE.md`.
 
 ---
 
@@ -135,7 +134,7 @@ Esto sirve para cualquier contenido más ancho que alto que quieras ver completo
 ## 4. Ritmo: mejor pecar de LENTO (en el Short MUDO; el final con voz va al grano)
 
 > Esto vale para el Short mudo que luego se monta con la voz. Cuando ya hay voz, el usuario quiere el
-> resultado lo más al grano posible, sin pausas: ver `METODOLOGIA-FUSION-CARA.md` (estilo medido).
+> resultado lo más al grano posible, sin pausas: ver `editor/shorts/METODOLOGIA-FUSION-CARA.md` (estilo medido).
 
 El usuario corta a mano después, así que **es mejor que cada plano dure de más que de menos**.
 
@@ -157,7 +156,7 @@ desde los originales (no recodifiques un clip ya codificado): un `-i` por fuente
 de imagen con `-loop 1 -framerate 60 -t <dur>`, una pista muda con
 `-f lavfi -t <total> -i anullsrc=r=48000:cl=stereo`, y `concat` de todos los `[vN]`.
 
-Usa el script `scripts/construir_short.py` (plantilla parametrizada que implementa todo lo
+Usa el script `editor/shorts/construir_short.py` (plantilla parametrizada que implementa todo lo
 anterior: banda fija, recorte/relleno, paneo, imagen y audio mudo). Edita su lista `SEGS` y
 ejecútalo. Parámetros de codificación de referencia (ajusta `-b:v` al material):
 `libx264 -preset slow -b:v 8M -maxrate 9M -bufsize 16M -c:a aac -b:a 128k -movflags +faststart`.
@@ -180,7 +179,7 @@ ejecútalo. Parámetros de codificación de referencia (ajusta `-b:v` al materia
 
 ## 7. Registro: `videos-editados/_cortes.log`
 
-Igual que en `CLAUDE.md`: cada vez que termines (o revises) un short, añade (APPEND, nunca
+Igual que en `editor/directos/CLAUDE.md`: cada vez que termines (o revises) un short, añade (APPEND, nunca
 reescribir) una entrada con los tramos exactos en segundos de cada segmento, los parámetros de
 recorte `CX:CY:CW:CH`, el `padtop`, los paneos, y qué se descartó y por qué. Es lo único que
 permite auditar o rehacer el short después sin reconstruirlo desde cero. Si el log aparece

@@ -22,7 +22,8 @@ import time
 from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "herramientas"))
-import vm_control as v  # noqa: E402
+import vm_control as v  # noqa: E402  (también pone nucleo/ en el path)
+from nucleo.rutas import SHORTS  # noqa: E402
 
 LAB_DIR = "~/lab-ssh"
 TAR = "eseseache.tar"
@@ -74,7 +75,7 @@ def deploy():
     exacto). Se replican sus dos pasos (`docker load`, `docker run`) EN PRIMER PLANO y SÍNCRONOS, igual
     que cualquier otro `sudo docker ...` de este proyecto (esos nunca se han colgado, toda la sesión)."""
     v.ssh(f"sudo docker rm -f {CONTAINER} >/dev/null 2>&1", check=False)
-    v.ssh(f"sudo docker rmi -f eseseache >/dev/null 2>&1", check=False)
+    v.ssh("sudo docker rmi -f eseseache >/dev/null 2>&1", check=False)
     v.ssh(f"cd {LAB_DIR} && sudo docker load -i {TAR}", capture=True, timeout=60)
     v.ssh(f"sudo docker run -d --name {CONTAINER} eseseache", capture=True, timeout=30)
     ip = v.ssh(f"sudo docker inspect -f '{{{{range .NetworkSettings.Networks}}}}{{{{.IPAddress}}}}"
@@ -163,8 +164,7 @@ def main():
     print("limpiando la máquina (fuera de grabación)...")
     v.ssh(f"sudo docker rm -f {CONTAINER} >/dev/null 2>&1", check=False)
 
-    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "editor", "scripts",
-                          "short_desde_toma.py")
+    script = os.path.join(SHORTS, "short_desde_toma.py")  # ruta del repo: nucleo/rutas.py
     import subprocess
     subprocess.run([sys.executable, script, nombre,
                     "--titulo", "CVE-SSH-Pihole-Como-Entrar-Sin-Contrasena-Y-Sacar-Reverse-Shell"], check=True)

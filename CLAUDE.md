@@ -7,17 +7,17 @@ Tú actúas y te mueves; el usuario solo graba. Entrada humana siempre (tecleo y
 - Empieza por `crear-shorts/METODOLOGIA/00-empezar-aqui-vm.md`, `crear-shorts/ARQUITECTURA.md` (qué es el
   sistema) y `PENDIENTE.md` (estado real). Demo de terminal nueva: `METODOLOGIA/10-plantilla-demo-terminal.md`.
 - La herramienta es `crear-shorts/herramientas/vm_control.py` (multiplataforma: Windows, macOS, Linux).
-- Edición posterior: `editor/CLAUDE.md` y `editor/METODOLOGIA-SHORTS.md`. Si el usuario pasa el Short de pantalla + un
-  vídeo con su cara y voz para juntarlos: `editor/METODOLOGIA-FUSION-CARA.md`. El Short sale solo con
-  `editor/scripts/short_desde_toma.py` (banda negra superior FIJA de 648 px para la cara del usuario). La toma se graba con
+- Edición posterior: índice en `editor/CLAUDE.md` (Shorts en `editor/shorts/`, directos 16:9 en `editor/directos/`). Si el usuario pasa el Short de pantalla + un
+  vídeo con su cara y voz para juntarlos: `editor/shorts/METODOLOGIA-FUSION-CARA.md`. El Short sale solo con
+  `editor/shorts/short_desde_toma.py` (banda negra superior FIJA de 648 px para la cara del usuario). La toma se graba con
   VirtualBox en el anfitrión (`rec start`), no con OBS ni dentro de la VM. La toma deja
   `editor/crudo/<toma>.mp4`, `.steps.jsonl` y `.mapa.md` para decidir los cortes.
 
 ## Objetivo final: el Short ideal
 Cómo debe quedar TODO Short entregado (aprobado por el usuario, con especificación medible):
-`editor/SHORT-IDEAL.md`. Antes de entregar uno: `python editor/scripts/verificar_short.py VIDEO.mp4` debe
+`editor/shorts/SHORT-IDEAL.md`. Antes de entregar uno: `python editor/shorts/verificar_short.py VIDEO.mp4` debe
 cumplir la especificación. Estilo: lo más al grano posible, sin pausas, y con subtítulos karaoke revisados
-(`editor/scripts/subtitular.py`, SHORT-IDEAL.md §6).
+(`editor/shorts/subtitular.py`, SHORT-IDEAL.md §6).
 
 ## Límites (no negociables)
 - No adivines contraseñas ni aceptes EULA/acuerdos por el usuario.

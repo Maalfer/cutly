@@ -8,7 +8,7 @@
 # Ejemplo:
 #   ./detectar_silencio.sh editor/crudo/directo4-completo.mp4 910 6 -22dB
 #
-# (Para afinar a 10 ms con rms + alta frecuencia, mejor: analizar_fusion.py energia VIDEO T0 T1)
+# (Para afinar a 10 ms con rms + alta frecuencia, mejor: python editor/comun/energia.py VIDEO T0 T1)
 
 set -euo pipefail
 

@@ -61,13 +61,13 @@ quitar conectores titubeantes ("Y…") y elegir tomas.
 
 ### 1. Transcribir la voz (turbo + VAD)
 ```bash
-python editor/scripts/transcribir.py editor/crudo/cara.mp4        # -> crudo/cara_transcripcion.json/.srt/.txt
+python editor/comun/transcribir.py editor/crudo/cara.mp4        # -> crudo/cara_transcripcion.json/.srt/.txt
 ```
-En CPU tarda ~1 min por cada 1,7 min de audio; lánzalo en segundo plano. Modelo y por qué: `BENCHMARK-WHISPER.md`.
+En CPU tarda ~1 min por cada 1,7 min de audio; lánzalo en segundo plano. Modelo y por qué: `editor/comun/BENCHMARK-WHISPER.md`.
 
 ### 2. Medirlo todo antes de cortar nada
 ```bash
-python editor/scripts/analizar_fusion.py informe editor/crudo/cara.mp4 editor/crudo/pantalla.mp4 \
+python editor/shorts/analizar_fusion.py informe editor/crudo/cara.mp4 editor/crudo/pantalla.mp4 \
        --trans editor/crudo/cara_transcripcion.json                 # -> crudo/cara.fusion.md
 ```
 El informe da:
@@ -96,7 +96,7 @@ Por cada bloque: ✅ se queda, ❌ toma fallida, ✂️ parte. Reglas:
 - De varias tomas de la misma frase, **la última buena**, salvo que una anterior diga algo que la última no repite.
 - Si repitió solo la **segunda mitad**: primera toma hasta justo antes de esa mitad + la repetición.
 - Fuera: falsos arranques ("Tal."), chasquidos y **conectores titubeantes** separados por un micro-hueco
-  ("Y… lo interesante" → "Lo interesante"). Localiza el hueco con `energia` y empieza el tramo justo antes de la
+  ("Y… lo interesante" → "Lo interesante"). Localiza el hueco con `editor/comun/energia.py` y empieza el tramo justo antes de la
   palabra buena.
 - **Sin pausas dramáticas ni de respiro:** el usuario las quita todas (ver tabla de arriba). No hace falta
   recortarlas a mano en el plan: los tramos pueden ir holgados, porque el script aprieta las pausas solo.
@@ -105,14 +105,14 @@ Por cada bloque: ✅ se queda, ❌ toma fallida, ✂️ parte. Reglas:
 ### 4. Afinar cada corte a 10 ms
 Los timestamps de Whisper fallan entre 50 y 500 ms. Por cada corte:
 ```bash
-python editor/scripts/analizar_fusion.py energia editor/crudo/cara.mp4 85.0 86.2
+python editor/comun/energia.py editor/crudo/cara.mp4 85.0 86.2
 ```
 Corta en el valle entre palabras. **Las sibilantes ("pass") tienen rms bajo pero `hf` alto**: la palabra acaba
 donde cae el `hf`, no el rms. Error real: cortar en 85,233 s se comió "pass" (acababa en 85,60 s).
 Evita cortar dentro de un chasquido o una respiración.
 
 ### 5. Escribir el plan y construir
-`crudo/fusion_plan.json` (local, no se versiona; parte de la plantilla `editor/plantillas/fusion_plan.ejemplo.json`):
+`crudo/fusion_plan.json` (local, no se versiona; parte de la plantilla `editor/shorts/plantillas/fusion_plan.ejemplo.json`):
 un tramo por trozo de voz, con lo que se ve debajo.
 ```json
 {"cara": "editor/crudo/cara.mp4", "pantalla": "editor/crudo/pantalla.mp4",
@@ -138,7 +138,7 @@ un tramo por trozo de voz, con lo que se ve debajo.
   tramo, así que lo que se nombra sigue cayendo sobre su momento.
 
 ```bash
-python editor/scripts/fusionar_cara_pantalla.py editor/crudo/fusion_plan.json
+python editor/shorts/fusionar_cara_pantalla.py editor/crudo/fusion_plan.json
 ```
 Un único render desde los originales (sin recodificar dos veces). Tiempos redondeados a fotogramas de 1/60 s para
 que audio y vídeo de cada tramo duren exactamente lo mismo (sin deriva). Micro-fundido de 15 ms solo donde el audio
@@ -146,17 +146,17 @@ salta. Imprime la tabla final (tramo → instante en el Short) para la verificac
 
 ### 6. Subtítulos
 ```bash
-python editor/scripts/subtitular.py preparar editor/videos-editados/short_<Titulo>_editado.mp4   # revisa el JSON
-python editor/scripts/subtitular.py quemar   editor/videos-editados/short_<Titulo>_editado.mp4
+python editor/shorts/subtitular.py preparar editor/videos-editados/short_<Titulo>_editado.mp4   # revisa el JSON
+python editor/shorts/subtitular.py quemar   editor/videos-editados/short_<Titulo>_editado.mp4
 ```
-Estilo y reglas: `SHORT-IDEAL.md` §6. El entregable es `short_<Titulo>_editado_subtitulado.mp4`.
+Estilo y reglas: `editor/shorts/SHORT-IDEAL.md` §6. El entregable es `short_<Titulo>_editado_subtitulado.mp4`.
 
 ### 7. Verificar (obligatorio, con algo que pueda fallar)
 Primero, la especificación medible del Short ideal (formato, banda de la cara, subtítulos, fundido, arranque,
 pausas > 0,4 s, final y volumen); todo eso lo mide el verificador, no hace falta repetirlo a mano:
 ```bash
-python editor/scripts/verificar_short.py editor/videos-editados/short_<Titulo>_editado.mp4 --sin-subtitulos   # tras el paso 5
-python editor/scripts/verificar_short.py editor/videos-editados/short_<Titulo>_editado_subtitulado.mp4         # entregable
+python editor/shorts/verificar_short.py editor/videos-editados/short_<Titulo>_editado.mp4 --sin-subtitulos   # tras el paso 5
+python editor/shorts/verificar_short.py editor/videos-editados/short_<Titulo>_editado_subtitulado.mp4         # entregable
 ```
 Después, lo que el verificador no puede saber por sí solo:
 - [ ] **Duración** del resultado = la que imprime el script (vídeo y audio iguales).

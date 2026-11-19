@@ -2,7 +2,7 @@
 """
 construir_short.py — Monta un SHORT vertical 1080x1920@60 con hueco para la cara.
 
-Implementa la metodologia de 'editor/METODOLOGIA-SHORTS.md':
+Implementa la metodologia de 'editor/shorts/METODOLOGIA-SHORTS.md':
   - Banda negra superior CONSTANTE (padtop) en todos los planos = donde va la cara.
   - Cada plano = recorte de una fuente escalado a 1080 de ancho y pegado bajo la banda.
   - Paneo horizontal opcional por plano (para mostrar contenido ancho a tamano completo).
@@ -10,15 +10,17 @@ Implementa la metodologia de 'editor/METODOLOGIA-SHORTS.md':
   - Pista de audio MUDA (el usuario graba la voz en off despues).
 
 NO es un CLI con mil flags: es una PLANTILLA. Edita las dos zonas marcadas (CONFIG y SEGS)
-y ejecutalo:  python construir_short.py
+y ejecutalo:  python editor/shorts/construir_short.py
 
-Requiere: ffmpeg, ffprobe (se localizan como en short_desde_toma.py), python 3.
+Requiere: ffmpeg, ffprobe (los localiza nucleo/ffmpeg.py), python 3.
 """
 
 import subprocess, os, sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from short_desde_toma import FFMPEG, FFPROBE, CRUDO, SALIDA  # rutas del repo, esté donde esté
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))
+from nucleo import formato  # noqa: E402
+from nucleo.ffmpeg import FFMPEG, FFPROBE  # noqa: E402
+from nucleo.rutas import CRUDO, SALIDA  # noqa: E402  rutas del repo, esté donde esté
 
 # ======================= CONFIG (editar) =======================
 OUT = os.path.join(SALIDA, "short_EJEMPLO_editado.mp4")
@@ -30,10 +32,10 @@ SOURCES = {
     "img":   os.path.join(CRUDO, "imagen.jpg"),
 }
 
-PADTOP   = 648     # altura de la banda negra superior (la cara). CONSTANTE. 648/1920 = tercio sup.
-CANVAS_W = 1080
-CANVAS_H = 1920
-FPS      = 60
+PADTOP   = formato.BANDA_CARA   # banda negra superior (la cara): 648. CONSTANTE en todos los planos.
+CANVAS_W = formato.ANCHO
+CANVAS_H = formato.ALTO
+FPS      = formato.FPS
 VBITRATE = "8M"    # ajustar a ~1.5-2x el bitrate nativo de la fuente (ver ffprobe)
 ABITRATE = "128k"
 

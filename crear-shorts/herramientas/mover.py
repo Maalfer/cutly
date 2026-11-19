@@ -9,7 +9,6 @@ tiempo sin deriva. Uso suelto, solo para inspeccionar:  mover.py X0 Y0 X Y [--du
 import argparse
 import math
 import random
-import sys
 
 
 def trayecto(x0, y0, x1, y1, dur=None, rng=None):

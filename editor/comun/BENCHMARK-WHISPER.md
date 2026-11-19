@@ -3,7 +3,7 @@
 > Pregunta: ¿hace falta el modelo que más recursos consume (`large-v3`) para transcribir bien, o hay uno que dé
 > el mismo resultado gastando menos? Respuesta medida (2026-11-19): **`large-v3-turbo` por defecto**. En nuestro
 > audio fue el doble de rápido, gastó un 40 % menos de RAM y se equivocó menos. `large-v3` queda como segunda
-> opinión para tramos dudosos. Script: `scripts/transcribir.py`.
+> opinión para tramos dudosos. Script: `editor/comun/transcribir.py` (lógica: `nucleo/transcripcion.py`).
 
 ## Cómo se midió
 - **Audio:** `crudo/cara.mp4`, 202 s de narración real del usuario (español, micro de escritorio, ruido de ventilador
@@ -63,6 +63,6 @@ Errores típicos de cada modelo:
 
 ## Margen pendiente: GPU AMD
 La RX 590 no la usa faster-whisper (solo CUDA/NVIDIA). **whisper.cpp compilado con Vulkan** (`-DGGML_VULKAN=1`, ver
-`../PORTABILIDAD.md`) sí puede usar GPUs AMD en Windows, y hay informes de aceleraciones grandes con
+`PORTABILIDAD.md` en la raíz) sí puede usar GPUs AMD en Windows, y hay informes de aceleraciones grandes con
 `ggml-large-v3-turbo.bin`. No está medido en esta máquina: si la transcripción se vuelve un cuello de botella,
 es el siguiente paso (mismo modelo y misma precisión, menos tiempo).

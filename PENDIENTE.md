@@ -14,9 +14,10 @@
 
 ## Pendiente (en este orden)
 1. **Fiabilidad:** repetir una demo end-to-end 10-20 veces y medir (hoy: 1 ejecución limpia por demo).
-2. **Control sin SSH** (para cuando no haya SSH, p. ej. invitado Windows): separar `vm_control.py` en
-   cerebro + backend intercambiable (SSH+xdotool actual → `VBoxManage guestcontrol` → API de VirtualBox).
-   La GRABACIÓN ya no depende de SSH; el CONTROL (ratón/teclado) todavía sí.
+2. **Control sin SSH** (para cuando no haya SSH, p. ej. invitado Windows): `vm_control.py` ya está partido en el
+   paquete `vm/`, y todo lo que habla con el invitado pasa por `vm/conexion.py` (ssh/scp). Falta hacer ese módulo
+   intercambiable (SSH+xdotool actual → `VBoxManage guestcontrol` → API de VirtualBox). La GRABACIÓN ya no depende
+   de SSH; el CONTROL (ratón/teclado) todavía sí.
 3. `suspend`/`resume`: medir tiempos y si las apps quedan bien al reanudar.
 4. Fichas de más apps de Kali (Wireshark, Metasploit, sqlmap…) en `METODOLOGIA/09-conducir-apps-kali.md`
    tras su primera sesión de reconocimiento con cada una.
@@ -24,14 +25,16 @@
    todavía — pendiente de que el usuario confirme que quiere ejecutarla así.
 6. Windows como invitado, Wayland.
 7. **Transcripción con la GPU AMD (RX 590):** faster-whisper solo usa CUDA, así que hoy va por CPU (~1,7× tiempo real
-   con turbo). Probar whisper.cpp compilado con Vulkan y medirlo como en `editor/BENCHMARK-WHISPER.md`.
+   con turbo). Probar whisper.cpp compilado con Vulkan y medirlo como en `editor/comun/BENCHMARK-WHISPER.md`.
 
 ## Referencia rápida
+- Pruebas (pásalas antes de cada commit): `python -m unittest discover -s pruebas -t pruebas`.
+- Estructura y dónde va cada cosa nueva: `README.md` ("Cómo crece el proyecto") y `editor/CLAUDE.md`.
 - Herramienta de control: `crear-shorts/herramientas/vm_control.py`.
-- Generar el Short: `editor/scripts/short_desde_toma.py TOMA --titulo Titulo-Con-Gancho`.
-- Juntar el Short con la cara y la voz del usuario: `editor/METODOLOGIA-FUSION-CARA.md`.
-- Subtítulos: `editor/scripts/subtitular.py preparar|quemar` (revisar el JSON entre medias).
-- **Cómo debe quedar el Short final:** `editor/SHORT-IDEAL.md`; comprobarlo con `editor/scripts/verificar_short.py`.
-- Transcribir: `editor/scripts/transcribir.py` (large-v3-turbo + VAD; por qué: `editor/BENCHMARK-WHISPER.md`).
+- Generar el Short: `editor/shorts/short_desde_toma.py TOMA --titulo Titulo-Con-Gancho`.
+- Juntar el Short con la cara y la voz del usuario: `editor/shorts/METODOLOGIA-FUSION-CARA.md`.
+- Subtítulos: `editor/shorts/subtitular.py preparar|quemar` (revisar el JSON entre medias).
+- **Cómo debe quedar el Short final:** `editor/shorts/SHORT-IDEAL.md`; comprobarlo con `editor/shorts/verificar_short.py`.
+- Transcribir: `editor/comun/transcribir.py` (large-v3-turbo + VAD; por qué: `editor/comun/BENCHMARK-WHISPER.md`).
 - Demos de referencia (copiar su estructura para una nueva): `crear-shorts/DEMO-IDOR/`, `crear-shorts/DEMO-SSHOLE/`.
 - Fallos ya resueltos y por qué: `crear-shorts/METODOLOGIA/09-conducir-apps-kali.md`.

@@ -19,7 +19,7 @@ Todo con **entrada humana** (ritmo de tecleo variable con errores corregidos, ra
 - **Apps:** lanzar, enfocar, colocar, esperar (Firefox, Burp Suite, terminal…).
 - **Verificar sin OCR:** el lab registra cada petición (`labcheck`).
 - **Grabar y registrar:** `rec` (VirtualBox en el anfitrión, cursor incluido, sin OBS ni nada dentro de la VM) + registro JSONL de cada paso + **mapa de
-  edición automático** con los segundos de cada momento → entrada directa de la Fase 2: `editor/scripts/short_desde_toma.py` genera el **Short 1080×1920 con la banda negra fija** para tu cara.
+  edición automático** con los segundos de cada momento → entrada directa de la Fase 2: `editor/shorts/short_desde_toma.py` genera el **Short 1080×1920 con la banda negra fija** para tu cara.
 - **Estado de partida rápido:** `suspend`/`resume` (savestate, no snapshot) para no repetir los diálogos de Burp.
 
 ## 📚 Índice
@@ -35,7 +35,7 @@ Todo con **entrada humana** (ritmo de tecleo variable con errores corregidos, ra
 | `METODOLOGIA/08-maquina-virtual.md` | Qué canal sirve para qué en VirtualBox, mediciones, fallos de montaje (37-42) |
 | `DEMO-IDOR/` | Demo de ejemplo: navegador + Burp contra un lab local (`lab_idor.py`) |
 | `DEMO-SSHOLE/` | Demo de ejemplo (la más completa): nmap + bypass SSH + reverse shell contra un laboratorio Docker de BunkerLabs; plantilla de código a copiar |
-| `herramientas/` | `vm_control.py` (la herramienta), `tipear.py`/`mover.py` (planes humanos), `ocr_buscar.py`, `ocr.swift` (OCR Vision, opcional en macOS) |
+| `herramientas/` | `vm_control.py` (CLI + API) sobre el paquete `vm/` (un módulo por responsabilidad: ver `vm/__init__.py`), `tipear.py`/`mover.py` (planes humanos), `ocr_buscar.py`, `ocr.swift` (OCR Vision, opcional en macOS) |
 
 > Los docs 05-07 nacieron controlando el anfitrión macOS: los **comandos** de esos ejemplos ya no se usan (su
 > equivalente es `vm_control.py`), pero los **principios y fallos** siguen vigentes.

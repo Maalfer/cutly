@@ -1,5 +1,8 @@
 # Historial de sesiones (archivo, no leer entero cada vez)
 
+> **Las rutas citadas son las de cada momento** (p. ej. `editor/scripts/…` hoy es `editor/shorts/`, `editor/comun/`
+> o `editor/directos/`; mapa actual en `README.md`).
+>
 > **Esto es un archivo histórico, append-only** (añade al final de una sesión a otra; no reescribas lo
 > anterior). Para el estado ACTUAL y lo pendiente de verdad, lee `../../PENDIENTE.md` (raíz del repo) — es
 > deliberadamente corto. Este fichero queda como registro de CÓMO se llegó hasta ahí, útil para entender el

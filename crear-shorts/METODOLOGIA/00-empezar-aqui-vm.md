@@ -54,7 +54,7 @@ python vm_control.py labcheck "GET /cuenta?id=1001"   # verificación SIN OCR
 python vm_control.py mark "Acto 2: Burp y Repeater"
 ...
 python vm_control.py take end                    # deja idor-01.mp4 y escribe idor-01.mapa.md
-python ../editor/scripts/short_desde_toma.py idor-01 --titulo Titulo-Con-Gancho   # SHORT 1080x1920 con banda para la cara
+python ../editor/shorts/short_desde_toma.py idor-01 --titulo Titulo-Con-Gancho   # SHORT 1080x1920 con banda para la cara
 ```
 
 - **Quién graba:** `rec start` usa la **grabación nativa de VirtualBox en el anfitrión** (`VBoxManage controlvm recording`):
@@ -63,14 +63,14 @@ python ../editor/scripts/short_desde_toma.py idor-01 --titulo Titulo-Con-Gancho 
   Ojo: `recording videores` lleva la resolución en DOS argumentos (`1920 1012`); con `1920x1012` imprime la ayuda y el
   vídeo sale recortado a 1024×768 (lo hace `vm_control.py` solo).
 - **Salida para la Fase 2:** `editor/crudo/<toma>.mp4` + `<toma>.steps.jsonl` + `<toma>.mapa.md`. El mapa da, por
-  cada `mark`, el rango en segundos del vídeo (±0,3 s) y los pasos fallidos a rehacer. Se usa tal cual en
-  `editor/CLAUDE.md` para decidir cortes.
+  cada `mark`, el rango en segundos del vídeo (±0,3 s) y los pasos fallidos a rehacer. Lo usa tal cual
+  `editor/shorts/short_desde_toma.py` para encuadrar y cortar.
 - **Anuncio al usuario:** "TOMA ÚNICA — no toques la ventana de la VM hasta 'CORTEN'". El usuario sí puede usar
   el resto de su ordenador (la VM tiene su propio ratón y teclado).
 - Pacing y entrada humana: doc 04 (regla 0). Todo tecleo y movimiento va por `type`/`typeurl`/`move`/`clicktext`.
 
 ## 3b. De la toma al Short, automático
-`editor/scripts/short_desde_toma.py TOMA` lee `editor/crudo/TOMA.mp4` + `TOMA.steps.jsonl` y construye
+`editor/shorts/short_desde_toma.py TOMA` lee `editor/crudo/TOMA.mp4` + `TOMA.steps.jsonl` y construye
 `editor/videos-editados/short_<Titulo>_editado.mp4` (1080×1920@60, **audio mudo**, banda negra superior de **648 px FIJA** para tu
 cara, verificada midiendo píxeles). Cada acto (`mark`) se parte en planos de ≤ 8 s que siguen el foco; el foco sale solo del
 ratón, de `typeurl` y de `waitfor` (dónde apareció el texto esperado), o a mano con `focus X Y`. Anota además `_cortes.log`.

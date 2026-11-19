@@ -8,7 +8,7 @@ Hace: prepare → grabación → Acto 1 (login legítimo, id=1001) → Acto 2 (B
 Send) → Acto 3 (lo mismo SIN Burp) → trae el .mp4, el registro .steps.jsonl y el mapa de edición .mapa.md.
 Cada paso se verifica (log del lab y/o OCR); si uno falla, se detiene y queda marcado en el mapa.
 Graba con VirtualBox (en el anfitrión, sin OBS ni nada dentro de la VM) y al final genera el Short 1080x1920 con la
-banda negra superior fija (editor/scripts/short_desde_toma.py).
+banda negra superior fija (editor/shorts/short_desde_toma.py).
 Todo es entrada humana (vm_control.type/move/click). Solo contra el lab propio.
 """
 import os
@@ -17,7 +17,8 @@ import time
 from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "herramientas"))
-import vm_control as v  # noqa: E402
+import vm_control as v  # noqa: E402  (también pone nucleo/ en el path)
+from nucleo.rutas import SHORTS  # noqa: E402
 
 LAB = "http://127.0.0.1:8765/cuenta?id="
 BURP = "Temporary Project"
@@ -99,7 +100,7 @@ def main():
 
     # ---- Edición automática: Short vertical con la banda negra superior fija para la cara del usuario
     import subprocess
-    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "editor", "scripts", "short_desde_toma.py")
+    script = os.path.join(SHORTS, "short_desde_toma.py")  # ruta del repo: nucleo/rutas.py
     subprocess.run([sys.executable, script, nombre, "--titulo", "Demo-IDOR-Cambiando-El-Id-Para-Ver-Datos-De-Otro-Usuario"], check=True)
 
 

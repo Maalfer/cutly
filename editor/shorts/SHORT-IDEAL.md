@@ -3,9 +3,9 @@
 > **Referencia aprobada por el usuario (2026-11-19): "este es el ideal de cómo quiero que queden los shorts al final".**
 > - Vídeo: `videos-editados/short_Entrar-Por-SSH-Sin-Saber-La-Contrasena_editado.mp4` (73,2 s; no está en git), y su
 >   versión FINAL con subtítulos `…_editado_subtitulado.mp4`. Subtítulos copiados del `ideal.mp4` del usuario (§6).
-> - Se generó con un plan como `plantillas/fusion_plan.ejemplo.json` + `scripts/fusionar_cara_pantalla.py`. El plan, los
+> - Se generó con un plan como `editor/shorts/plantillas/fusion_plan.ejemplo.json` + `editor/shorts/fusionar_cara_pantalla.py`. El plan, los
 >   vídeos y el registro de cortes (`_cortes.log`) son material local de ese vídeo y no se versionan.
-> - **Antes de entregar cualquier Short:** `python editor/scripts/verificar_short.py VIDEO.mp4` debe decir
+> - **Antes de entregar cualquier Short:** `python editor/shorts/verificar_short.py VIDEO.mp4` debe decir
 >   "cumple la especificación". Si falla un punto, se arregla; no se entrega "casi".
 
 ## 1. Qué es, en una frase
@@ -23,7 +23,7 @@ momento. Termina con una llamada a comentar y un fundido a negro.
 6. subtitular.py preparar → REVISAR texto → quemar → Short FINAL con subtítulos karaoke (§6)
 7. verificar_short.py                             → cumple la especificación → entregar
 ```
-Procedimiento detallado de los pasos 4 y 5: `METODOLOGIA-FUSION-CARA.md`.
+Procedimiento detallado de los pasos 4 y 5: `editor/shorts/METODOLOGIA-FUSION-CARA.md`.
 
 ## 3. Especificación medible (lo que comprueba `verificar_short.py`)
 
@@ -81,14 +81,14 @@ es del usuario (no se reescribe ni se resume); el trabajo es dejarla limpia y qu
 ## 6. Subtítulos (estilo del `ideal.mp4` del usuario, medido)
 
 El usuario hizo su ideal con subtítulos automáticos de un editor (parece CapCut). Se midieron píxel a píxel y fotograma
-a fotograma, y `scripts/subtitular.py` los reproduce: la caja sale en la misma posición al píxel (filas 619-725) y con
+a fotograma, y `editor/shorts/subtitular.py` los reproduce: la caja sale en la misma posición al píxel (filas 619-725) y con
 la misma letra, el mismo color y el mismo comportamiento.
 
 | Elemento | Valor medido en el ideal |
 |---|---|
 | Caja | negra opaca (0,0,0), 107 px de alto, radio 16, margen lateral 20 px, ancho según el texto, centrada en x=540 |
 | Posición | filas 619-725 (centro 672): **sobre la unión cara/pantalla** (28 px sobre la cara, 78 sobre la pantalla) |
-| Letra | Inter Bold ~52 px (la más parecida de 6 candidatas comparadas); en el repo: `editor/fuentes/Inter.ttf` (OFL) |
+| Letra | Inter Bold ~52 px (la más parecida de 6 candidatas comparadas); en el repo: `editor/comun/fuentes/Inter.ttf` (OFL) |
 | Karaoke | palabra ya dicha en BLANCO (255), palabra por decir en GRIS (80); cambia al empezar a decirla (±50 ms) |
 | Bloques | 1-5 palabras, ≤ ~24 caracteres, una sola línea; corte tras . ? !; ~1 s en pantalla (0,6-1,9 s) |
 | Aparición | el bloque entra con su primera palabra y se queda hasta que entra el siguiente, sin hueco entre ambos (la caja no parpadea); tras una pausa de > 0,8 s se retira 0,25 s después de su última palabra |
@@ -101,10 +101,10 @@ te lo pida.
 
 **Cómo se hacen:**
 ```bash
-python editor/scripts/subtitular.py preparar editor/videos-editados/short_<Titulo>_editado.mp4
+python editor/shorts/subtitular.py preparar editor/videos-editados/short_<Titulo>_editado.mp4
 #   -> transcribe en modo --subtitulos y escribe short_<Titulo>_editado.subtitulos.json + lo imprime
 #   REVISA los bloques: tildes ("cómo" interrogativo), términos técnicos, nombres. Corrige "texto" en el JSON.
-python editor/scripts/subtitular.py quemar editor/videos-editados/short_<Titulo>_editado.mp4
+python editor/shorts/subtitular.py quemar editor/videos-editados/short_<Titulo>_editado.mp4
 #   -> short_<Titulo>_editado_subtitulado.mp4 (entregable final)
 ```
 
@@ -115,7 +115,7 @@ python editor/scripts/subtitular.py quemar editor/videos-editados/short_<Titulo>
   forma". Arreglo: `transcribir.py --subtitulos` (texto de contexto puntuado con los términos técnicos + contexto
   encadenado). El resultado sale puntuado y con "Netcat", "Kali", "reverse shell" e "ID" bien escritos. Solo sobre
   el Short FINAL: encadenar contexto en una grabación con silencios provoca alucinaciones.
-- **`editor/glosario.json`** recoge las correcciones fijas de términos (por frase: "cal" solo es "Kali" detrás de
+- **`editor/comun/glosario.json`** recoge las correcciones fijas de términos (por frase: "cal" solo es "Kali" detrás de
   "máquina"), y sus términos se pasan a Whisper como vocabulario. Cada término técnico nuevo que veas mal escrito
   se añade ahí; un error de una frase concreta, no (se corrige en el `.subtitulos.json` al revisar).
 - **Se dibuja con Pillow** (`pip install pillow`) y se superpone con ffmpeg: el `drawtext`/libass de ffmpeg se
@@ -126,7 +126,7 @@ python editor/scripts/subtitular.py quemar editor/videos-editados/short_<Titulo>
 | Error | Consecuencia | Regla |
 |---|---|---|
 | Dejar pausas "para respirar" y una espera de 3,6 s tras el Enter | el usuario tuvo que re-editarlo: 90,5 → 73,4 s | el script aprieta por defecto; no lo desactives |
-| Cortar con el timestamp de Whisper | se comió "pass" (fallaba 280 ms) | afinar con `analizar_fusion.py energia` (rms + alta frecuencia) |
+| Cortar con el timestamp de Whisper | se comió "pass" (fallaba 280 ms) | afinar con `editor/comun/energia.py` (rms + alta frecuencia) |
 | Pasar tiempos del vídeo final al original sin sumar un desfase | se comió "lo" de "Lo interesante" | re-transcribe el resultado y compáralo con el plan, palabra a palabra |
 | Fiarse del texto de Whisper en silencios | "Gracias por ver el vídeo" donde no había voz | VAD siempre; la energía manda |
 | Volumen a mano | saturación | `lufs` en el plan (−14 por defecto) |

@@ -116,7 +116,7 @@ y las pausas de lectura marcan el pacing; el movimiento del cursor, "glided" (do
 | 6 | Sin Burp | cambiar el id en la barra del navegador | 4s |
 | 7 | Cierre | resumen "esto es un IDOR" | 3s |
 
-> Para un **Short vertical**, este material se edita con `editor/METODOLOGIA-SHORTS.md`: recortes
+> Para un **Short vertical**, este material se edita con `editor/shorts/METODOLOGIA-SHORTS.md`: recortes
 > verticales de la zona que importa (barra de URL, panel de Repeater, respuesta), banda superior
 > para la cara, y **paneo** para leer una URL o una respuesta larga a tamaño completo.
 

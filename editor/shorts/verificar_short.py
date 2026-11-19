@@ -1,33 +1,26 @@
 #!/usr/bin/env python3
 """
 verificar_short.py — Comprueba un Short FINAL contra la especificación del Short ideal aprobado por el usuario
-(editor/SHORT-IDEAL.md). Cada comprobación mide algo que puede fallar; no hay nada "a ojo".
+(editor/shorts/SHORT-IDEAL.md). Cada comprobación mide algo que puede fallar; no hay nada "a ojo".
 
-    python verificar_short.py VIDEO.mp4 [--sin-subtitulos]   # OK/FALLA por punto; código de salida 1 si algo falla
+    python editor/shorts/verificar_short.py VIDEO.mp4 [--sin-subtitulos]   # OK/FALLA por punto; código de salida 1 si algo falla
 
 --sin-subtitulos: para un paso intermedio (el Short montado, antes de subtitular.py quemar).
 
 Referencia: short_Entrar-Por-SSH-Sin-Saber-La-Contrasena_editado.mp4 (2026-11-19), que pasa todo.
 """
 import argparse
-import json
 import os
 import subprocess
 import sys
 
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from short_desde_toma import FFMPEG, FFPROBE  # noqa: E402
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))
+from nucleo import audio, formato, medios, series  # noqa: E402
+from nucleo.ffmpeg import FFMPEG  # noqa: E402
 
-PADTOP = 648
-
-
-def probe(v):
-    out = subprocess.run([FFPROBE, "-v", "error", "-show_entries",
-                          "stream=codec_type,width,height,r_frame_rate,sample_rate:format=duration", "-of", "json", v],
-                         capture_output=True, text=True, check=True).stdout
-    return json.loads(out)
+PADTOP = formato.BANDA_CARA
 
 
 def main():
@@ -42,7 +35,7 @@ def main():
         res.append(ok)
         print(f"[{'OK   ' if ok else 'FALLA'}] {nombre}: {detalle}")
 
-    p = probe(v)
+    p = medios.info(v)
     vs = [s for s in p["streams"] if s["codec_type"] == "video"][0]
     aus = [s for s in p["streams"] if s["codec_type"] == "audio"]
     dur = float(p["format"]["duration"])
@@ -52,9 +45,7 @@ def main():
     chk(dur <= 90, "duración", f"{dur:.1f} s (referencia 73 s; un Short al grano no debería pasar de ~90 s)")
 
     # banda de la cara: las filas 0-647 tienen imagen (cara) en todos los fotogramas
-    raw = subprocess.run([FFMPEG, "-v", "error", "-i", v, "-vf", f"fps=5,crop=1080:{PADTOP}:0:0,scale=108:{PADTOP},"
-                          "format=gray", "-f", "rawvideo", "-"], capture_output=True, check=True).stdout
-    f = np.frombuffer(raw, np.uint8).reshape(-1, PADTOP, 108)
+    f = medios.fotogramas_gris(v, 5, (formato.ANCHO, PADTOP, 0, 0), (108, PADTOP))
     cuerpo = f[:-3]  # los últimos fotogramas son el fundido a negro
     negras = (cuerpo.max(axis=2) < 24)
     malos = int(negras[:, PADTOP - 10:].any(axis=1).sum())
@@ -69,7 +60,7 @@ def main():
         s = np.frombuffer(raw, np.uint8).reshape(-1, 26 * 40 * 3)
         con = float((s[:-3].max(axis=1) <= 10).mean())
         chk(con >= 0.85, "subtítulos", f"caja de subtítulo en el {con * 100:.0f} % de los fotogramas (≥ 85 %; "
-            f"generarlos: scripts/subtitular.py; si es un paso intermedio, usa --sin-subtitulos)")
+            f"generarlos: editor/shorts/subtitular.py; si es un paso intermedio, usa --sin-subtitulos)")
 
     # fundido final
     raw = subprocess.run([FFMPEG, "-v", "error", "-sseof", "-1", "-i", v, "-vf", "scale=54:96,format=gray",
@@ -80,26 +71,16 @@ def main():
 
     # audio: silencio inicial, pausas, cola final
     if aus:
-        raw = subprocess.run([FFMPEG, "-v", "error", "-i", v, "-vn", "-ac", "1", "-ar", "16000", "-f", "s16le", "-"],
-                             capture_output=True, check=True).stdout
-        a = np.frombuffer(raw, np.int16).astype(np.float32) / 32768
-        n = len(a) // 160
-        fr = a[: n * 160].reshape(n, 160)
-        rms = 20 * np.log10(np.sqrt((fr ** 2).mean(1)) + 1e-9)
-        hf = 20 * np.log10(np.sqrt((np.diff(fr, axis=1) ** 2).mean(1)) + 1e-9)
+        rms, hf = audio.energia(medios.audio_mono(v))       # ventanas de 10 ms
+        n = len(rms)
         # umbral relativo al nivel de la voz (el vídeo ya está normalizado a -14 LUFS)
         thr = np.percentile(rms, 90) - 22
         voz = (rms > thr) | (hf > np.percentile(hf, 90) - 20)
         ini = int(np.argmax(voz)) * 10
         fin = (n - int(np.argmax(voz[::-1]))) * 10
         chk(ini <= 120, "arranque", f"primera voz a {ini} ms (el gancho empieza en la primera sílaba, ≤ 120 ms)")
-        pausas, s = [], None
-        for i, x in enumerate(voz):
-            if not x and s is None:
-                s = i
-            if x and s is not None:
-                pausas.append((s / 100, (i - s) * 10))
-                s = None
+        # pausas = silencios ENTRE voz (el silencio tras la última palabra es la cola, se mide aparte)
+        pausas = [(i0 / 100, (i1 - i0) * 10) for i0, i1 in series.rachas(~voz, 1) if i1 < n]
         largas = [q for q in pausas if q[1] > 400]
         mx = max((q[1] for q in pausas), default=0)
         chk(not largas, "pausas", f"máx {mx} ms; > 400 ms: " +
@@ -107,15 +88,13 @@ def main():
             " (estilo del usuario: sin pausas de respiro ni dramáticas)")
         cola = n * 10 - fin
         chk(cola <= 450, "final", f"{cola} ms entre la última palabra y el final (corte justo + fundido)")
-        med = subprocess.run([FFMPEG, "-v", "info", "-i", v, "-vn", "-af", "loudnorm=print_format=json", "-f", "null",
-                              "-"], capture_output=True, text=True, encoding="utf-8", errors="replace").stderr
-        m = json.loads(med[med.rindex("{"):med.rindex("}") + 1])
+        m = audio.medir_sonoridad(v)
         li, tp = float(m["input_i"]), float(m["input_tp"])
         chk(-15.0 <= li <= -13.0 and tp <= -0.5, "volumen",
             f"{li:.1f} LUFS, pico {tp:.1f} dBTP (objetivo -14 LUFS, pico ≤ -1 dBTP; se tolera -0,5 por el AAC)")
 
     print("\nRESULTADO:", "cumple la especificación del Short ideal" if all(res) else
-          f"{res.count(False)} punto(s) por corregir (ver editor/SHORT-IDEAL.md)")
+          f"{res.count(False)} punto(s) por corregir (ver editor/shorts/SHORT-IDEAL.md)")
     sys.exit(0 if all(res) else 1)
 
 

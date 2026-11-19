@@ -52,7 +52,7 @@ momento clave ocurrió. **Si algo falló:** rehacer SOLO la fase fallida (los es
 
 ### FASE 4 — El mapa de edición (ya generado)
 `editor/crudo/<toma>.mapa.md` se escribe solo: un bloque por `mark` con su rango en segundos del vídeo, su duración y
-el nº de pasos. Se pasa tal cual a la edición (`editor/CLAUDE.md`).
+el nº de pasos. Se pasa tal cual a la edición (`editor/shorts/short_desde_toma.py`; contrato: `nucleo/toma.py`).
 
 ## Reglas de pacing (cine, no teatro)
 

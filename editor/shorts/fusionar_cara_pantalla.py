@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 fusionar_cara_pantalla.py — Mete la cara (con su voz) del usuario en la banda negra superior de un Short ya
-construido (pantalla.mp4, de short_desde_toma.py) y sincroniza la pantalla con la narración.
+construido (pantalla.mp4, de editor/shorts/short_desde_toma.py) y sincroniza la pantalla con la narración.
 
-    python fusionar_cara_pantalla.py plan.json
+    python editor/shorts/fusionar_cara_pantalla.py plan.json
 
 La narración manda: el audio y la cara se cortan por tramos (para quitar tomas repetidas y silencios muertos) y,
 para cada tramo, se elige qué se ve abajo:
@@ -18,52 +18,30 @@ plan.json:
   "padtop": 648, "cara_alto": 758, "cara_y": 20,
   "tramos": [ {"a0":0, "a1":7, "abajo":"pant", "p0":0, "p1":22.5}, {"a0":69.15,"a1":75.13,"abajo":"cara"}, ... ]
 }
-Estilo del usuario aplicado por defecto (medido comparando con su re-edición, METODOLOGIA-FUSION-CARA.md):
+Estilo del usuario aplicado por defecto (medido comparando con su re-edición, editor/shorts/METODOLOGIA-FUSION-CARA.md):
   "apretar": quita toda pausa > 0,25 s (margen 40 ms antes / 60 ms después de la voz) y los tramos sin voz;
   "lufs": -14 (normalización lineal, techo -1 dBTP); "fundido_final": 0.25 s a negro.
 Todos los tiempos se redondean a fotogramas de 1/60 s, así audio y vídeo de cada tramo duran EXACTAMENTE lo mismo
 (48000/60 = 800 muestras por fotograma) y no hay deriva al concatenar.
 """
-import json
+import argparse
 import os
 import subprocess
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from short_desde_toma import FFMPEG  # localiza ffmpeg igual que el resto de scripts (Windows/macOS/Linux)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))
+from nucleo import archivos, audio, formato, medios  # noqa: E402
+from nucleo.ffmpeg import FFMPEG  # noqa: E402
 
-FPS = 60
-W, H = 1080, 1920
-
-
-def q(t):
-    return round(t * FPS) / FPS
+FPS = formato.FPS
+W, H = formato.ANCHO, formato.ALTO
+q = formato.cuantizar
 
 
 def mascara_voz(cara):
-    """Voz cada 10 ms en el audio de la cara: rms > -38 dB, o energía de alta frecuencia > -42 dB (sibilantes
-    finales como la 's' de 'pass', que tienen poco rms). Ignora chasquidos sueltos de < 60 ms."""
-    import numpy as np
-    raw = subprocess.run([FFMPEG, "-v", "error", "-i", cara, "-vn", "-ac", "1", "-ar", "16000", "-f", "s16le", "-"],
-                         capture_output=True, check=True).stdout
-    a = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768
-    n = len(a) // 160
-    fr = a[:n * 160].reshape(n, 160)
-    rms = 20 * np.log10(np.sqrt((fr ** 2).mean(1)) + 1e-9)
-    hf = 20 * np.log10(np.sqrt((np.diff(fr, axis=1) ** 2).mean(1)) + 1e-9)
-    v = (rms > -38) | (hf > -42)
-    i = 0
-    while i < n:  # quita rachas de voz de menos de 60 ms (chasquidos, golpes)
-        if v[i]:
-            j = i
-            while j < n and v[j]:
-                j += 1
-            if j - i < 6:
-                v[i:j] = False
-            i = j
-        else:
-            i += 1
-    return v
+    """Voz cada 10 ms en el audio de la cara (nucleo.audio: rms > -38 dB o alta frecuencia > -42 dB, para no comerse
+    una 's' final; sin chasquidos de < 60 ms)."""
+    return audio.mascara_voz(*audio.energia(medios.audio_mono(cara)))
 
 
 def apretar(tramos, voz, pausa_max, m_antes, m_despues):
@@ -100,7 +78,10 @@ def apretar(tramos, voz, pausa_max, m_antes, m_despues):
 
 
 def main():
-    plan = json.load(open(sys.argv[1], encoding="utf-8"))
+    ap = argparse.ArgumentParser(description="Funde cara+voz con el Short de pantalla según un plan JSON "
+                                             "(plantilla: editor/shorts/plantillas/fusion_plan.ejemplo.json).")
+    ap.add_argument("plan")
+    plan = archivos.leer_json(ap.parse_args().plan)
     padtop, cara_alto, cara_y = plan["padtop"], plan["cara_alto"], plan.get("cara_y", 0)
     bajo = H - padtop
     ap = plan.get("apretar", {"pausa_max": 0.25, "margen_antes": 0.04, "margen_despues": 0.06})
@@ -161,12 +142,8 @@ def main():
         # volumen del usuario: ~-14 LUFS (lo subió +5 dB a mano). Normalización LINEAL en dos pasadas (misma
         # ganancia en todo el vídeo, sin compresión) con techo de -1 dBTP para no saturar como el ajuste a mano.
         src = tmp
-        med = subprocess.run([FFMPEG, "-v", "info", "-i", src, "-vn", "-af",
-                              f"loudnorm=I={lufs}:TP=-1:LRA=11:print_format=json", "-f", "null", "-"],
-                             capture_output=True, text=True, encoding="utf-8", errors="replace").stderr
-        m = json.loads(med[med.rindex("{"):med.rindex("}") + 1])
-        an = (f"loudnorm=I={lufs}:TP=-1:LRA=11:linear=true:measured_I={m['input_i']}:measured_TP={m['input_tp']}:"
-              f"measured_LRA={m['input_lra']}:measured_thresh={m['input_thresh']}:offset={m['target_offset']}")
+        m = audio.medir_sonoridad(src, f"loudnorm=I={lufs}:TP=-1:LRA=11:print_format=json")
+        an = audio.filtro_normalizar(m, lufs)
         subprocess.run([FFMPEG, "-v", "error", "-y", "-i", src, "-c:v", "copy", "-af", an, "-ar", "48000",
                         "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", plan["salida"]], check=True)
         os.remove(src)

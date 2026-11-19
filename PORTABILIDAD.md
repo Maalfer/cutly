@@ -5,7 +5,9 @@
 > herramientas del anfitrión** y unos pocos detalles de rutas. Esta guía lo cubre.
 
 ## 0. Convenciones
-- `cutly/` puede vivir donde quieras; los scripts calculan su ruta (`REPO`) a partir de su ubicación.
+- `cutly/` puede vivir donde quieras: todas las rutas salen de `nucleo/rutas.py`, que las calcula desde su ubicación.
+  `CUTLY_CRUDO` / `CUTLY_SALIDA` redirigen las carpetas de trabajo (p. ej. para probar sin tocar el material real).
+- ffmpeg/ffprobe los localiza `nucleo/ffmpeg.py` (PATH o carpeta de winget en Windows): no hace falta tocar el PATH.
 - Home: macOS/Linux `~`; Windows `%USERPROFILE%` (PowerShell `$env:USERPROFILE`; Git Bash `~`).
 - Whisper: `~/.whisper-models` (Windows: `%USERPROFILE%\.whisper-models`). Los `.py` usan `expanduser`.
 - Temporales: `vm_control.py` usa `tempfile.gettempdir()` (Windows `%TEMP%`, resto `/tmp`).
@@ -87,12 +89,12 @@ cmake -B build -DGGML_CUDA=1 && cmake --build build -j --config Release
 # Binario: build/bin/whisper-cli  (Windows: build\bin\Release\whisper-cli.exe)
 ```
 El binario puede llamarse `whisper-cli` o `main`. **Modelo: `ggml-large-v3-turbo.bin`** (medido igual o más
-preciso que `large-v3` en nuestro audio, al doble de velocidad: `editor/BENCHMARK-WHISPER.md`).
+preciso que `large-v3` en nuestro audio, al doble de velocidad: `editor/comun/BENCHMARK-WHISPER.md`).
 
-**Subtítulos:** `pip install pillow` (los dibuja `editor/scripts/subtitular.py`; no usa drawtext/libass de ffmpeg).
+**Subtítulos:** `pip install pillow` (los dibuja `editor/shorts/subtitular.py`; no usa drawtext/libass de ffmpeg).
 
 **Transcripción sin compilar nada (la usada en Windows):** `pip install faster-whisper` y
-`python editor/scripts/transcribir.py VIDEO` (turbo + VAD + timestamps por palabra). Notas de Windows:
+`python editor/comun/transcribir.py VIDEO` (turbo + VAD + timestamps por palabra). Notas de Windows:
 - faster-whisper solo usa GPU **NVIDIA** (CUDA). Con una AMD (esta máquina: RX 590) va por CPU en int8, a ~1,7×
   tiempo real con turbo. Para usar una GPU AMD hay que ir a whisper.cpp compilado con `-DGGML_VULKAN=1` (sin medir aún).
 - Si faster-whisper falla con `open() got an unexpected keyword argument 'metadata_errors'` (choque de versión con

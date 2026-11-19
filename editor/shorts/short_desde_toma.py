@@ -3,7 +3,7 @@
 short_desde_toma.py — Convierte una TOMA grabada por los agentes en un SHORT vertical 1080x1920@60 con la banda
 negra superior FIJA (padtop=648) para la cara del usuario, de forma totalmente automática.
 
-    python short_desde_toma.py NOMBRE_TOMA [--titulo Titulo-Con-Gancho] [--max-plano 8] [--padtop 648]
+    python editor/shorts/short_desde_toma.py NOMBRE_TOMA [--titulo Titulo-Con-Gancho] [--max-plano 8] [--padtop 648]
                                            [--plan plan.json]
 
 Entrada (la deja `vm_control.py take end` en editor/crudo/):
@@ -13,7 +13,7 @@ Salida:
     editor/videos-editados/short_<Titulo>_editado.mp4   (audio MUDO: el usuario graba la voz después)
     + una entrada (APPEND) en editor/videos-editados/_cortes.log
 
-Cómo decide el encuadre (metodología: METODOLOGIA-SHORTS.md):
+Cómo decide el encuadre (metodología: editor/shorts/METODOLOGIA-SHORTS.md):
   - Cada acto (marca) se parte en planos de <= --max-plano segundos (planos holgados, pecar de lento).
   - Dos modos de encuadre por plano, según el `focus` más cercano (ver `vm_control.py focus`):
       · CON REGIÓN (w,h, p. ej. el rectángulo exacto de una ventana de terminal): LETTERBOX de esa región
@@ -28,46 +28,24 @@ Cómo decide el encuadre (metodología: METODOLOGIA-SHORTS.md):
     recorte, o [{"start":s,"end":e,"rx":x,"ry":y,"rw":w,"rh":h}, ...] para letterbox de una región fija.
 """
 import argparse
-import glob
-import json
 import os
-import shutil
 import subprocess
 import sys
 from datetime import datetime
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-EDITOR = os.path.abspath(os.path.join(HERE, ".."))
-CRUDO = os.path.join(EDITOR, "crudo")
-SALIDA = os.path.join(EDITOR, "videos-editados")
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))
+from nucleo import archivos, cortes, formato, medios, toma  # noqa: E402
+from nucleo.ffmpeg import FFMPEG  # noqa: E402
+from nucleo.rutas import SALIDA  # noqa: E402
 
-CW, CH = 816, 961            # recorte "nativo de short": proporción 1080x1272
-CANVAS_W, CANVAS_H, FPS = 1080, 1920, 60
+CW, CH = formato.RECORTE_W, formato.RECORTE_H          # recorte "nativo de short": proporción 1080x1272
+CANVAS_W, CANVAS_H, FPS = formato.ANCHO, formato.ALTO, formato.FPS
 URLBAR_FOCUS = (408, 135)    # mirar mientras se teclea una URL: x=408 -> recorte desde el borde izquierdo (URL + inicio de la página)
 
 
-def find_tool(name):
-    c = shutil.which(name)
-    if c:
-        return c
-    for g in glob.glob(os.path.join(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "WinGet", "Packages",
-                                    "Gyan.FFmpeg*", "ffmpeg-*", "bin", name + ".exe")):
-        return g
-    sys.exit(f"falta {name} (Windows: winget install Gyan.FFmpeg; ver PORTABILIDAD.md)")
-
-
-FFMPEG, FFPROBE = find_tool("ffmpeg"), find_tool("ffprobe")
-
-
-def probe(path):
-    out = subprocess.run([FFPROBE, "-v", "error", "-select_streams", "v:0", "-show_entries",
-                          "stream=width,height:format=duration", "-of", "json", path], capture_output=True, text=True).stdout
-    d = json.loads(out)
-    return d["streams"][0]["width"], d["streams"][0]["height"], float(d["format"]["duration"])
-
-
-def cargar_registro(nombre):
-    ev = [json.loads(l) for l in open(os.path.join(CRUDO, f"{nombre}.steps.jsonl"), encoding="utf-8") if l.strip()]
+def cargar_registro(base):
+    """Marcas y focos de BASE.steps.jsonl (contrato: nucleo/toma.py)."""
+    ev = toma.cargar_eventos(base + ".steps.jsonl")
     marks = [(e["t_video"], e["label"]) for e in ev if e["op"] == "mark" and "t_video" in e]
     focos = []                       # (t_video, x, y, w|None, h|None): hacia dónde mira el espectador
     for e in ev:
@@ -136,8 +114,7 @@ def fit_contain(rw, rh, avail_w, avail_h):
     return dw, avail_h, (avail_w - dw) // 2
 
 
-def construir(nombre, planos, ancho, alto, padtop, titulo):
-    src = os.path.join(CRUDO, f"{nombre}.mp4")
+def construir(src, planos, ancho, alto, padtop, titulo):
     os.makedirs(SALIDA, exist_ok=True)
     out = os.path.join(SALIDA, f"short_{titulo}_editado.mp4")
     avail_h = CANVAS_H - padtop
@@ -207,46 +184,45 @@ def main():
     ap.add_argument("toma")
     ap.add_argument("--titulo", default=None, help="Titulo-Con-Gancho en Capitalized-Kebab-Case (def.: nombre de la toma)")
     ap.add_argument("--max-plano", type=float, default=8.0)
-    ap.add_argument("--padtop", type=int, default=648)
+    ap.add_argument("--padtop", type=int, default=formato.BANDA_CARA)
     ap.add_argument("--plan", default=None)
     a = ap.parse_args()
 
-    src = os.path.join(CRUDO, f"{a.toma}.mp4")
+    src = toma.ruta(a.toma, "mp4")
     if not os.path.exists(src):
         sys.exit(f"no existe {src}")
-    ancho, alto, dur = probe(src)
-    marks, focos = cargar_registro(a.toma)
+    ancho, alto, dur = medios.probe_video(src)
+    marks, focos = cargar_registro(src[:-len(".mp4")])
     if a.plan:
-        planos = json.load(open(a.plan, encoding="utf-8"))
+        planos = archivos.leer_json(a.plan)
     else:
         if not marks:
             sys.exit("el registro no tiene marcas (`vm_control.py mark ...`): usa --plan")
         planos = planos_automaticos(marks, focos, dur, ancho, alto, a.max_plano)
     titulo = a.titulo or a.toma
-    out, total = construir(a.toma, planos, ancho, alto, a.padtop, titulo)
+    out, total = construir(src, planos, ancho, alto, a.padtop, titulo)
 
     # --- verificación obligatoria (METODOLOGIA-SHORTS.md §6)
-    _, _, dsal = probe(out)
+    _, _, dsal = medios.probe_video(out)
     ts, filas = verificar(out, dsal, a.padtop)
-    size_out = probe(out)[:2]
+    size_out = medios.probe_video(out)[:2]
     ok_dur = abs(dsal - total) < 0.6
     ok_banda = all(f >= a.padtop for f in filas) and size_out == (CANVAS_W, CANVAS_H)   # >= padtop: el panel oscuro de Kali bajo la banda también cuenta como negro; la altura exacta la fija el filtro pad
     print(f"short: {out}")
     print(f"duración {dsal:.1f}s (esperada {total:.1f}s) {'OK' if ok_dur else 'REVISAR'} | planos: {len(planos)}")
     print(f"filas negras superiores medidas en 5 instantes: {filas} (>= padtop={a.padtop}; el pad fija {a.padtop} exactos) | lienzo {size_out[0]}x{size_out[1]} {'OK' if ok_banda else 'REVISAR'}")
 
-    # --- registro de cortes (APPEND, nunca reescribir)
-    os.makedirs(SALIDA, exist_ok=True)
-    with open(os.path.join(SALIDA, "_cortes.log"), "a", encoding="utf-8") as f:
-        f.write(f"\n[{datetime.now():%Y-%m-%d %H:%M}] short_{titulo}_editado.mp4  (desde toma '{a.toma}', padtop={a.padtop}, "
-                f"fuente {ancho}x{alto})\n")
-        for i, p in enumerate(planos):
-            if "rw" in p:
-                f.write(f"  plano {i + 1}: {p['start']:.2f}-{p['end']:.2f}s  LETTERBOX región "
+    # --- registro de cortes
+    entrada = (f"\n[{datetime.now():%Y-%m-%d %H:%M}] short_{titulo}_editado.mp4  (desde toma '{a.toma}', "
+               f"padtop={a.padtop}, fuente {ancho}x{alto})\n")
+    for i, p in enumerate(planos):
+        if "rw" in p:
+            entrada += (f"  plano {i + 1}: {p['start']:.2f}-{p['end']:.2f}s  LETTERBOX región "
                         f"{p['rw']}x{p['rh']} @ {p['x0']},{p['ry']}  [{p.get('acto', '')}]\n")
-            else:
-                f.write(f"  plano {i + 1}: {p['start']:.2f}-{p['end']:.2f}s  crop {CW}:{CH} x {p['x0']}->{p['x1']} y {p['y']}"
-                        f"  [{p.get('acto', '')}]\n")
+        else:
+            entrada += (f"  plano {i + 1}: {p['start']:.2f}-{p['end']:.2f}s  crop {CW}:{CH} x {p['x0']}->{p['x1']} "
+                        f"y {p['y']}  [{p.get('acto', '')}]\n")
+    cortes.anotar(entrada)  # APPEND, nunca reescribir
     if not (ok_dur and ok_banda):
         sys.exit(1)
 
