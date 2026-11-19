@@ -1,19 +1,37 @@
-# cutly guarda METODOLOGIA, no material pesado.
-# Se excluyen los videos (fuentes en bruto y clips finales) y audio intermedio.
-# Se versiona todo lo demas: docs, scripts, transcripciones de ejemplo y _cortes.log.
+# cutly versiona METODOLOGÍA (docs, scripts, plantillas, glosario, fuente), nunca material de un vídeo concreto.
+# Todo lo de un vídeo (fuentes, transcripciones, planes, subtítulos, registros de toma y de cortes, clips) vive
+# solo en local, en las carpetas de trabajo de abajo.
 
-# Videos
+# Carpetas de trabajo (locales): se conserva solo la carpeta vacía
+editor/crudo/*
+!editor/crudo/.gitkeep
+editor/videos-editados/*
+!editor/videos-editados/.gitkeep
+
+# Material de un vídeo concreto, esté donde esté
+*_transcripcion.*
+*.subtitulos.json
+*.steps.jsonl
+*.mapa.md
+*.fusion.md
+fusion_plan.json
+_cortes.log
+
+# Vídeo, audio e imágenes de trabajo
 *.mp4
 *.mkv
 *.mov
 *.webm
 *.avi
 *.m4v
-
-# Audio intermedio y descargas a medias
 *.wav
+*.mp3
+*.m4a
 *.part
 *.ytdl
+
+# Modelos Whisper (viven en ~/.whisper-models o en la caché de Hugging Face, nunca en el repo)
+*.bin
 
 # Sistema / editores
 .DS_Store
@@ -21,6 +39,3 @@
 *.swp
 __pycache__/
 *.pyc
-
-# Modelos Whisper (viven en ~/.whisper-models, nunca en el repo)
-*.bin

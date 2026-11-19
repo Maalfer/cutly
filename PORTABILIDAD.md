@@ -88,6 +88,8 @@ cmake -B build -DGGML_CUDA=1 && cmake --build build -j --config Release
 El binario puede llamarse `whisper-cli` o `main`. **Modelo: `ggml-large-v3-turbo.bin`** (medido igual o más
 preciso que `large-v3` en nuestro audio, al doble de velocidad: `editor/BENCHMARK-WHISPER.md`).
 
+**Subtítulos:** `pip install pillow` (los dibuja `editor/scripts/subtitular.py`; no usa drawtext/libass de ffmpeg).
+
 **Transcripción sin compilar nada (la usada en Windows):** `pip install faster-whisper` y
 `python editor/scripts/transcribir.py VIDEO` (turbo + VAD + timestamps por palabra). Notas de Windows:
 - faster-whisper solo usa GPU **NVIDIA** (CUDA). Con una AMD (esta máquina: RX 590) va por CPU en int8, a ~1,7×

@@ -47,6 +47,11 @@ def main():
     ap.add_argument("--salida", help="ruta sin extensión (defecto: junto a la entrada, <nombre>_transcripcion)")
     ap.add_argument("--idioma", default="es")
     ap.add_argument("--dispositivo", default="auto", help="auto | cpu | cuda (CUDA solo con GPU NVIDIA)")
+    ap.add_argument("--subtitulos", action="store_true",
+                    help="modo SUBTÍTULOS, solo para el Short FINAL (sin silencios): texto de contexto puntuado con los "
+                         "términos técnicos + contexto encadenado entre ventanas -> texto con puntos, comas y mayúsculas "
+                         "correctas y 'Netcat', 'Kali', 'reverse shell', 'ID' bien escritos. NO lo uses en grabaciones con "
+                         "silencios largos: encadenar contexto es lo que provoca alucinaciones en silencios.")
     a = ap.parse_args()
 
     from faster_whisper import WhisperModel
@@ -63,8 +68,13 @@ def main():
         except Exception:
             dev = "cpu"
     modelo = WhisperModel(a.modelo, device=dev, compute_type="int8" if dev == "cpu" else "float16")
+    prompt = None
+    if a.subtitulos:
+        prompt = ("Hola, ¿qué tal? Hoy os enseño una técnica de hacking ético. Primero lanzo nmap, veo el puerto 22 con "
+                  "SSH abierto y uso sshpass. Después, con Netcat, escucho en el puerto 4444 y lanzo una reverse shell "
+                  "desde mi máquina Kali. Ejecuto el comando ID, veo la IP y entro en el servidor.")
     segs, _ = modelo.transcribe(audio, language=a.idioma, word_timestamps=True, vad_filter=True,
-                                condition_on_previous_text=False, beam_size=5)
+                                condition_on_previous_text=a.subtitulos, initial_prompt=prompt, beam_size=5)
     out = []
     for s in segs:
         out.append({"start": round(s.start, 3), "end": round(s.end, 3), "text": s.text.strip(),

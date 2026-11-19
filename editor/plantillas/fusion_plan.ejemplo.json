@@ -1,0 +1,15 @@
+{
+ "_comentario": "PLANTILLA de plan para fusionar_cara_pantalla.py (ver METODOLOGIA-FUSION-CARA.md). Cópiala a editor/crudo/fusion_plan.json (local, no se versiona) y rellena los tiempos con lo medido por analizar_fusion.py. a0/a1 = trozo de la grabación de cara (voz + cara); abajo 'pant' + p0/p1 = tramo del Short de pantalla que se re-temporiza a la duración del trozo; abajo 'cara' = se ve la parte de abajo de la grabación de cara (el usuario enseñando su pantalla). Las opciones apretar/lufs/fundido_final tienen ya el valor del estilo del usuario: no hace falta escribirlas.",
+ "cara": "editor/crudo/cara.mp4",
+ "pantalla": "editor/crudo/pantalla.mp4",
+ "salida": "editor/videos-editados/short_Titulo-Con-Gancho_editado.mp4",
+ "padtop": 648,
+ "cara_alto": 758,
+ "cara_y": 20,
+ "tramos": [
+  {"a0": 0.75, "a1": 5.6, "abajo": "pant", "p0": 0.0, "p1": 22.5, "nota": "gancho; el tecleo de pantalla se acelera para caber en la frase"},
+  {"a0": 22.3, "a1": 30.5, "abajo": "pant", "p0": 22.5, "p1": 30.5, "nota": "la frase cae sobre el resultado del que habla"},
+  {"a0": 69.15, "a1": 75.13, "abajo": "cara", "nota": "inserto: el usuario enseña su propia pantalla (se conserva)"},
+  {"a0": 75.13, "a1": 77.3, "abajo": "pant", "p0": 31.6, "p1": 35.85, "nota": "audio continuo con el anterior (a0 = a1 previo): solo cambia lo de abajo"}
+ ]
+}

@@ -16,7 +16,8 @@ Tú actúas y te mueves; el usuario solo graba. Entrada humana siempre (tecleo y
 ## Objetivo final: el Short ideal
 Cómo debe quedar TODO Short entregado (aprobado por el usuario, con especificación medible):
 `editor/SHORT-IDEAL.md`. Antes de entregar uno: `python editor/scripts/verificar_short.py VIDEO.mp4` debe
-cumplir la especificación. Estilo: lo más al grano posible, sin pausas.
+cumplir la especificación. Estilo: lo más al grano posible, sin pausas, y con subtítulos karaoke revisados
+(`editor/scripts/subtitular.py`, SHORT-IDEAL.md §6).
 
 ## Límites (no negociables)
 - No adivines contraseñas ni aceptes EULA/acuerdos por el usuario.

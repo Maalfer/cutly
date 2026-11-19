@@ -77,11 +77,14 @@ cutly/
     ├── CLAUDE.md                     ←   edición de un DIRECTO SIN registro → clips 16:9 (camino manual)
     ├── METODOLOGIA-SHORTS.md         ←   Shorts 9:16 a mano (camino manual, sin registro de pasos)
     ├── SHORT-IDEAL.md                ←   CÓMO DEBE QUEDAR el Short final (referencia aprobada + especificación medible)
+    ├── glosario.json                 ←   correcciones de términos técnicos para los subtítulos
+    ├── fuentes/Inter.ttf             ←   letra de los subtítulos (licencia OFL)
     ├── METODOLOGIA-FUSION-CARA.md    ←   juntar el Short de pantalla con el vídeo de la cara+voz del usuario
     ├── BENCHMARK-WHISPER.md          ←   qué modelo de transcripción usar y por qué (medido)
     ├── scripts/
     │   ├── short_desde_toma.py       ←   Short AUTOMÁTICO desde una toma de Fase 1 (el camino normal)
     │   ├── transcribir.py            ←   transcripción (faster-whisper: large-v3-turbo + VAD, timestamps por palabra)
+    │   ├── subtitular.py             ←   subtítulos karaoke quemados (estilo del ideal del usuario)
     │   ├── verificar_short.py        ←   comprueba un Short final contra la especificación del ideal
     │   ├── analizar_fusion.py        ←   mide cara/pantalla/voz y avisa de tomas repetidas antes de la fusión
     │   ├── fusionar_cara_pantalla.py ←   mete cara+voz en la banda del Short y sincroniza pantalla con la narración
@@ -92,7 +95,8 @@ cutly/
     │   └── verificar_corte.sh        ←   transcribe un tramo para verificar una unión
     ├── crudo/                        ←   vídeos fuente + transcripciones + `.steps.jsonl`/`.mapa.md` de Fase 1
     │                                     (los .mkv/.mp4 NO están en git, ver abajo)
-    └── videos-editados/              ←   salida de clips + _cortes.log (registro de cortes)
+    ├── plantillas/                   ←   plantillas genéricas (p. ej. fusion_plan.ejemplo.json)
+    └── videos-editados/              ←   salida de clips + _cortes.log (LOCAL, no se versiona)
 ```
 **¿Camino automático o manual en la Fase 2?** Si el vídeo viene de `crear-shorts/` (tiene
 `.steps.jsonl`), usa `short_desde_toma.py` — no sigas `editor/CLAUDE.md`/`METODOLOGIA-SHORTS.md`,
@@ -100,13 +104,16 @@ que son para un directo real sin ese registro. Ver el árbol de decisión al pri
 
 ### ⚠️ Qué NO está en el repositorio
 
-Este repo guarda **metodología**, no material pesado. El `.gitignore` excluye:
+Este repo guarda **metodología impersonal**: documentación, scripts, plantillas, glosario y la fuente de los
+subtítulos. **Nada de un vídeo concreto se versiona.** El `.gitignore` excluye:
 
-- **Vídeos** (`*.mp4`, `*.mkv`, `*.mov`, `*.webm`) — fuentes en bruto y clips finales.
-- Audio intermedio (`*.wav`) y `.DS_Store`.
+- **Las carpetas de trabajo enteras** `editor/crudo/` y `editor/videos-editados/` (solo se versiona su `.gitkeep`):
+  fuentes, clips, transcripciones, planes de fusión, subtítulos `.subtitulos.json`, registros de toma
+  (`.steps.jsonl`, `.mapa.md`) y el registro de cortes `_cortes.log`. Viven solo en tu disco.
+- Esos mismos tipos de archivo estén donde estén, más vídeo, audio y modelos Whisper (`*.bin`).
 
-Sí se versiona todo lo demás: documentación, scripts, transcripciones de ejemplo
-(`*_transcripcion.*`) y el registro de cortes (`_cortes.log`), porque son el valor real.
+Si un caso real enseña algo, se documenta **la lección** (medidas, reglas, errores) en la metodología, no los
+archivos del vídeo. Las plantillas genéricas van en `editor/plantillas/`.
 
 ---
 

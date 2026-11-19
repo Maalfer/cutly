@@ -54,6 +54,16 @@ def main():
     chk(malos == 0, "banda de la cara", f"{len(cuerpo)} fotogramas; con fila negra en {PADTOP - 10}-{PADTOP - 1}: {malos} "
         f"(la cara debe llenar exactamente 0-{PADTOP - 1})")
 
+    # subtítulos: la caja negra (filas 619-725, centrada) presente mientras se habla. Se mira la franja 621-648, que
+    # es caja sin letras (las letras van de ~652 a ~700): sin subtítulos ahí se ve la sudadera, nunca negro puro.
+    if "--sin-subtitulos" not in sys.argv:
+        raw = subprocess.run([FFMPEG, "-v", "error", "-i", v, "-vf", "fps=5,crop=40:26:520:621", "-f", "rawvideo",
+                              "-pix_fmt", "rgb24", "-"], capture_output=True, check=True).stdout
+        s = np.frombuffer(raw, np.uint8).reshape(-1, 26 * 40 * 3)
+        con = float((s[:-3].max(axis=1) <= 10).mean())
+        chk(con >= 0.85, "subtítulos", f"caja de subtítulo en el {con * 100:.0f} % de los fotogramas (≥ 85 %; "
+            f"generarlos: scripts/subtitular.py; si es un paso intermedio, usa --sin-subtitulos)")
+
     # fundido final
     raw = subprocess.run([FFMPEG, "-v", "error", "-sseof", "-1", "-i", v, "-vf", "scale=54:96,format=gray",
                           "-f", "rawvideo", "-"], capture_output=True, check=True).stdout

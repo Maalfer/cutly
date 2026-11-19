@@ -32,6 +32,9 @@ banda de 648 px y re-temporiza la pantalla para que cada frase caiga sobre su mo
         │ transcribir.py → analizar_fusion.py → fusion_plan.json → fusionar_cara_pantalla.py
         ▼
   editor/videos-editados/short_<Titulo>_editado.mp4   (cara en la banda, voz limpia, pantalla sincronizada)
+        │ subtitular.py preparar → revisar texto → quemar
+        ▼
+  short_<Titulo>_editado_subtitulado.mp4   (subtítulos karaoke sobre la unión cara/pantalla)
         │ verificar_short.py
         ▼
   cumple editor/SHORT-IDEAL.md  →  se entrega

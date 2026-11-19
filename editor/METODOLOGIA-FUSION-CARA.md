@@ -112,7 +112,8 @@ donde cae el `hf`, no el rms. Error real: cortar en 85,233 s se comió "pass" (a
 Evita cortar dentro de un chasquido o una respiración.
 
 ### 5. Escribir el plan y construir
-`crudo/fusion_plan.json` (ejemplo real en el repo): un tramo por trozo de voz, con lo que se ve debajo.
+`crudo/fusion_plan.json` (local, no se versiona; parte de la plantilla `editor/plantillas/fusion_plan.ejemplo.json`):
+un tramo por trozo de voz, con lo que se ve debajo.
 ```json
 {"cara": "editor/crudo/cara.mp4", "pantalla": "editor/crudo/pantalla.mp4",
  "salida": "editor/videos-editados/short_<Titulo-Con-Gancho>_editado.mp4",
@@ -143,10 +144,17 @@ Un único render desde los originales (sin recodificar dos veces). Tiempos redon
 que audio y vídeo de cada tramo duren exactamente lo mismo (sin deriva). Micro-fundido de 15 ms solo donde el audio
 salta. Imprime la tabla final (tramo → instante en el Short) para la verificación.
 
-### 6. Verificar (obligatorio, con algo que pueda fallar)
+### 6. Subtítulos
+```bash
+python editor/scripts/subtitular.py preparar editor/videos-editados/short_<Titulo>_editado.mp4   # revisa el JSON
+python editor/scripts/subtitular.py quemar   editor/videos-editados/short_<Titulo>_editado.mp4
+```
+Estilo y reglas: `SHORT-IDEAL.md` §6. El entregable es `short_<Titulo>_editado_subtitulado.mp4`.
+
+### 7. Verificar (obligatorio, con algo que pueda fallar)
 Primero, la especificación del Short ideal (formato, banda, arranque, pausas, final, volumen):
 ```bash
-python editor/scripts/verificar_short.py editor/videos-editados/short_<Titulo>_editado.mp4
+python editor/scripts/verificar_short.py editor/videos-editados/short_<Titulo>_editado_subtitulado.mp4
 ```
 Después, lo que el verificador no puede saber por sí solo:
 - [ ] **Duración** del resultado = la que imprime el script (vídeo y audio iguales).

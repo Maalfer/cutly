@@ -24,7 +24,7 @@ OUT = os.path.expanduser("~/Desktop/cutly/editor/videos-editados/short_EJEMPLO_e
 SOURCES = {
     "intro": os.path.expanduser("~/Desktop/cutly/editor/crudo/intro.mkv"),
     "main":  os.path.expanduser("~/Desktop/cutly/editor/crudo/editar.mkv"),
-    "img":   os.path.expanduser("~/Desktop/cutly/editor/crudo/ransomware-message.jpg"),
+    "img":   os.path.expanduser("~/Desktop/cutly/editor/crudo/imagen.jpg"),
 }
 
 PADTOP   = 648     # altura de la banda negra superior (la cara). CONSTANTE. 648/1920 = tercio sup.
@@ -45,7 +45,8 @@ ABITRATE = "128k"
 #
 # La banda superior (PADTOP) es la misma SIEMPRE: aqui no se toca.
 SEGS = [
-    # --- INTRO (ejemplo del short ClickFix) ---
+    # VALORES DE EJEMPLO (de un Short antiguo): sustitúyelos por los de tu vídeo.
+    # --- INTRO ---
     {"src": "intro", "start": 2.5,  "end": 10.8, "cx": 190, "cy": 40, "cw": 816, "ch": 961},            # busqueda (desde que se teclea)
     {"src": "intro", "start": 12.8, "end": 18.0, "cx": 90,  "cy": 40, "cw": 816, "ch": 961},            # resultados
     {"src": "intro", "start": 35.8, "end": 40.3, "cx": 40,  "cy": 20, "cw": 816, "ch": 961, "panx": 330},  # comando: PANEO a tamano completo

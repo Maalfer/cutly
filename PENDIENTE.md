@@ -30,6 +30,7 @@
 - Herramienta de control: `crear-shorts/herramientas/vm_control.py`.
 - Generar el Short: `editor/scripts/short_desde_toma.py TOMA --titulo Titulo-Con-Gancho`.
 - Juntar el Short con la cara y la voz del usuario: `editor/METODOLOGIA-FUSION-CARA.md`.
+- Subtítulos: `editor/scripts/subtitular.py preparar|quemar` (revisar el JSON entre medias).
 - **Cómo debe quedar el Short final:** `editor/SHORT-IDEAL.md`; comprobarlo con `editor/scripts/verificar_short.py`.
 - Transcribir: `editor/scripts/transcribir.py` (large-v3-turbo + VAD; por qué: `editor/BENCHMARK-WHISPER.md`).
 - Demos de referencia (copiar su estructura para una nueva): `crear-shorts/DEMO-IDOR/`, `crear-shorts/DEMO-SSHOLE/`.
