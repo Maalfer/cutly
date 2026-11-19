@@ -9,11 +9,10 @@ El objetivo final siempre es el mismo: **sacar clips cortos y pulidos** (formato
 YouTube y formato **Short** vertical) a partir de demostraciones técnicas, con gancho y
 limpios de relleno.
 
-> **Multiplataforma:** esta metodología funciona en **macOS, Windows y Linux**. Los documentos
-> muestran los comandos tal cual se usaron en la máquina de desarrollo (macOS); el equivalente
-> para Windows y Linux (instalación, control del ordenador, rutas, GPU) está en
-> **[`PORTABILIDAD.md`](PORTABILIDAD.md)**. La Fase 2 (editar) es casi idéntica en todos lados;
-> la Fase 1 (controlar el ordenador) es la que más cambia de un sistema a otro.
+> **Todo en una VM, desde cualquier anfitrión:** las demos se ejecutan **dentro de una VM de VirtualBox**
+> (nunca en el ordenador real). El anfitrión puede ser **Windows, macOS o Linux**: solo cambia cómo se instalan
+> las herramientas (VirtualBox, ssh, Tesseract, ffmpeg) — ver **[`PORTABILIDAD.md`](PORTABILIDAD.md)**, que incluye
+> la sección de **anfitrión Windows** (rutas, `VBoxManage`, Tesseract). Reglas para agentes: [`CLAUDE.md`](CLAUDE.md).
 
 ---
 
@@ -26,7 +25,7 @@ El flujo tiene dos fases independientes, cada una con su carpeta y su metodolog�
 │  FASE 1 — GENERAR / GRABAR          │  FASE 2 — EDITAR                         │
 │  (carpeta  crear-shorts/)           │  (carpeta  editor/)                      │
 │                                     │                                          │
-│  La IA controla el ordenador 100%   │  La IA transcribe, analiza y recorta     │
+│  La IA controla la VM 100%            │  La IA transcribe, analiza y recorta     │
 │  (cursor, teclado, ventanas, apps)  │  la grabación en bruto hasta dejar       │
 │  y ejecuta una demo cinematográfica │  clips limpios: formato largo (16:9)     │
 │  mientras el usuario graba con OBS. │  o SHORT vertical (9:16) con hueco        │
@@ -52,34 +51,22 @@ cutly/
 ├── README.md                         ← ESTE archivo (empieza aquí)
 ├── PORTABILIDAD.md                   ← cómo usar todo en macOS / Windows / Linux
 │
-├── crear-shorts/                     ← FASE 1: la IA controla el ordenador y graba la demo
-│   ├── README.md                     ←   índice + qué puede hacer la IA + permiso maestro
-│   ├── METODOLOGIA/                  ←   el CÓMO (sirve para cualquier demo)
-│   │   ├── 01-control-total-mac.md   ←   permiso + teoría del control
-│   │   ├── 02-kit-herramientas.md    ←   OCR, cursor, cliclick, find_button (con código)
-│   │   ├── 03-gestion-ventanas.md    ←   z-order, apps fullscreen, direccionar por ID
-│   │   ├── 04-flujo-toma-video.md    ←   protocolo de toma: fases, pacing, verificación
-│   │   ├── 05-controlar-aplicaciones.md        ←  conducir CUALQUIER app: abrir/esperar/enfocar/cerrar, multi-app
-│   │   ├── 06-navegador-y-herramientas-gui.md  ←  navegador + herramientas GUI (Burp Suite)
-│   │   ├── 07-auditoria-de-pruebas.md          ←  fallos reales hallados probando + protocolo de pruebas por SO
-│   │   └── 08-maquina-virtual.md               ←  controlar una VM (VirtualBox/Kali): resultados medidos y comparación con el anfitrión
-│   ├── DEMO-CLICKFIX/                ←   ejemplo: demo ClickFix (exfiltración por copiar-y-pegar)
-│   │   ├── demo-completa.md · reproducir-paso-a-paso.md · limpieza-restore.md
-│   ├── DEMO-IDOR/                    ←   ejemplo: demo de IDOR con navegador + Burp Suite
-│   │   ├── ejemplo-idor-con-burp.md
-│   │   └── lab_idor.py                 ←  laboratorio local vulnerable (solo 127.0.0.1) para grabar el IDOR
-│   └── herramientas/                 ←   código fuente de las herramientas
-│       ├── ocr.swift                 ←   OCR con Vision de macOS (texto + coordenadas)
-│       ├── mousepos.swift            ←   posición real del cursor
-│       ├── find_button.py            ←   localizar botones por color
-│       ├── winlist.swift             ←   ventanas en pantalla CON z-order (CGWindowList)
-│       ├── visibilidad.py            ←   % realmente visible por ventana: enterrada/cortada/overlay (universal)
-│       ├── ocr_buscar.py             ←   localiza una palabra del OCR y devuelve el punto de clic
-│       ├── mac-control.sh            ←   funciones que HACEN y VERIFICAN (foco, colocar, clic, esperar); bash y zsh
-│       ├── tipear.py                 ←   teclea como una persona (ritmo variable, pausas, errores corregidos)
-│       ├── mover.py                  ←   mueve el cursor como una persona (curva, lento-rápido-lento)
-│       ├── teclear.swift             ←   emisor de teclado Unicode y ratón (tildes OK; sin el coste de cliclick)
-│       └── vm_control.py             ←   controla una VM Linux/X11 de VirtualBox (xdotool por SSH + capturas de VBoxManage)
+├── CLAUDE.md                         ← reglas para agentes (todo en la VM)
+├── PENDIENTE.md                      ← estado real y trabajo pendiente
+│
+├── crear-shorts/                     ← FASE 1: la IA controla la VM y graba la demo
+│   ├── README.md
+│   ├── METODOLOGIA/
+│   │   ├── 00-empezar-aqui-vm.md     ←   PUNTO DE ENTRADA: montaje, toma, verificación, referencia
+│   │   ├── 04-flujo-toma-video.md    ←   protocolo de toma y pacing
+│   │   ├── 05-controlar-aplicaciones.md · 06-navegador-y-herramientas-gui.md
+│   │   ├── 07-auditoria-de-pruebas.md ←  fallos reales y protocolo de pruebas
+│   │   └── 08-maquina-virtual.md     ←   canales de VirtualBox, mediciones, fallos de montaje
+│   ├── DEMO-IDOR/                    ←   demo: navegador + Burp contra lab_idor.py (solo 127.0.0.1)
+│   └── herramientas/
+│       ├── vm_control.py             ←   LA herramienta (Win/macOS/Linux): ver, actuar, verificar, grabar, registrar
+│       ├── tipear.py · mover.py      ←   planes de tecleo y ratón humanos (lógica pura)
+│       └── ocr_buscar.py · ocr.swift ←   localizar texto por OCR (ocr.swift: Vision, opcional en macOS)
 │
 └── editor/                           ← FASE 2: editar la grabación en clips
     ├── CLAUDE.md                     ←   METODOLOGÍA PRINCIPAL de edición (directo → clips 16:9)
@@ -110,13 +97,9 @@ Sí se versiona todo lo demás: documentación, scripts, transcripciones de ejem
 ## 🚀 Si eres un agente de IA que retoma este trabajo — lee en este orden
 
 1. **Este README** (visión global).
-2. **`PORTABILIDAD.md`** si NO estás en macOS (o si quieres los comandos de tu sistema):
-   instalación, control del ordenador, rutas y GPU para Windows y Linux.
-3. ¿Vas a **grabar/generar** una demo nueva controlando el ordenador?
-   → `crear-shorts/README.md`, luego `crear-shorts/METODOLOGIA/01…06` (el `05` y el `06` son el
-   patrón general para conducir cualquier app: navegador, Burp, terminal…) y un ejemplo completo
-   (`DEMO-CLICKFIX/` o `DEMO-IDOR/`). En macOS tal cual; en Windows/Linux con los equivalentes de
-   `PORTABILIDAD.md`.
+2. **`CLAUDE.md`** y **`PORTABILIDAD.md`** (instalación en tu anfitrión: Windows, macOS o Linux).
+3. ¿Vas a **grabar/generar** una demo? → `crear-shorts/METODOLOGIA/00-empezar-aqui-vm.md` y luego `04`-`06`.
+   La toma deja `editor/crudo/<toma>.mp4` + `.steps.jsonl` + `.mapa.md` para la Fase 2.
 4. ¿Vas a **editar** una grabación en clips?
    → `editor/CLAUDE.md` (clips 16:9 desde un directo) **y**
    `editor/METODOLOGIA-SHORTS.md` (shorts verticales 9:16 con hueco para la cara).
@@ -141,10 +124,8 @@ Comunes a los tres sistemas (instalación por SO en [`PORTABILIDAD.md`](PORTABIL
 - **ffmpeg / ffprobe** — todo el corte, recodificación y análisis (Fase 2).
 - **whisper.cpp** + modelos en `~/.whisper-models/` — transcripción con timestamps (Fase 2).
 - **yt-dlp** — descargar directos si se parte de una URL (Fase 2).
-- **Kit de control del ordenador** (Fase 1) — cursor, teclado, ventanas y OCR; cambia según el SO:
-  macOS `cliclick` + OCR/`mousepos` propios; Windows AutoHotkey/PowerShell/nircmd + Tesseract;
-  Linux `xdotool`/`wmctrl`/`scrot`/`xclip`/`tesseract` (X11) o `ydotool`/`grim`/`wl-clipboard` (Wayland).
+- **VirtualBox + ssh + `vm_control.py`** (Fase 1) — control de la VM, igual en los tres SO; OCR con Tesseract
+  (en macOS puede usarse Vision).
 
-Máquina donde se desarrolló la metodología: **Apple Silicon (Metal)**, macOS, pantalla 1280×832
-lógico (Retina 2×), menús en español. Por eso los ejemplos son de macOS — su equivalente para los
-demás sistemas está en `PORTABILIDAD.md`.
+Desarrollo: la metodología se midió primero en un Mac con Apple Silicon (invitado ARM64) y se portó a un anfitrión
+Windows 11 (invitado x86-64). Los resultados medidos de cada plataforma están en `crear-shorts/METODOLOGIA/08` y `PENDIENTE.md`.

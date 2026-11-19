@@ -1,5 +1,9 @@
 # 06 — Conducir el navegador y herramientas GUI (Burp Suite, etc.)
 
+> **⚠️ Vigencia:** este documento nació controlando el anfitrión macOS. Los **principios y fallos** siguen
+> vigentes; los **comandos** de los ejemplos (`cliclick`, `osascript`, `type_human`…) fueron sustituidos por
+> `herramientas/vm_control.py` dentro de la VM. Punto de entrada: `00-empezar-aqui-vm.md`.
+
 > **Entrada humana:** en los ejemplos, el texto se teclea con `type_human` y el cursor se mueve con
 > `mover_humano`/`click_text` (ver doc 02, herramienta 9). Los atajos (`Cmd+T`, `Cmd+L`…) siguen
 > siendo pulsaciones sueltas y no necesitan ritmo.

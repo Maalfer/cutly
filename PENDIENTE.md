@@ -1,48 +1,78 @@
 # Estado y trabajo pendiente (leer al retomar)
 
-> Escrito al cerrar la sesión del 2026-11-18. El repo está **a medio migrar**: la decisión ya tomada es que
-> **todas las demos se graban dentro de una VM de VirtualBox (Kali) y nunca en el anfitrión**, pero la
-> documentación sigue describiendo mayoritariamente el control del anfitrión macOS.
+> Actualizado el 2026-11-19 (demo sshole, run10, dada por buena por el usuario: "está perfecto"). Decisión
+> vigente: **todas las demos se graban dentro de una VM de VirtualBox, desde cualquier anfitrión**. Para una
+> demo de TERMINAL (nmap/ssh/exploits) **empieza por `crear-shorts/METODOLOGIA/10-plantilla-demo-terminal.md`**
+> — condensa las 10 iteraciones de esta sesión para no repetir el mismo camino de prueba y error.
 
 ## Decisiones del usuario (vigentes)
-- **Siempre VirtualBox** para grabar demos; no se usará el anfitrión. Quitar de la documentación todo lo de macOS.
-- No hacer copias ni snapshots de la VM `kali` (se trabaja directamente en ella; no hay nada delicado).
-- El clon `kali-demo` ya se **eliminó**. El EULA de Burp se **aceptó** (autorizado por el usuario) y se eligió Community.
-- La IA debe ser quien actúe y se mueva; el usuario solo graba con OBS.
-- Entrada humana (tecleo y ratón realistas) siempre que se grabe.
+- Siempre VirtualBox para grabar; no se usa el anfitrión. La IA actúa y se mueve; el usuario solo graba (o graba la VM con `rec`).
+- Sin copias ni snapshots de la VM `kali`. `suspend`/`resume` (savestate) es otra cosa y está permitido.
+- EULA de Burp aceptado por el usuario (Community). Entrada humana (tecleo y ratón realistas) siempre.
 
-## Qué funciona (verificado en la VM `kali`, Kali ARM64, VirtualBox 7.2.22, Apple Silicon)
-- `crear-shorts/herramientas/vm_control.py`: captura (0,08 s), ratón (5/5 exacto), tecleo humano idéntico con tildes y
-  símbolos, `typeurl`, `selecttext`, `clicktext`, `waitfor`, `activate`, `place`, `start/stop/status/bootstrap/prepare`.
-- Control por **SSH + xdotool** (clave dedicada en `~/.ssh/cutly_vm`, redirección 2222→22). `VBoxManage keyboardputstring`
-  corrompe el texto y no hay comando de ratón: no usarlos para teclear.
-- Fiabilidad medida: 10/10 repeticiones de "teclear URL y verificar por OCR".
-- Entorno persistente en la VM: perfil Firefox `demo` (proxy a Burp, sin autocompletado ni tráfico de fondo, en
-  `~/.mozilla/firefox-demo/user.js`), lab en `~/lab/lab_idor.py`, salvapantallas/bloqueo desactivados, no molestar.
-- Cadena **Firefox → Burp → lab verificada** (el historial de Burp muestra `GET /cuenta?id=1001`).
+## Hecho en esta sesión (código y docs; sin probar en vivo en Windows)
+- `vm_control.py` reescrito y multiplataforma: localiza `VBoxManage`, Tesseract y `tempfile`; SSH en bytes (fix `\r\n`);
+  reproductor de planes sin deriva en el invitado; posición del cursor cacheada.
+- Registro JSONL + `mark` + `rec` (ffmpeg x11grab) + mapa de edición automático (`take`/`mark`/`rec`/`mapa`). Probado
+  el registro y el mapa sin VM.
+- `waitstill`, `labcheck` (el lab ahora registra cada petición), `clickimg` (OpenCV), `suspend`/`resume`, `res`.
+- Regla NAT `ssh,tcp,127.0.0.1,2222,,22` añadida a la VM `kali` (x86-64). Instalados en el anfitrión Windows: Tesseract, ffmpeg.
+- Docs: `00-empezar-aqui-vm.md`, `CLAUDE.md` raíz, `PORTABILIDAD.md` (sección Windows), README, 04, 08.
+  Retirado lo del anfitrión macOS (docs 01-03, DEMO-CLICKFIX, mac-control, teclear, winlist, visibilidad, mousepos, find_button).
+
+## Verificado en vivo (2026-11-19, anfitrión Windows 11, invitado Kali x86-64, VirtualBox 7.2.22)
+- Montaje: regla NAT, clave SSH dedicada, xdotool/xclip/wmctrl/ffmpeg en el invitado, perfil Firefox `demo`, lab, Burp sin EULA pendiente.
+- Control: ratón/tecleo humano (tildes OK), OCR Tesseract con 2.ª pasada para botones de color, `waitstill`, `dismiss` (modal de Burp),
+  `selecttext` por teclado (3/3), `maximize`, `labcheck`, `prepare` (29 s en frío).
+- **Demo IDOR de punta a punta** (`DEMO-IDOR/demo_idor.py`, run7): Firefox + Burp, 6 actos, 0 pasos fallidos, vídeo 1920×1012@30 con cursor
+  grabado DENTRO de la VM (sin OBS) + `.steps.jsonl` + `.mapa.md`. Una ejecución limpia; fallos anteriores (run1-6) corregidos uno a uno.
+
+## Grabación y edición automáticas (2026-11-19)
+- Grabación: `rec start` usa la grabación NATIVA de VirtualBox en el anfitrión (cursor visible, sin SSH ni nada en la VM, sin OBS); resolución
+  con DOS argumentos (`videores 1920 1012`). Alternativa `--guest` (ffmpeg dentro).
+- Edición: `editor/scripts/short_desde_toma.py` genera el Short 1080×1920@60 mudo con banda negra superior fija (648 px) y planos que
+  siguen el foco (ratón, `typeurl`, `waitfor`, `focus`). `demo_idor.py` hace el ciclo entero (run8: demo → grabación → Short, OK).
+- Pendiente de afinar: el encuadre automático es un BORRADOR (sigue el cursor/texto; Burp a veces queda parcialmente recortado): usar
+  `focus X Y` en los guiones o `--plan`. Sin subtítulos ni voz (la pones tú). Medir la banda exacta es imposible si el contenido de
+  debajo es negro: la altura la fija el filtro `pad`.
+
+## Demo de referencia: DEMO-SSHOLE (2026-11-19) — CERRADA, dada por buena
+`crear-shorts/DEMO-SSHOLE/demo_sshole.py`: nmap + bypass SSH (CVE ficticio "sshole", musl `crypt()` con
+contraseña >256 car.) + reverse shell, contra un laboratorio Docker de BunkerLabs. 10 iteraciones hasta
+el OK final del usuario ("está perfecto"). Es ahora la **plantilla de código** a copiar para demos nuevas
+de terminal; la metodología destilada está en `METODOLOGIA/10-plantilla-demo-terminal.md`. Resumen de lo
+que se fijó (detalle en esa guía):
+- Despliegue del objetivo SÍNCRONO y en primer plano (nunca el script del lab en segundo plano por SSH).
+- Ventanas por ID (`launch_terminal`/`place_id`/`activate_id`), nunca por título.
+- Encuadre: `focus(x,y,w,h)` con la REGIÓN completa de la ventana (letterbox, nunca recorta); `Ctrl+L` +
+  `focus` antes de un comando corto importante para que no quede enterrado; **fuente del terminal a 24pt**
+  (no recorte estrecho) para que todo se vea grande; cuidado con dejar una región "heredada" activa antes
+  de un comando largo.
+- Pausas generosas en momentos clave (p. ej. el listener se queda 4 s en pantalla, no 1,5 s).
+- Memoria persistente creada: `user-mario-cutly.md` y `proyecto-cutly.md` (preferencias de Mario y
+  arquitectura del repo) — se cargan solas en próximas sesiones.
 
 ## Pendiente (en este orden)
-1. **Reescribir la documentación solo para la VM** y **borrar lo del anfitrión**: `METODOLOGIA/01-03`, `07` (parte macOS),
-   `PORTABILIDAD.md` (kit por SO), `DEMO-CLICKFIX/`, y las herramientas `mac-control.sh`, `teclear.swift`, `winlist.swift`,
-   `visibilidad.py`, `mousepos.swift`, `find_button.py`. Reducir `tipear.py`/`mover.py` a generadores de plan (sin emisor macOS).
-   Crear `METODOLOGIA/00-empezar-aqui-vm.md` (montaje único, protocolo de toma, referencia de comandos) y adaptar 04/05/06 y `DEMO-IDOR`.
-   Un `CLAUDE.md` en la raíz con la regla "todo en la VM". (Fuera del repo: `~/Desktop/ctrl-kit` y `~/Desktop/clickfix-demo`
-   son restos del anfitrión; preguntar antes de borrarlos.)
-2. **Arreglar `vm_control.py prepare`** (deja la VM lista: lab + Burp + Firefox). Última sesión: la lógica de `burp_up`
-   tenía falsos éxitos y problemas de orden de ventanas; se corrigió varias veces pero **no llegó a verificarse de punta a punta**.
-   Estado en que se dejó la VM: Burp mostrando el aviso "Delete old temporary files?". Reintentar desde cero.
-3. **Investigar una forma mejor de controlar la VM** (petición del usuario, sin empezar): candidatos a evaluar —
-   API Main de VirtualBox (`IMouse.putMouseEventAbsolute`, `IKeyboard`) vía `vboxapi`; VNC con `vncdotool`; accesibilidad AT-SPI
-   (`dogtail`) y Java Access Bridge para Burp; Playwright/Marionette para Firefox; el **servidor MCP de Burp** (hay una pestaña
-   "MCP" en Burp 2026) para manejar Burp sin OCR; búsqueda de imágenes (OpenCV/SikuliX) para botones que el OCR no lee.
-4. Primer **guion con comprobaciones** del ejercicio IDOR y medir fiabilidad con 10-20 repeticiones.
-5. Sin verificar: grabación de la ventana de la VM con OBS (¿sale el cursor del invitado?), Windows como invitado
-   (`Win11-25H2`), Wayland, snapshots (descartados por el usuario).
+1. **Fiabilidad:** repetir una demo end-to-end 10-20 veces y medir (de momento 1 ejecución limpia por demo,
+   contando solo la última iteración corregida de cada una).
+2. **Sin SSH (petición del usuario):** separar `vm_control.py` en cerebro + backends intercambiables: SSH+xdotool (actual) →
+   `VBoxManage guestcontrol` → API de VirtualBox (ratón absoluto/scancodes; necesario para invitado Windows). Sin probar.
+   `rec` (grabación) YA no depende de SSH; el CONTROL (ratón/teclado) todavía sí.
+3. `suspend`/`resume`: medir tiempos (savestate) y si las apps quedan bien al reanudar.
+4. Fichas de otras apps de Kali (Wireshark, Metasploit, sqlmap…) en `METODOLOGIA/09-conducir-apps-kali.md` tras su primera sesión.
+   nmap, Docker y terminal (qterminal): fichas ya abiertas.
+5. Windows como invitado, Wayland. Sin MCP en ningún caso (regla del usuario).
 
-## Lecciones recientes (VM)
-- Vision (macOS) lee botones de interfaz que Tesseract no encuentra; **ningún OCR lee texto claro sobre botones de color**
-  (p. ej. "I Accept"): ahí manda la visión (coordenada vista en la captura) más verificación.
-- Enter no activa los botones de los diálogos Swing de Burp: clic verificado por OCR.
-- Un aviso modal tapa el diálogo de debajo pero el OCR sigue viendo su texto: tratar siempre primero el modal.
-- Comprobar el nombre de una ventana no basta (los diálogos se llaman casi igual que la ventana principal).
-- Un script que "informa" sin verificar da falsos éxitos: terminar siempre con una comprobación que falle de verdad.
+## Lecciones (VM) — resumen; detalle completo en `METODOLOGIA/09-conducir-apps-kali.md`
+- Ningún OCR lee texto claro sobre botones de color ("I Accept"): usar `clickimg` o coordenada vista + verificación.
+- Enter no activa los botones de los diálogos Swing de Burp: clic verificado.
+- Un modal tapa el diálogo de debajo pero el OCR sigue viendo su texto: tratar primero el modal.
+- Comprobar el nombre de una ventana no basta (los diálogos se llaman casi igual que la principal).
+- Un script que "informa" sin verificar da falsos éxitos: termina siempre con una comprobación que pueda fallar.
+- En Windows: `text=True` en `subprocess` convierte `\n` en `\r\n` y rompe bash por SSH; usar bytes.
+- `nohup cmd & disown` por SSH se cuelga minutos (a veces para siempre) con `sudo` de por medio → `setsid`, o mejor,
+  ejecución síncrona en primer plano cuando sea viable.
+- `vm_control.ssh()` lleva `timeout=` (antes se colgaba en silencio sin avisar).
+- VirtualBox no deja cambiar resolución/fichero de grabación tras la primera vez habilitada en la sesión: fichero
+  fijo reutilizado entre tomas (`rec_start()` ya lo gestiona solo).
+- Encuadre del Short y "se ve pequeño": ver sección de arriba y `METODOLOGIA/10-plantilla-demo-terminal.md`.

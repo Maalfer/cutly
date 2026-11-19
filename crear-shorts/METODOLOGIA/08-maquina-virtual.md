@@ -19,8 +19,8 @@
 | **Mover/clicar el ratón** | `VBoxManage` | ❌ **no existe ningún comando de ratón** en `controlvm` |
 | **Ratón + teclado reales** | **`xdotool` dentro del invitado, por SSH** | ✅ ver §2 |
 | **Ejecutar comandos / copiar ficheros** | SSH (`natpf` 2222→22) + `scp` | ✅ rápido y sin depender del teclado |
-| **Grabar vídeo** | OBS sobre la ventana de la VM, o `controlvm recording` (propio de VirtualBox) | disponible; no probado en esta sesión |
-| **Resolución** | `controlvm setvideomodehint W H bpp` | disponible; no probado (se podría ajustar al formato del short) |
+| **Grabar vídeo** | **`ffmpeg -f x11grab -draw_mouse 1` dentro del invitado** (`vm_control.py rec`), u OBS sobre la ventana de la VM | x11grab: cursor garantizado y instantes exactos para el registro; OBS: cursor no garantizado. Pendiente de medir en Windows |
+| **Resolución** | `controlvm setvideomodehint W H bpp` (`vm_control.py res W H`) | para fijar el formato del short antes de grabar |
 
 **Conclusión:** VirtualBox da el *ojo* (captura) y la *puerta* (SSH/puertos), pero **no el teclado ni el ratón**
 de forma fiable. El control real se hace con `xdotool` dentro del invitado.
@@ -101,3 +101,27 @@ macOS y, en el futuro, una VM Windows para lo de Windows.
 - **Snapshots:** una toma *en caliente* con 4 GB de RAM llevaba más de 4 minutos (se canceló por indicación del
   usuario, que no quiere snapshots). No se midió restaurar.
 - **Windows** (`Win11-25H2`) como invitado, y Wayland.
+
+---
+
+## 6. Cambios posteriores (diseño, no mediciones)
+
+- **Línea de tiempo sin deriva.** Antes el plan era un bash con `sleep` encadenados: el tiempo de cada `xdotool` se
+  acumulaba. Ahora el plan se compila a una línea de tiempo absoluta y un reproductor Python **en el invitado** la
+  ejecuta (una sola conexión SSH por plan; en Windows no hay `ControlMaster`). La posición del cursor se recuerda en
+  el anfitrión para no consultar al invitado antes de cada movimiento.
+- **Registro y mapa de edición** (`take`, `mark`, `rec`): cada paso queda en JSONL con su hora; el mapa de edición se
+  genera solo. Conecta la Fase 1 con la Fase 2.
+- **Verificación sin OCR:** `labcheck` (el lab imprime cada petición) y `waitstill` (pantalla asentada).
+  `clickimg` (OpenCV) para botones que el OCR no lee.
+- **Estado de partida:** `suspend`/`resume` usan `savestate` (no es snapshot ni copia).
+- **Montaje:** regla NAT añadida con `modifyvm --natpf1` (VM apagada); clave instalada con `guestcontrol` si el usuario
+  da la contraseña (`VM_GUEST_PASS`), si no, tecleándola con el teclado en US (solo letras).
+- **Anfitrión Windows:** bytes con `
+` en la entrada de SSH (con `text=True` llegaban `
+`), `VBoxManage` localizado
+  fuera del PATH, Tesseract en su ruta de instalación. Ver `PORTABILIDAD.md` §1.
+- **Sin implementar (candidatos):** Marionette/Playwright para Firefox (sin MCP en ningún caso: regla del proyecto);
+  AT-SPI/`dogtail` para apps GTK. Se evaluarán cuando el flujo base esté medido en Windows.
+
+> Estos cambios **no están medidos todavía en Windows/x86**: la tabla de resultados de arriba es del Mac/ARM.

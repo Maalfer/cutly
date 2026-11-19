@@ -1,0 +1,63 @@
+{"op": "take_start", "name": "idor-run8", "t_wall": 1795082102.255}
+{"op": "rec_start", "backend": "vbox", "size": "1920x1012", "fps": 30, "t_wall": 1795082103.711, "t_video": 0.01}
+{"op": "mark", "label": "Acto 1: usuarioA ve su cuenta (id=1001)", "t_wall": 1795082103.712, "t_video": 0.01}
+{"op": "activate", "args": ["Mozilla Firefox"], "dur": 0.92, "ok": true, "t_wall": 1795082104.635, "t_video": 0.94}
+{"op": "type", "args": ["http://127.0.0.1:8765/cuenta?id=1001"], "dur": 14.1, "ok": true, "t_wall": 1795082119.465, "t_video": 15.77}
+{"op": "typeurl", "args": ["http://127.0.0.1:8765/cuenta?id=1001"], "dur": 15.68, "ok": true, "t_wall": 1795082120.315, "t_video": 16.62}
+{"op": "labcheck", "args": ["GET /cuenta?id=1001"], "dur": 0.2, "ok": true, "t_wall": 1795082120.519, "t_video": 16.82}
+{"op": "focus", "args": [438, 204], "why": "waitfor:usuarioA", "t_wall": 1795082121.156, "t_video": 17.46}
+{"op": "waitfor", "args": ["usuarioA", "8"], "dur": 0.64, "ok": true, "t_wall": 1795082121.158, "t_video": 17.46}
+{"op": "mark", "label": "Acto 2: Burp intercepta la petición", "t_wall": 1795082124.159, "t_video": 20.46}
+{"op": "activate", "args": ["Temporary Project"], "dur": 0.8, "ok": true, "t_wall": 1795082124.964, "t_video": 21.27}
+{"op": "move", "args": ["233", "142"], "dur": 0.31, "ok": true, "t_wall": 1795082125.51, "t_video": 21.81}
+{"op": "click", "args": ["False"], "dur": 0.23, "ok": true, "t_wall": 1795082125.987, "t_video": 22.29}
+{"op": "clicktext", "args": ["Proxy"], "dur": 1.02, "ok": true, "t_wall": 1795082125.988, "t_video": 22.29}
+{"op": "move", "args": ["172", "284"], "dur": 0.49, "ok": true, "t_wall": 1795082127.871, "t_video": 24.17}
+{"op": "click", "args": ["False"], "dur": 0.25, "ok": true, "t_wall": 1795082128.378, "t_video": 24.68}
+{"op": "clicktext", "args": ["off"], "dur": 1.26, "ok": true, "t_wall": 1795082128.379, "t_video": 24.68}
+{"op": "focus", "args": [140, 286], "why": "waitfor:intercept on", "t_wall": 1795082128.766, "t_video": 25.07}
+{"op": "waitfor", "args": ["intercept on", "5"], "dur": 0.39, "ok": true, "t_wall": 1795082128.766, "t_video": 25.07}
+{"op": "activate", "args": ["Mozilla Firefox"], "dur": 0.91, "ok": true, "t_wall": 1795082129.679, "t_video": 25.98}
+{"op": "activate", "args": ["Temporary Project"], "dur": 1.1, "ok": true, "t_wall": 1795082130.962, "t_video": 27.26}
+{"op": "focus", "args": [575, 388], "why": "waitfor:cuenta?id=1001", "t_wall": 1795082132.511, "t_video": 28.81}
+{"op": "waitfor", "args": ["cuenta?id=1001", "8"], "dur": 1.55, "ok": true, "t_wall": 1795082132.512, "t_video": 28.81}
+{"op": "mark", "label": "Acto 2b: a Repeater, 1001 -> 1002", "t_wall": 1795082134.513, "t_video": 30.81}
+{"op": "move", "args": ["340", "286"], "dur": 0.55, "ok": true, "t_wall": 1795082136.501, "t_video": 32.8}
+{"op": "click", "args": ["False"], "dur": 0.26, "ok": true, "t_wall": 1795082137.011, "t_video": 33.31}
+{"op": "clicktext", "args": ["Forward"], "dur": 1.51, "ok": true, "t_wall": 1795082137.012, "t_video": 33.31}
+{"op": "activate", "args": ["Temporary Project"], "dur": 0.93, "ok": true, "t_wall": 1795082137.943, "t_video": 34.25}
+{"op": "move", "args": ["233", "142"], "dur": 0.53, "ok": true, "t_wall": 1795082138.841, "t_video": 35.14}
+{"op": "click", "args": ["False"], "dur": 0.26, "ok": true, "t_wall": 1795082139.353, "t_video": 35.66}
+{"op": "clicktext", "args": ["Proxy"], "dur": 1.41, "ok": true, "t_wall": 1795082139.354, "t_video": 35.66}
+{"op": "move", "args": ["172", "286"], "dur": 0.52, "ok": true, "t_wall": 1795082141.669, "t_video": 37.97}
+{"op": "click", "args": ["False"], "dur": 0.26, "ok": true, "t_wall": 1795082142.181, "t_video": 38.48}
+{"op": "clicktext", "args": ["on"], "dur": 1.41, "ok": true, "t_wall": 1795082142.182, "t_video": 38.48}
+{"op": "focus", "args": [128, 286], "why": "waitfor:intercept off", "t_wall": 1795082142.575, "t_video": 38.88}
+{"op": "waitfor", "args": ["intercept off", "5"], "dur": 0.39, "ok": true, "t_wall": 1795082142.576, "t_video": 38.88}
+{"op": "move", "args": ["416", "142"], "dur": 0.61, "ok": true, "t_wall": 1795082143.534, "t_video": 39.84}
+{"op": "click", "args": ["False"], "dur": 0.27, "ok": true, "t_wall": 1795082144.058, "t_video": 40.36}
+{"op": "clicktext", "args": ["Repeater"], "dur": 1.48, "ok": true, "t_wall": 1795082144.059, "t_video": 40.36}
+{"op": "focus", "args": [42, 304], "why": "waitfor:Send", "t_wall": 1795082144.432, "t_video": 40.73}
+{"op": "waitfor", "args": ["Send", "6"], "dur": 0.37, "ok": true, "t_wall": 1795082144.432, "t_video": 40.73}
+{"op": "move", "args": ["165", "454"], "dur": 0.68, "ok": true, "t_wall": 1795082145.77, "t_video": 42.07}
+{"op": "click", "args": [], "dur": 0.24, "ok": true, "t_wall": 1795082146.315, "t_video": 42.62}
+{"op": "selecttext", "args": ["1001"], "dur": 3.52, "ok": true, "t_wall": 1795082147.952, "t_video": 44.25}
+{"op": "type", "args": ["1002"], "dur": 1.67, "ok": true, "t_wall": 1795082149.628, "t_video": 45.93}
+{"op": "focus", "args": [112, 454], "why": "waitfor:id=1002", "t_wall": 1795082151.529, "t_video": 47.83}
+{"op": "waitfor", "args": ["id=1002", "5"], "dur": 1.9, "ok": true, "t_wall": 1795082151.53, "t_video": 47.83}
+{"op": "mark", "label": "Acto 2c: Send -> datos de usuarioB (IDOR)", "t_wall": 1795082153.031, "t_video": 49.33}
+{"op": "move", "args": ["42", "304"], "dur": 0.54, "ok": true, "t_wall": 1795082153.937, "t_video": 50.24}
+{"op": "click", "args": ["False"], "dur": 0.26, "ok": true, "t_wall": 1795082154.444, "t_video": 50.75}
+{"op": "clicktext", "args": ["Send"], "dur": 1.41, "ok": true, "t_wall": 1795082154.445, "t_video": 50.75}
+{"op": "focus", "args": [982, 594], "why": "waitfor:usuarioB", "t_wall": 1795082159.036, "t_video": 55.34}
+{"op": "waitfor", "args": ["usuarioB", "8"], "dur": 4.59, "ok": true, "t_wall": 1795082159.037, "t_video": 55.34}
+{"op": "labcheck", "args": ["GET /cuenta?id=1002"], "dur": 0.14, "ok": true, "t_wall": 1795082159.18, "t_video": 55.48}
+{"op": "mark", "label": "Acto 3: lo mismo sin Burp, en la barra del navegador", "t_wall": 1795082163.182, "t_video": 59.48}
+{"op": "activate", "args": ["Mozilla Firefox"], "dur": 0.93, "ok": true, "t_wall": 1795082164.114, "t_video": 60.42}
+{"op": "type", "args": ["http://127.0.0.1:8765/cuenta?id=1002"], "dur": 12.6, "ok": true, "t_wall": 1795082177.47, "t_video": 73.77}
+{"op": "typeurl", "args": ["http://127.0.0.1:8765/cuenta?id=1002"], "dur": 14.22, "ok": true, "t_wall": 1795082178.331, "t_video": 74.63}
+{"op": "focus", "args": [436, 204], "why": "waitfor:usuarioB", "t_wall": 1795082178.949, "t_video": 75.25}
+{"op": "waitfor", "args": ["usuarioB", "8"], "dur": 0.62, "ok": true, "t_wall": 1795082178.95, "t_video": 75.25}
+{"op": "mark", "label": "Cierre", "t_wall": 1795082181.951, "t_video": 78.25}
+{"op": "rec_stop", "t_wall": 1795082181.953, "t_video": 78.26}
+{"op": "take_end", "t_wall": 1795082194.138}

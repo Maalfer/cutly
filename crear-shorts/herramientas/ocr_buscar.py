@@ -32,7 +32,7 @@ def norm(s):
     return re.sub(r"[^\w]", "", s)
 
 
-def buscar(lineas, target, n, scale, reg, sub, modo):
+def buscar(lineas, target, n, scale, reg, sub, modo, detail=False):
     """n > 0: la n-ésima coincidencia de arriba abajo. n < 0: contando desde el final (-1 = la última).
     La última sirve cuando una palabra sale varias veces y el BOTÓN es la de más abajo (p. ej. 'Delete')."""
     hits = []
@@ -54,7 +54,7 @@ def buscar(lineas, target, n, scale, reg, sub, modo):
         cx, cy = (x + w * frac) / scale, (y + h / 2) / scale
         if reg and not (reg[0] <= cx <= reg[0] + reg[2] and reg[1] <= cy <= reg[1] + reg[3]):
             continue
-        hits.append(f"{cx:.0f},{cy:.0f}")
+        hits.append((cx, cy, w / scale / max(len(tok), 1)) if detail else f"{cx:.0f},{cy:.0f}")
     idx = n - 1 if n > 0 else n
     return hits[idx] if -len(hits) <= idx < len(hits) else None
 

@@ -13,7 +13,8 @@ Cómo se usa en la demo: ver ejemplo-idor-con-burp.md.
 import http.server, urllib.parse
 USERS={"1001":("usuarioA","a@lab.local"),"1002":("usuarioB","b@lab.local")}
 class H(http.server.BaseHTTPRequestHandler):
-    def log_message(self,*a): pass
+    def log_message(self,fmt,*a):   # una línea por petición: sirve de VERIFICACIÓN sin OCR (vm_control.py labcheck)
+        print("REQ "+(fmt%a),flush=True)
     def do_GET(self):
         u=urllib.parse.urlparse(self.path); q=urllib.parse.parse_qs(u.query)
         if u.path=="/cuenta":

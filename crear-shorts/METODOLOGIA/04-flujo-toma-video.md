@@ -1,8 +1,6 @@
 # 04 — Flujo de toma de video (protocolo completo)
 
-> **Independiente del sistema operativo.** Las fases, el pacing cinematográfico, la toma única
-> "sin tocar" y la verificación post-toma valen igual en macOS, Windows y Linux. Solo los comandos
-> concretos del ejemplo son de macOS; su equivalente está en `../../PORTABILIDAD.md` §2.
+> Protocolo para la VM (`00-empezar-aqui-vm.md`). Las fases, el pacing y la toma única "sin tocar" valen en cualquier SO.
 
 ## El modelo de trabajo
 
@@ -28,55 +26,40 @@ USUARIO: "haz X en video"
 
 ### FASE 1 — El anuncio (crítico)
 ```
-"⚠️ TOMA ÚNICA — NO TOQUES EL MAC HASTA QUE TE DIGA CORTEN (~15s)"
+"⚠️ TOMA ÚNICA — NO TOQUES LA VENTANA DE LA VM HASTA QUE TE DIGA CORTEN (~15s)"
 ```
 **Por qué:** una interacción del usuario a mitad de toma rompe el z-order
 (ver doc 03, lección 7). Anunciar duración reduce la tentación.
 
 ### FASE 2 — La secuencia continua
-UN solo bloque de shell con todos los pasos y sus pausas:
+Un script con todos los pasos, cada uno con su verificación, bajo un registro de toma:
 
 ```bash
-# (ejemplo de la toma ClickFix v2 — 15 segundos totales)
-sleep 4                                    # pausa: leer el señuelo
-cliclick m:250,350; sleep 0.6              # cursor glided (visual)
-cliclick m:420,550; sleep 0.6
-cliclick m:639,684; sleep 0.8
-cliclick c:639,684; sleep 1.5              # CLIC en COPIAR → verde
-cliclick c:1100,300; sleep 1.5             # foco a la víctima
-osascript ... keystroke "v" using {command down}   # ⌘V — la pared base64
-sleep 3.5                                  # pausa dramática
-osascript ... keystroke return             # ENTER — ejecuta el payload
-sleep 6                                   # payload + exfiltración + flood del C2
-cliclick c:150,400                        # REVEAL: foco al C2 con el botín
-sleep 2.5
-screencapture -x /tmp/take_final.png      # captura de verificación
+vm_control.py take start clip-01 && vm_control.py rec start     # registro + ffmpeg dentro de la VM
+vm_control.py mark "Señuelo"        && sleep 4                  # pausa: leer
+vm_control.py clicktext "COPIAR"    && vm_control.py waitstill  # clic humano + esperar a que se pinte
+vm_control.py mark "El payload"
+vm_control.py type "comando" --in "Terminal" --wpm 40           # tecleo humano con guarda de foco
+vm_control.py labcheck "POST /exfil"                            # verificación sin OCR
+vm_control.py take end                                          # trae .mp4 y escribe .mapa.md
 ```
 
 ### FASE 3 — Verificación post-toma
-OCR de la captura final para confirmar que cada momento clave ocurrió:
-- El comando pegado aparece en la ventana víctima
-- El output del payload visible ("completada ✓")
-- El C2 muestra el botín
-**Si algo falló:** rehacer SOLO la fase fallida (el clipboard y los estados persisten).
+`take end` imprime los pasos fallidos del registro (`ok:false`). Comprueba además con `waitfor`/captura final que cada
+momento clave ocurrió. **Si algo falló:** rehacer SOLO la fase fallida (los estados persisten en la VM).
 
-### FASE 4 — El mapa de edición (entregable al usuario)
-Tabla con cada momento, qué se ve y su duración — para que edite rápido:
-
-| # | Momento | Qué se ve | Dura |
-|---|---------|-----------|------|
-| 1 | Señuelo | Página de amenazas | 4s |
-| 2 | El clic | Botón rojo → verde | 4s |
-| ... | ... | ... | ... |
+### FASE 4 — El mapa de edición (ya generado)
+`editor/crudo/<toma>.mapa.md` se escribe solo: un bloque por `mark` con su rango en segundos del vídeo, su duración y
+el nº de pasos. Se pasa tal cual a la edición (`editor/CLAUDE.md`).
 
 ## Reglas de pacing (cine, no teatro)
 
 0. **Entrada HUMANA siempre (regla nº 0 del vídeo):** el texto que aparece de golpe y el cursor que
    salta al botón delatan que es una máquina. Mientras OBS graba:
-   - **Teclear:** `type_human "App" "texto"` (ritmo variable, pausas tras espacios/signos, algún error
-     corregido con retroceso). **Nunca** `type_in`/`keystroke` con texto (es instantáneo).
-   - **Mover/clicar:** `mover_humano X Y` / `clic_humano X Y` / `click_text` (trayecto curvo, lento-
-     rápido-lento, 0,5-1,8 s según distancia). **Nunca** `cliclick m:` a pelo (salta de golpe).
+   - **Teclear:** `vm_control.py type "texto" --in "Título"` (ritmo variable, pausas tras espacios/signos, algún error
+     corregido con retroceso). **Nunca** pegar texto de golpe (es instantáneo).
+   - **Mover/clicar:** `move X Y` / `clicktext PALABRA` (trayecto curvo, lento-
+     rápido-lento, 0,5-1,8 s según distancia). **Nunca** teletransportar el cursor.
    - Velocidad: `--wpm 55` por defecto; **bájala (35-45)** para que se lea cada comando en un short.
 1. **Pauses de lectura:** 4s en pantallas con texto denso (el espectador lee)
 2. **Cursor glided:** `mover_humano` ya traza el trayecto; no hace falta trocearlo a mano
@@ -87,6 +70,6 @@ Tabla con cada momento, qué se ve y su duración — para que edite rápido:
 
 ## Grabación del usuario
 
-- OBS oculto SIGUE grabando (ocultar ventana ≠ parar proceso)
-- Verificar ANTES de la toma que la grabadora está activa
+- Por defecto graba la VM (`rec start`, ffmpeg dentro del invitado, cursor incluido). Con OBS sobre la ventana de VirtualBox, comprueba antes que sale el cursor.
+- Verificar ANTES de la toma que la grabación está activa (`rec start` falla si ffmpeg no arranca)
 - La toma es reproducible: si no se grabó, se rehace (todo el flujo es re-ejecutable)

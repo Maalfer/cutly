@@ -5,8 +5,8 @@
 > (Insecure Direct Object Reference), mientras el usuario graba con OBS.
 >
 > Usa los patrones de `METODOLOGIA/05-controlar-aplicaciones.md` (ciclo universal, wait-for,
-> multi-app) y `METODOLOGIA/06-navegador-y-herramientas-gui.md` (navegador + Burp). Comandos de
-> ejemplo en macOS; equivalentes por sistema en `../../PORTABILIDAD.md`.
+> multi-app) y `METODOLOGIA/06-navegador-y-herramientas-gui.md` (navegador + Burp). Todo se ejecuta en la VM con
+> `vm_control.py` (`../METODOLOGIA/00-empezar-aqui-vm.md`).
 
 ---
 
@@ -62,7 +62,7 @@ cuenta", la petición es `GET /cuenta?id=1001`. Si cambiamos a `id=1002`, salen 
 
 ## 2b. Lab listo y flujo YA PROBADO
 
-El lab del paso anterior existe: `python3 crear-shorts/DEMO-IDOR/lab_idor.py &` (solo `127.0.0.1:8765`).
+El lab existe: en la VM, `python3 ~/lab/lab_idor.py >/tmp/lab.log &` (solo `127.0.0.1:8765`; `prepare` lo lanza). Imprime una línea por petición, que `vm_control.py labcheck "GET /cuenta?id=1002"` usa para verificar sin OCR.
 El acto 2 (Burp: escribir la petición, enviar, cambiar `1001`→`1002`, reenviar) está **verificado de
 punta a punta** con Burp Suite Community 2026.10 y entrada humana: ver
 `METODOLOGIA/06-navegador-y-herramientas-gui.md`, secciones 1.0 (perfil limpio de Chrome), 1.1
@@ -71,7 +71,7 @@ usuarioA`, respuesta 2 `Cuenta de usuarioB`.
 
 ## 3. La toma (FASES 1-3 — grabando, una secuencia continua)
 
-**Anuncio:** `"⚠️ TOMA — NO TOQUES EL MAC HASTA 'CORTEN' (~30-40s)"` y confirmar que OBS graba
+**Anuncio:** `"⚠️ TOMA — NO TOQUES LA VM HASTA 'CORTEN' (~30-40s)"` y confirmar que OBS graba
 (doc 04). Luego el agente ejecuta, verificando cada paso (doc 05 §1). Guion:
 
 ```text

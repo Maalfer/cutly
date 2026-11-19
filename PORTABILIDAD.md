@@ -1,202 +1,98 @@
-# 🖥️ Portabilidad — misma metodología en macOS, Windows y Linux
+# 🖥️ Portabilidad — Windows, macOS y Linux como anfitrión
 
-> La metodología de `cutly` no depende de ningún sistema operativo concreto. Esta guía es la
-> **referencia central** para usarla en cualquier máquina. El resto de documentos describen los
-> comandos tal cual se usaron en la máquina de desarrollo (**macOS**); aquí tienes el equivalente
-> para **Windows** y **Linux**.
->
-> Regla general: **la Fase 2 (editar) es casi idéntica en todos lados** (mismas herramientas).
-> **La Fase 1 (controlar el ordenador) es la que más cambia** entre sistemas — tabla de abajo.
+> Las demos se graban **dentro de una VM** (ver `crear-shorts/METODOLOGIA/00-empezar-aqui-vm.md`), así que el
+> control (xdotool, X11) es el mismo en cualquier anfitrión. Lo único que depende del SO es **instalar las
+> herramientas del anfitrión** y unos pocos detalles de rutas. Esta guía lo cubre.
 
----
-
-## 0. Convenciones que valen en cualquier sistema
-
-- **La carpeta `cutly/` puede vivir donde quieras.** Las rutas tipo `~/Desktop/cutly/...` que
-  aparecen en los documentos son **ejemplos de la máquina macOS**. Sustituye por la ruta real de
-  tu `cutly` en cada sistema. Dentro del repo, usa siempre rutas **relativas** cuando puedas.
-- **Home / carpeta personal:** macOS y Linux → `~` (`$HOME`). Windows → `%USERPROFILE%`
-  (PowerShell: `$env:USERPROFILE`; en Git Bash/WSL `~` también funciona).
-- **Carpeta de modelos Whisper:** `~/.whisper-models` en macOS/Linux; `%USERPROFILE%\.whisper-models`
-  en Windows. Los scripts en Python usan `os.path.expanduser("~")`, que resuelve bien en los tres.
-- **Temporal / scratchpad:** `/tmp` o `$TMPDIR` (macOS/Linux); `%TEMP%` (Windows).
-- **Papelera (para la regla "si `_cortes.log` falta, míralo antes de recrear"):**
-  macOS `~/.Trash` · Linux `~/.local/share/Trash/files` · Windows Papelera de reciclaje
-  (sin ruta fija; mírala desde el Explorador).
-- **Scripts `.sh`:** nativos en macOS/Linux. En **Windows** ejecútalos con **Git Bash** o **WSL**
-  (ambos traen `bash`, `curl`, `ffmpeg`…), o replica el comando a mano. El builder de shorts está
-  en **Python** (`editor/scripts/construir_short.py`) justamente para ser portable sin shell.
+## 0. Convenciones
+- `cutly/` puede vivir donde quieras; los scripts calculan su ruta (`REPO`) a partir de su ubicación.
+- Home: macOS/Linux `~`; Windows `%USERPROFILE%` (PowerShell `$env:USERPROFILE`; Git Bash `~`).
+- Whisper: `~/.whisper-models` (Windows: `%USERPROFILE%\.whisper-models`). Los `.py` usan `expanduser`.
+- Temporales: `vm_control.py` usa `tempfile.gettempdir()` (Windows `%TEMP%`, resto `/tmp`).
+- Scripts `.sh` del editor: en Windows, con **Git Bash** o **WSL**. Lo demás es Python y va en todos lados.
 
 ---
 
-## 1. FASE 2 — Editar (ffmpeg + whisper.cpp + yt-dlp + python): casi igual en todos lados
+## 1. Anfitrión WINDOWS (caso real de esta máquina)
 
-Las herramientas son las mismas; solo cambia **cómo se instalan** y la **aceleración por GPU**.
+### 1.1 Instalación (PowerShell)
+```powershell
+winget install Oracle.VirtualBox                     # si no lo tienes
+winget install Python.Python.3.13
+winget install UB-Mannheim.TesseractOCR              # OCR (Windows no tiene Vision)
+winget install Gyan.FFmpeg                           # Fase 2 y miniaturas
+pip install pillow opencv-python                     # opcionales: OCR por región y clickimg
+# OpenSSH cliente: viene con Windows 10/11 (Configuración > Aplicaciones > Funciones opcionales)
+```
+Abre una terminal **nueva** tras instalar para que el PATH se refresque.
 
-### Instalación por sistema
+### 1.2 Rutas y detalles propios de Windows
+| Cosa | Dónde está / qué hacer |
+|---|---|
+| `VBoxManage.exe` | `C:\Program Files\Oracle\VirtualBox\` — **no está en el PATH**. `vm_control.py` lo localiza solo; para otros scripts: `$env:VBOXMANAGE="C:\Program Files\Oracle\VirtualBox\VBoxManage.exe"` |
+| Tesseract | `C:\Program Files\Tesseract-OCR\tesseract.exe` (el script lo encuentra aunque no esté en el PATH) |
+| Clave SSH de la VM | `%USERPROFILE%\.ssh\cutly_vm` (`ssh-keygen` ajusta los permisos; no la muevas a otra carpeta) |
+| Python | usa `python`, no `python3` (en Windows `python3` suele ser un acceso directo de la Store) |
+| Saltos de línea | `vm_control.py` envía los scripts por SSH en **bytes con `\n`**; con `text=True` Windows los convertiría en `\r\n` y bash fallaría (corregido) |
+| `ControlMaster` de SSH | **No existe en OpenSSH para Windows**: por eso cada plan largo va en **una sola conexión** (reproductor de planes) |
+| Codificación de consola | Si ves `?` en tildes en la salida, es solo la consola (`$env:PYTHONUTF8=1`); el texto tecleado en la VM va por JSON y no se ve afectado |
+| Antivirus / Defender | Puede ralentizar `ssh`/`scp` la primera vez; no afecta al resultado |
 
-| Herramienta | macOS (Homebrew) | Windows | Linux (Debian/Ubuntu · Fedora · Arch) |
+### 1.3 Comprobación en 1 minuto
+```powershell
+python crear-shorts\herramientas\vm_control.py status   # VM, SSH, pantalla, ventana activa
+tesseract --version; ffmpeg -version | Select-Object -First 1
+```
+Si `status` dice `ssh: no`: falta el montaje único (`bootstrap`, doc 00 §1) o la regla NAT.
+
+### 1.4 Restricciones de la VM en esta máquina
+La VM `kali` aquí es **x86-64 (Debian 64-bit)**, no ARM64 como en la máquina donde se desarrolló: las
+instrucciones de Burp/Java para x86 son las estándar. La regla NAT `ssh,tcp,127.0.0.1,2222,,22` se añade con la VM
+**apagada** (`bootstrap` lo hace).
+
+---
+
+## 2. Anfitrión macOS
+```bash
+brew install --cask virtualbox        # (Apple Silicon: VirtualBox 7.1+ con invitado ARM64)
+brew install python tesseract ffmpeg
+pip3 install pillow opencv-python     # opcionales
+```
+`VBoxManage` queda en el PATH. Si existe `~/Desktop/ctrl-kit/ocr` (Vision), `vm_control.py` lo prefiere a Tesseract
+(`VM_OCR=tesseract` lo desactiva). Vision lee botones de interfaz que Tesseract no encuentra.
+
+## 3. Anfitrión Linux
+```bash
+sudo apt install virtualbox openssh-client python3 python3-pip tesseract-ocr ffmpeg   # (dnf/pacman equivalentes)
+pip3 install pillow opencv-python
+```
+`VBoxManage` queda en el PATH. Si el anfitrión es Wayland no importa: lo que debe ser **X11 es el invitado**.
+
+---
+
+## 4. Fase 2 — Editar (ffmpeg + whisper.cpp + yt-dlp): casi idéntica en todos lados
+
+| Herramienta | macOS | Windows | Linux |
 |---|---|---|---|
-| **ffmpeg/ffprobe** | `brew install ffmpeg` | `winget install Gyan.FFmpeg` (o `choco install ffmpeg` / `scoop install ffmpeg`) | `apt install ffmpeg` · `dnf install ffmpeg` · `pacman -S ffmpeg` |
-| **python3** | `brew install python` | `winget install Python.Python.3` | `apt install python3` · `dnf install python3` · `pacman -S python` |
-| **yt-dlp** | `brew install yt-dlp` | `winget install yt-dlp.yt-dlp` (o `pipx install yt-dlp`) | `pipx install yt-dlp` · `pacman -S yt-dlp` |
-| **whisper.cpp** | `brew install whisper-cpp` (trae Metal) | compilar desde fuente (abajo) o binarios de releases | compilar desde fuente (abajo) |
-
-### whisper.cpp con GPU (compilar desde fuente si no hay paquete)
+| ffmpeg/ffprobe | `brew install ffmpeg` | `winget install Gyan.FFmpeg` | `apt install ffmpeg` |
+| python3 | `brew install python` | `winget install Python.Python.3.13` | `apt install python3` |
+| yt-dlp | `brew install yt-dlp` | `winget install yt-dlp.yt-dlp` | `pipx install yt-dlp` |
+| whisper.cpp | `brew install whisper-cpp` (Metal) | compilar o binarios de releases | compilar |
 
 ```bash
 git clone https://github.com/ggml-org/whisper.cpp && cd whisper.cpp
-# Elige el backend según tu hardware:
-#   Apple Silicon (macOS):   -DGGML_METAL=1     (por defecto en mac)
-#   NVIDIA (Win/Linux):      -DGGML_CUDA=1
-#   AMD/Intel (Win/Linux):   -DGGML_VULKAN=1
-#   Sin GPU (cualquiera):    (nada, usa CPU)
-cmake -B build -DGGML_CUDA=1          # <- ajusta el flag a tu caso
-cmake --build build -j --config Release
-# Binario resultante: build/bin/whisper-cli  (en Windows: build\bin\Release\whisper-cli.exe)
+# GPU: Apple -DGGML_METAL=1 · NVIDIA -DGGML_CUDA=1 · AMD/Intel -DGGML_VULKAN=1 · sin GPU: nada
+cmake -B build -DGGML_CUDA=1 && cmake --build build -j --config Release
+# Binario: build/bin/whisper-cli  (Windows: build\bin\Release\whisper-cli.exe)
 ```
-
-> El binario puede llamarse `whisper-cli` (reciente) o `main` (antiguo). Ajusta el nombre en los
-> scripts si hace falta. En los documentos aparece `whisper-cli` (el de Homebrew en mac).
-
-### ffmpeg y GPU (opcional, para acelerar el render)
-
-Por defecto los scripts usan `libx264` (CPU, idéntico resultado en todos lados y lo más
-compatible). Si quieres acelerar el codificado con la GPU, cambia el códec:
-
-| GPU | Códec ffmpeg | Nota |
-|---|---|---|
-| Apple Silicon | `-c:v h264_videotoolbox` | macOS |
-| NVIDIA | `-c:v h264_nvenc` | Win/Linux |
-| AMD (Win) / VAAPI (Linux) | `-c:v h264_amf` / `-c:v h264_vaapi` | |
-
-Para **máxima calidad y portabilidad**, deja `libx264 -preset slow` (lo documentado). Los
-encoders de GPU son más rápidos pero algo menos eficientes a igual bitrate.
-
-### Lo que NO cambia en la Fase 2
-
-- Todos los filtros de ffmpeg (`crop`, `scale`, `pad`, `concat`, `trim`, `afade`, `silencedetect`…)
-  son **idénticos** en los tres sistemas.
-- La lógica de `construir_short.py`, `construir_clip.sh`, el flujo de transcripción y verificación,
-  y la metodología de `CLAUDE.md` / `METODOLOGIA-SHORTS.md` son **las mismas**. Solo cambian las
-  rutas y la forma de invocar el binario.
+El binario puede llamarse `whisper-cli` o `main`. Por defecto los scripts usan `libx264` (CPU, igual en todos
+lados). Aceleración opcional: `h264_videotoolbox` (Apple), `h264_nvenc` (NVIDIA), `h264_amf` (AMD, Windows),
+`h264_vaapi` (Linux). Los filtros de ffmpeg y la lógica de `construir_short.py` son idénticos en los tres SO.
 
 ---
 
-## 2. FASE 1 — Controlar el ordenador: aquí está la diferencia real
-
-La Fase 1 (la IA mueve cursor/teclado/ventanas y "ve" la pantalla con OCR) usa APIs del sistema,
-así que **cada SO tiene sus herramientas**. Esta es la tabla de equivalencias. La columna macOS es
-la que está detallada en `crear-shorts/METODOLOGIA/`; las otras dos son su equivalente directo.
-
-| Capacidad | macOS | Windows | Linux · X11 | Linux · Wayland |
-|---|---|---|---|---|
-| **Mover / clicar cursor** | `cliclick m:x,y` / `c:x,y` | AutoHotkey `Click x,y` · `nircmd sendmouse left click` · PowerShell+user32 | `xdotool mousemove x y click 1` | `ydotool mousemove x y` + `ydotool click` |
-| **Teclear texto / combinaciones** | `osascript … keystroke` | AutoHotkey `Send "txt"` · PowerShell `[System.Windows.Forms.SendKeys]::SendWait()` | `xdotool type "txt"` / `xdotool key ctrl+v` | `ydotool type "txt"` / `ydotool key` |
-| **Posición del cursor** | `mousepos` (Swift) | PowerShell `[System.Windows.Forms.Cursor]::Position` | `xdotool getmouselocation` | compositor (p. ej. `swaymsg`) |
-| **Captura de pantalla** | `screencapture -x out.png` | `nircmd savescreenshot out.png` · PowerShell `CopyFromScreen` | `scrot out.png` · `maim out.png` | `grim out.png` |
-| **OCR con coordenadas** | `ocr.swift` (Vision) | **Tesseract** `tesseract in.png out tsv` · o WinRT `Windows.Media.Ocr` | **Tesseract** `tesseract in.png out tsv` | Tesseract (igual) |
-| **Abrir app / archivo** | `open -a App f` | `Start-Process App` · `start f` | `xdg-open f` / binario | `xdg-open f` |
-| **Posicionar ventana** | AppleScript `set bounds` | `nircmd win move title "X" x y w h` · PowerShell+`MoveWindow` | `wmctrl -r :ACTIVE: -e 0,x,y,w,h` · `xdotool windowmove` | limitado (depende del compositor) |
-| **Ocultar / minimizar ventana** | `set visible to false` | `nircmd win hide title "X"` · `ShowWindow` | `xdotool windowminimize` · `wmctrl` | limitado |
-| **Enumerar ventanas (solo títulos)** | System Events (AppleScript) | PowerShell `Get-Process \| ? MainWindowTitle` · `EnumWindows` | `wmctrl -l` · `xdotool search --name` | limitado |
-| **Geometría de ventanas (x,y,w,h)** — para el detector de solapes | AppleScript `position`/`size` de cada ventana | PowerShell + `GetWindowRect` (user32, P/Invoke) | **`wmctrl -lG`** (da id, x, y, w, h, título) | compositor (p. ej. `swaymsg -t get_tree`) |
-| **Ver la pantalla como un humano** | captura + **el modelo con visión la mira** (Claude); OCR para coords | igual (captura + visión + Tesseract para coords) | igual | igual |
-| **Portapapeles** | `pbcopy` / `pbpaste` | `Set-Clipboard` / `Get-Clipboard` · `… \| clip` | `xclip -selection clipboard` · `xsel -b` | `wl-copy` / `wl-paste` |
-| **Permiso para automatizar** | TCC → **Accesibilidad** (obligatorio) **y, si se usa AppleScript de una app, Automatización por cada app** (evitable usando System Events) | normalmente sin permiso extra (ojo UAC/apps elevadas) | X11 lo permite de serie | **restringido**: input por `uinput` (ydotool + daemon), captura por portal |
-
-### Instalación del kit de control por sistema
-
-```text
-Windows  : AutoHotkey v2 (autohotkey.com)  +  nircmd (nirsoft.net)  +  Tesseract (UB-Mannheim build)
-           — o todo con PowerShell (cursor, portapapeles, captura nativos; clic/tecla vía user32 o AHK)
-Linux X11: sudo apt install xdotool wmctrl scrot xclip tesseract-ocr        (o dnf / pacman equivalentes)
-Linux Wayland: ydotool (+ ydotoold, acceso a /dev/uinput)  +  grim  +  wl-clipboard  +  tesseract-ocr
-macOS    : cliclick (brew) + OCR/mousepos propios (Swift+Vision) + permiso de Accesibilidad  (ver crear-shorts/)
-```
-
-### Notas por sistema (importantes)
-
-- **Windows:** la pila más cómoda para un agente es **AutoHotkey v2** (clic, teclado y mover
-  ventanas en una sola herramienta) + **PowerShell** (portapapeles, captura, posición de cursor) +
-  **Tesseract** para OCR. `nircmd` cubre captura y ventanas sin programar. No suele hacer falta
-  permiso especial salvo que la ventana objetivo corra **elevada** (como admin): entonces el
-  automatizador también debe ir elevado.
-- **Linux X11** es el entorno **más parecido a macOS** para esto: `xdotool` + `wmctrl` + `scrot` +
-  `xclip` + `tesseract` cubren todo con comandos simples. Es la opción recomendada en Linux para
-  grabar demos.
-- **Linux Wayland** es el **más restrictivo** por seguridad: el input sintético global necesita
-  `ydotool` con su daemon y acceso a `/dev/uinput`, y la captura va por `grim`/portales. Si te
-  complica, **inicia sesión en un escritorio X11** para grabar la demo y vuelve a Wayland después.
-
-### OCR con coordenadas en Tesseract (equivalente al `ocr.swift` de macOS)
-
-El OCR de macOS devuelve texto + caja `[x,y WxH]`. Con Tesseract se obtiene lo mismo con la salida
-TSV (columnas `left top width height` + `text`):
-
-```bash
-tesseract captura.png salida --oem 1 --psm 11 -l spa+eng tsv
-# salida.tsv: filtra conf>0 y lee left/top/width/height/text para localizar un botón y clicar su centro.
-```
-
-> Recuerda el factor de escala Retina/HiDPI: si capturas a resolución física y el clic va en puntos
-> lógicos, divide las coordenadas por el factor de escala de la pantalla (en macOS Retina = 2;
-> en Windows/Linux depende del "scale"/DPI configurado). Verifica siempre con un clic de prueba.
-
-### Entrada humana (tecleo y ratón realistas) en cada sistema
-
-El **plan** (qué tecla, cuándo, con qué retardo; y los puntos del trayecto del ratón) es lógica
-pura en Python y vale igual en los tres sistemas: `tipear.py` (`plan()`) y `mover.py` (`trayecto()`).
-Solo cambia el **emisor** que ejecuta ese plan:
-
-| SO | Emisor del plan | Notas |
-|---|---|---|
-| **macOS** | `teclear` (Swift, eventos CGEvent Unicode y ratón) | ✅ probado. `keystroke` de AppleScript pierde las tildes con Spanish-ISO; `cliclick m:` cuesta ~100 ms por punto |
-| **Windows** | AutoHotkey v2: `SendText`/`Send` por carácter con `Sleep`, y `MouseMove x, y, 0` por punto con `Sleep`; o PowerShell `SendKeys` | ⚠️ sin probar. `SendText` envía Unicode (tildes OK) |
-| **Linux X11** | `xdotool key --delay` / `xdotool type --delay 0 "x"` por carácter con `sleep`; ratón: `xdotool mousemove x y` por punto | ⚠️ sin probar. `xdotool type` maneja Unicode, pero comprueba las tildes |
-| **Linux Wayland** | `ydotool type`/`ydotool mousemove` con `sleep` entre llamadas | ⚠️ sin probar. Más lento por proceso; medir el coste por llamada |
-
-Antes de fiarte del emisor de tu SO: **mide el coste fijo por evento** (en macOS, `cliclick` tardaba
-~100 ms/punto) y **comprueba las tildes** (`á é ú ü ñ ¿ €`) con el teclado real de la máquina. Protocolo
-P16-P18 en `crear-shorts/METODOLOGIA/07-auditoria-de-pruebas.md`.
-
----
-
-### Medir qué ve realmente una persona (gate anti-solape) en cada sistema
-
-`crear-shorts/herramientas/visibilidad.py` es **universal** (rasteriza y pinta ventanas de atrás
-hacia delante). Solo cambia el comando que **enumera las ventanas con su z-order**. Acepta líneas
-`etiqueta x y w h` **ordenadas de la de MÁS ARRIBA a la de MÁS ABAJO** (también el formato completo
-de `winlist` en macOS). Nombre de app = la etiqueta (úsala luego en `--only`).
-
-| SO | Cómo enumerar con z-order | Estado |
-|---|---|---|
-| **macOS** | `winlist` (Swift, `CGWindowList`): ya da z-order, capa y geometría → `winlist \| visibilidad.py` | ✅ **probado** |
-| **Linux X11** | orden: `xprop -root _NET_CLIENT_LIST_STACKING` (de abajo a arriba → invertir); geometría: `xdotool getwindowgeometry` o `wmctrl -lG` por id | ⚠️ documentado, sin probar |
-| **Windows** | `EnumWindows` recorre de **arriba a abajo** (z-order); `GetWindowRect` da la geometría; filtra con `IsWindowVisible` | ⚠️ documentado, sin probar |
-| **Wayland** | depende del compositor (`swaymsg -t get_tree` en sway/Hyprland `hyprctl clients -j`) | ⚠️ documentado, sin probar |
-
-```bash
-# Linux X11 (esbozo): ids de arriba a abajo -> "etiqueta x y w h"
-for id in $(xprop -root _NET_CLIENT_LIST_STACKING | grep -o '0x[0-9a-f]*' | tac); do
-  eval "$(xdotool getwindowgeometry --shell $id)"; n=$(xdotool getwindowname $id | tr ' \t' '__')
-  printf '%s\t%s\t%s\t%s\t%s\n' "$n" "$X" "$Y" "$WIDTH" "$HEIGHT"
-done | python3 crear-shorts/herramientas/visibilidad.py --screen 1920x1080 --only Terminal --exit-code
-```
-Indica `--screen WxH` en SO sin ventana "Dock" (la pantalla no se autodetecta). Con `--exit-code` el
-script devuelve ≠ 0 si algo está enterrado, cortado o no cumple `--need`: úsalo como **puerta**.
-Complétalo **mirando la captura** (visión) para confirmar a ojo que se ve lo que debe verse.
-
----
-
-## 3. Resumen: qué tocar al cambiar de sistema
-
-1. **Instala** las herramientas de tu SO (tablas de arriba).
-2. **Ajusta las rutas** `~/Desktop/cutly/...` a donde tengas `cutly` (o usa rutas relativas).
-3. **Fase 2 (editar):** funciona igual; solo cambia el nombre/ruta del binario de whisper y, si
-   quieres, el códec de GPU. Los scripts `.sh` → Git Bash/WSL en Windows; el builder de shorts es
-   Python y va en todos lados.
-4. **Fase 1 (controlar):** sustituye `cliclick`/`osascript`/`ocr`/`screencapture` por el
-   equivalente de tu SO (tabla de la sección 2). La *metodología* (verificar cada acción con OCR,
-   pacing cinematográfico, gestión de z-order, toma única sin tocar) **es idéntica**; solo cambian
-   los comandos.
+## 5. Qué ya NO se usa
+El control del ordenador anfitrión (`cliclick`, AppleScript, AutoHotkey, `wmctrl`, `ydotool`, Vision como único OCR,
+gate anti-solape sobre ventanas del anfitrión…) **se retiró**: todo ocurre dentro de la VM. Los fallos históricos de ese
+enfoque siguen documentados en `crear-shorts/METODOLOGIA/07-auditoria-de-pruebas.md` como lecciones, no como
+instrucciones.

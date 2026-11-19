@@ -1,5 +1,9 @@
 # 07 — Auditoría de pruebas: fallos reales y protocolo para validar en cualquier sistema
 
+> **⚠️ Vigencia:** este documento nació controlando el anfitrión macOS. Los **principios y fallos** siguen
+> vigentes; los **comandos** de los ejemplos (`cliclick`, `osascript`, `type_human`…) fueron sustituidos por
+> `herramientas/vm_control.py` dentro de la VM. Punto de entrada: `00-empezar-aqui-vm.md`.
+
 > Este documento nace de **probar de verdad** la navegación (abrir apps, colocar ventanas, dar foco,
 > clicar, escribir, esperar) en una máquina real y anotar **cada fallo**. Dos usos:
 > 1. **Catálogo de fallos reales** y cómo se evitan (cada uno ya tiene arreglo en el kit).

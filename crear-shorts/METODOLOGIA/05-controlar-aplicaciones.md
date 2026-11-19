@@ -1,5 +1,9 @@
 # 05 — Controlar CUALQUIER aplicación (no solo una demo)
 
+> **⚠️ Vigencia:** este documento nació controlando el anfitrión macOS. Los **principios y fallos** siguen
+> vigentes; los **comandos** de los ejemplos (`cliclick`, `osascript`, `type_human`…) fueron sustituidos por
+> `herramientas/vm_control.py` dentro de la VM. Punto de entrada: `00-empezar-aqui-vm.md`.
+
 > El objetivo real de esta herramienta: que un modelo de IA (Claude u otro) **controle el
 > ordenador por completo** — cursor, teclado, abrir/cerrar apps, escribir en ellas — para montar
 > **cualquier** demostración en vídeo mientras el usuario graba con OBS. La demo ClickFix es solo

@@ -1,18 +1,10 @@
 #!/usr/bin/env python3
 """
-mover.py — Mueve el cursor como una persona: trayecto ligeramente curvo, arranca y frena suave,
-y la duración crece con la distancia. En vídeo, un cursor que "salta" al botón queda artificial.
+mover.py — GENERADOR del trayecto de un ratón humano: curva de Bézier ligeramente curva, lento-rápido-lento,
+microtemblor y llegada exacta. La duración crece con la distancia. Un cursor que salta al botón delata a la máquina.
 
-Uso:  mover.py X Y [--dur SEG] [--seed N] [--dry-run]
-      (X, Y en puntos lógicos, como cliclick)
-
-Cómo: calcula una curva de Bézier cuadrática desde la posición actual hasta el destino, con el
-punto de control desplazado en perpendicular (curvatura aleatoria pequeña). Reparte los puntos con
-una función "smoothstep" (lento-rápido-lento) y los envía con `teclear` (Swift; eventos de ratón
-directos). Alternativa lenta: `cliclick`, que tarda ~100 ms POR movimiento (medido) y no sirve para
-trazar un trayecto largo. Termina EXACTAMENTE en el destino.
-
-Backend macOS: `teclear` (Swift). Windows/Linux: mismo cálculo de puntos, otro emisor (xdotool/AHK).
+Es lógica pura (sin emisor): lo ejecuta vm_control.py (move) dentro de la VM con xdotool, como parte de una línea de
+tiempo sin deriva. Uso suelto, solo para inspeccionar:  mover.py X0 Y0 X Y [--dur S] [--seed N]
 """
 import argparse
 import math
@@ -22,14 +14,6 @@ import re
 import shutil
 import subprocess
 import sys
-
-
-def posicion_actual():
-    out = subprocess.run(["cliclick", "p:."], capture_output=True, text=True).stdout
-    m = re.search(r"(-?\d+)\s*,\s*(-?\d+)", out)
-    if not m:
-        sys.exit("no pude leer la posición del cursor (¿cliclick instalado y con permiso?)")
-    return int(m.group(1)), int(m.group(2))
 
 
 def trayecto(x0, y0, x1, y1, dur=None, rng=None):
@@ -65,28 +49,16 @@ def trayecto(x0, y0, x1, y1, dur=None, rng=None):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("x", type=int)
-    ap.add_argument("y", type=int)
-    ap.add_argument("--dur", type=float, default=None, help="duración en segundos (def.: según distancia)")
+    ap = argparse.ArgumentParser(description="Genera (no ejecuta) un trayecto humano de ratón. El emisor es vm_control.py.")
+    ap.add_argument("x0", type=int); ap.add_argument("y0", type=int)
+    ap.add_argument("x", type=int); ap.add_argument("y", type=int)
+    ap.add_argument("--dur", type=float, default=None)
     ap.add_argument("--seed", type=int, default=None)
-    ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
-    x0, y0 = posicion_actual()
-    pts = trayecto(x0, y0, a.x, a.y, a.dur, random.Random(a.seed))
-    if a.dry_run:
-        print(f"{len(pts)} puntos de ({x0},{y0}) a ({a.x},{a.y})"); return
-    kit = os.environ.get("CTRL_KIT", os.path.expanduser("~/Desktop/ctrl-kit"))
-    tk = os.path.join(kit, "teclear")
-    tk = tk if os.access(tk, os.X_OK) else shutil.which("teclear")
-    if tk:
-        plan = "".join(f"m {x} {y}\nd 0.022\n" for x, y in pts)
-        r = subprocess.run([tk], input=plan, text=True, capture_output=True)
-    else:
-        print("AVISO: sin `teclear` el movimiento irá a ~100 ms por punto (muy lento). Compílalo.", file=sys.stderr)
-        r = subprocess.run(["cliclick"] + [f"m:{x},{y}" for x, y in pts], capture_output=True, text=True)
-    if r.returncode:
-        sys.exit(f"el emisor falló: {r.stderr.strip()}")
+    pts = trayecto(a.x0, a.y0, a.x, a.y, a.dur, random.Random(a.seed))
+    print(f"{len(pts)} puntos de ({a.x0},{a.y0}) a ({a.x},{a.y})")
+    for p in pts:
+        print(*p)
 
 
 if __name__ == "__main__":
