@@ -64,6 +64,10 @@ cutly/
 │   ├── transcripcion.py · subtitulos.py  ← Whisper medido; texto y tiempos de los subtítulos
 │   └── cortes.py                     ←   _cortes.log (solo APPEND)
 ├── pruebas/                          ← python -m unittest discover -s pruebas -t pruebas
+├── estudio/                          ← INTERFAZ DE ESCRITORIO (PySide6): Claude Code dentro + pestañas VM/Shorts/Subtítulos
+│                                         (python -m estudio; ver estudio/ESTUDIO.md)
+├── .claude/skills/                   ← los flujos de trabajo como skills (/preparar-vm, /fusionar-cara-pantalla…)
+│                                         = los botones de la interfaz
 │
 ├── crear-shorts/                     ← FASE 1: la IA controla la VM y graba la demo
 │   ├── README.md · ARQUITECTURA.md   ←   índice de esta fase · QUÉ es el sistema + propuesta multiagente

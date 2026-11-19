@@ -54,11 +54,12 @@ class Documentacion(unittest.TestCase):
         muertas = []
         mds = [m for m in glob.glob(os.path.join(REPO, "**", "*.md"), recursive=True)
                if "historial" not in m and ".git" not in m]
+        mds += glob.glob(os.path.join(REPO, ".claude", "skills", "*", "SKILL.md"))      # las skills también
         for md in mds:
             for tok in re.findall(r"`([^`\n]+)`", leer(md)):
                 for palabra in tok.split():
                     p = palabra.strip("\"'(),;:")
-                    if not re.match(r"^(editor|crear-shorts|nucleo|pruebas)/", p):
+                    if not re.match(r"^(editor|crear-shorts|nucleo|pruebas|estudio)/", p):
                         continue
                     if any(c in p for c in "<>*{}$") or p.startswith(LOCALES) or "..." in p or "…" in p:
                         continue

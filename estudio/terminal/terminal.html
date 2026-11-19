@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>terminal</title>
+<!-- xterm.js: el mismo emulador que el terminal de VS Code (versiones fijadas) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css">
+<script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-unicode11@0.8.0/lib/addon-unicode11.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@xterm/addon-web-links@0.11.0/lib/addon-web-links.js"></script>
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script><!-- widget.py lo sustituye por el script en línea -->
+<style>
+  html, body { margin: 0; height: 100%; background: #1e1e1e; overflow: hidden; }
+  #t { position: absolute; inset: 6px; }
+  #aviso { color: #ccc; font: 14px sans-serif; padding: 16px; }
+</style>
+</head>
+<body>
+<div id="t"></div>
+<script>
+if (typeof Terminal === "undefined") {
+  document.body.innerHTML = '<div id="aviso">No se pudo cargar xterm.js (¿sin conexión a internet?). ' +
+    'Claude Code también la necesita.</div>';
+} else {
+  const term = new Terminal({
+    fontFamily: '"Cascadia Mono", "Cascadia Code", Consolas, "DejaVu Sans Mono", monospace',
+    fontSize: 14, cursorBlink: true, allowProposedApi: true, scrollback: 20000,
+    theme: { background: "#1e1e1e", foreground: "#d4d4d4" },
+  });
+  const fit = new FitAddon.FitAddon();
+  term.loadAddon(fit);
+  term.loadAddon(new Unicode11Addon.Unicode11Addon());
+  term.unicode.activeVersion = "11";          // anchos correctos de los símbolos y emojis de Claude Code
+  term.loadAddon(new WebLinksAddon.WebLinksAddon((e, url) => puente && puente.abrir(url)));
+  term.open(document.getElementById("t"));
+  let puente = null;
+
+  // Ctrl+C con texto seleccionado = copiar (como Windows Terminal); sin selección va al programa (interrumpir)
+  term.attachCustomKeyEventHandler(ev => {
+    if (ev.type === "keydown" && ev.ctrlKey && !ev.altKey && ev.key.toLowerCase() === "c" && term.hasSelection()) {
+      puente && puente.copiar(term.getSelection());
+      term.clearSelection();
+      return false;
+    }
+    if (ev.type === "keydown" && ev.ctrlKey && ev.key.toLowerCase() === "v") {
+      puente && puente.pegar();            // Qt lee el portapapeles y lo escribe en el programa
+      return false;
+    }
+    return true;
+  });
+
+  new QWebChannel(qt.webChannelTransport, canal => {
+    puente = canal.objects.puente;
+    puente.datos.connect(d => term.write(d));
+    puente.foco.connect(() => term.focus());
+    term.onData(d => puente.entrada(d));
+    term.onBinary(d => puente.entrada(d));
+    term.onResize(s => puente.tam(s.cols, s.rows));
+    fit.fit();
+    puente.listo(term.cols, term.rows);
+    term.focus();
+  });
+  new ResizeObserver(() => { try { fit.fit(); } catch (e) {} }).observe(document.getElementById("t"));
+}
+</script>
+</body>
+</html>

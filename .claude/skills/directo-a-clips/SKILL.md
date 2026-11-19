@@ -1,0 +1,20 @@
+---
+name: directo-a-clips
+description: Convierte un directo (Twitch/YouTube) o una grabación sin registro de pasos en clips 16:9 para YouTube. Úsala cuando el usuario pase un directo completo o un enlace a uno.
+argument-hint: "<directoN-completo.mp4 | URL>"
+---
+
+# Directo -> clips 16:9
+
+Fuente: $ARGUMENTS. Sigue **`editor/directos/CLAUDE.md`** (metodología completa; es la fuente de verdad).
+
+Por defecto, al recibir un directo nuevo y sin pedir permiso para estos dos pasos:
+
+1. Si es una URL, descárgala a `editor/crudo/` en la máxima calidad (sección 0).
+2. Transcríbelo entero (`python editor/comun/transcribir.py`, o whisper-cli con `-mc 0` y VAD).
+3. Analiza y muestra la **tabla de fragmentos interesantes** (cronológica, con estrella en los mejores) y **espera** a
+   que el usuario elija. No cortes nada todavía.
+
+Cuando elija: afina cada corte (`editor/comun/energia.py`, `editor/comun/detectar_silencio.sh`), construye con
+`editor/directos/construir_clip.sh`, verifica cada empalme (`editor/comun/verificar_corte.sh`) y añade la entrada
+APPEND a `editor/videos-editados/_cortes.log`.

@@ -39,3 +39,7 @@ _cortes.log
 *.swp
 __pycache__/
 *.pyc
+
+# Claude Code: solo se versionan las skills del proyecto
+.claude/*.lock
+.claude/settings.local.json
