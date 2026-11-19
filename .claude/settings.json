@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python editor/comun/material.py)",
+      "Bash(python editor/comun/material.py *)",
+      "Bash(python editor/comun/transcribir.py *)",
+      "Bash(python editor/comun/energia.py *)",
+      "Bash(bash editor/comun/verificar_corte.sh *)",
+      "Bash(bash editor/comun/detectar_silencio.sh *)",
+      "Bash(python editor/shorts/analizar_fusion.py *)",
+      "Bash(python editor/shorts/fusionar_cara_pantalla.py *)",
+      "Bash(python editor/shorts/construir_short.py *)",
+      "Bash(python editor/shorts/short_desde_toma.py *)",
+      "Bash(python editor/shorts/subtitular.py *)",
+      "Bash(python editor/shorts/verificar_short.py *)",
+      "Bash(bash editor/directos/construir_clip.sh *)",
+      "Bash(python crear-shorts/herramientas/vm_control.py *)",
+      "Bash(python -m unittest discover -s pruebas -t pruebas)",
+      "Bash(ffprobe *)",
+      "Bash(ffmpeg *)",
+      "Edit(/editor/crudo/**)",
+      "Edit(/editor/videos-editados/**)"
+    ],
+    "ask": [
+      "Edit(/editor/videos-editados/_cortes.log)"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {"hooks": [{"type": "command", "command": "python \"${CLAUDE_PROJECT_DIR}/estudio/hooks/estado_claude.py\" trabajando 2>/dev/null || python3 \"${CLAUDE_PROJECT_DIR}/estudio/hooks/estado_claude.py\" trabajando 2>/dev/null || true"}]}
+    ],
+    "PostToolUse": [
+      {"hooks": [{"type": "command", "command": "python \"${CLAUDE_PROJECT_DIR}/estudio/hooks/estado_claude.py\" trabajando 2>/dev/null || python3 \"${CLAUDE_PROJECT_DIR}/estudio/hooks/estado_claude.py\" trabajando 2>/dev/null || true"}]}
+    ],
+    "Notification": [
+      {"matcher": "permission_prompt",
+       "hooks": [{"type": "command", "command": "python \"${CLAUDE_PROJECT_DIR}/estudio/hooks/estado_claude.py\" necesita 2>/dev/null || python3 \"${CLAUDE_PROJECT_DIR}/estudio/hooks/estado_claude.py\" necesita 2>/dev/null || true"}]}
+    ],
+    "Stop": [
+      {"hooks": [{"type": "command", "command": "python \"${CLAUDE_PROJECT_DIR}/estudio/hooks/estado_claude.py\" libre 2>/dev/null || python3 \"${CLAUDE_PROJECT_DIR}/estudio/hooks/estado_claude.py\" libre 2>/dev/null || true"}]}
+    ]
+  }
+}

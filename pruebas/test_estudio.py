@@ -1,5 +1,6 @@
 """cutly estudio (estudio/): flujos = skills, lógica de la sección Subtítulos, el pseudo-terminal y los paneles sin
 mostrarlos (plataforma Qt "offscreen"). No abre ninguna sesión de Claude Code."""
+import json
 import os
 import sys
 import tempfile
@@ -8,6 +9,7 @@ import unittest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import util  # noqa: F401,E402  (rutas)
+from util import REPO  # noqa: E402
 
 try:
     from PySide6.QtCore import QCoreApplication, QTimer
@@ -190,3 +192,42 @@ class Vigia(unittest.TestCase):
                 v.deleteLater()
         self.assertIn(("subtitulos", "s.subtitulos.json"), vistos)
         self.assertIn(("resultado", "short_X_editado.mp4"), vistos)
+
+
+class EstadoDeClaude(unittest.TestCase):
+    """Hooks del proyecto (.claude/settings.json) -> estudio/hooks/estado_claude.py -> la app sabe en qué está Claude."""
+    HOOK = os.path.join(REPO, "estudio", "hooks", "estado_claude.py")
+
+    def _hook(self, estado, entrada, env_extra):
+        import subprocess
+        env = {k: v for k, v in os.environ.items() if k != "CUTLY_ESTADO_FICHERO"}
+        env.update(env_extra)
+        return subprocess.run([sys.executable, self.HOOK, estado], input=json.dumps(entrada), capture_output=True,
+                              text=True, env=env, timeout=30)
+
+    def test_escribe_el_estado_sin_imprimir_nada(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = os.path.join(d, "estado.json")
+            r = self._hook("necesita", {"hook_event_name": "Notification", "message": "permiso para Bash"},
+                           {"CUTLY_ESTADO_FICHERO": f})
+            self.assertEqual((r.returncode, r.stdout), (0, ""))     # lo impreso iría al contexto de Claude
+            e = archivos.leer_json(f)
+            self.assertEqual((e["estado"], e["mensaje"]), ("necesita", "permiso para Bash"))
+
+    def test_fuera_de_la_app_no_hace_nada(self):
+        r = self._hook("libre", {}, {})
+        self.assertEqual((r.returncode, r.stdout), (0, ""))
+
+    def test_settings_del_proyecto(self):
+        """Hooks que apuntan a un script que existe; permisos solo para herramientas del repo que existen."""
+        s = archivos.leer_json(os.path.join(REPO, ".claude", "settings.json"))
+        for evento in ("UserPromptSubmit", "PostToolUse", "Notification", "Stop"):
+            orden = s["hooks"][evento][0]["hooks"][0]["command"]
+            self.assertIn("estudio/hooks/estado_claude.py", orden)
+            self.assertTrue(orden.rstrip().endswith("|| true"), "un hook nunca debe fallar")
+        for regla in s["permissions"]["allow"]:
+            for trozo in regla[5:-1].split():                     # Bash(python editor/x.py *) -> editor/x.py
+                if trozo.endswith((".py", ".sh")):
+                    self.assertTrue(os.path.exists(os.path.join(REPO, trozo)), regla)
+            self.assertNotIn(regla, ("Bash(python *)", "Bash(bash *)", "Bash(*)"), "demasiado amplia")
+        self.assertIn("Edit(/editor/videos-editados/_cortes.log)", s["permissions"]["ask"])   # nunca recrearlo

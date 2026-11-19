@@ -50,6 +50,28 @@ mismo disco; si no, copia en segundo plano; soltar dos veces lo mismo no lo dupl
 toca se marca con ● en la barra lateral, la barra de estado ofrece "Ir a…" y la sección ya lo tiene abierto (los
 subtítulos para revisar, la propuesta de fragmentos, el vídeo terminado; un vídeo se anuncia cuando deja de crecer).
 
+## La app sabe en qué está Claude
+
+Los hooks del proyecto (`.claude/settings.json` → `estudio/hooks/estado_claude.py`) escriben en un fichero temporal
+en qué está **esta** sesión (la app le pasa la ruta en `CUTLY_ESTADO_FICHERO`; en tu terminal de siempre no hacen
+nada, y nunca imprimen ni bloquean). La app lo enseña en la barra de estado y en el título del panel:
+
+| Estado | De dónde sale | Qué hace la app |
+|---|---|---|
+| Claude arrancando… | sesión nueva | lo que pidas espera a que pueda recibirlo |
+| Claude trabajando… | al enviarle algo (y `UserPromptSubmit`, `PostToolUse`) | lo que pidas desde una sección **espera en cola** ("N petición(es) en espera · enviar ya") y se envía sola al terminar |
+| ⚠ Claude espera tu respuesta | `Notification` de permiso | muestra el panel de Claude y hace parpadear la ventana en la barra de tareas |
+| Claude listo | `Stop`, o su terminal quieto 8 s (si lo interrumpes con Esc no hay aviso) | envía lo siguiente de la cola |
+
+Cerrar la app o cambiar de sesión mientras trabaja pide confirmación, y detiene también lo que Claude haya lanzado
+(una transcripción no se queda corriendo sola). Si abres la app desde otra sesión de Claude Code, la suya no hereda
+sus variables (no se creería una sesión hija).
+
+**Permisos**: el mismo `settings.json` permite sin preguntar solo las herramientas del repo que usan los flujos,
+ffmpeg/ffprobe y editar dentro de `editor/crudo/` y `editor/videos-editados/` (`_cortes.log` siempre pregunta, para
+que nunca se recree). Todo lo demás sigue preguntando como siempre. Solo se aplica en carpetas que Claude Code ya
+considere de confianza.
+
 ## Accesibilidad
 
 - **Teclado en todo**: Ctrl+1…7 cambia de sección; F12 muestra/oculta Claude; Ctrl+` le da el foco; F1 lista todos los
@@ -88,6 +110,7 @@ estudio/
 ├── ventana.py         barra lateral + sección + panel de Claude, menús, avisos, preferencias
 ├── apariencia.py      temas (colores con contraste comprobado), hoja de estilo única, escala de letra
 ├── servicios.py       el vigía central (material, carpetas, novedades)
+├── hooks/             estado_claude.py: lo que los hooks de Claude Code cuentan a la app
 ├── flujos.py          las skills como flujos
 ├── entorno.py         rutas del repo, tareas en segundo plano, CLIs con salida en directo
 ├── miniaturas.py      fotogramas de muestra en caché
@@ -114,5 +137,8 @@ nuevo de material va en `ROLES` de `nucleo/material.py`. Nada de colores sueltos
 | El botón principal del tema oscuro (blanco sobre azul claro) daba 3,7:1 | acento más oscuro: 5,2:1 (la prueba de contraste lo vigila) |
 | Las columnas de las tablas se cortaban al subir la letra | columnas que se ajustan solas al contenido |
 | Un vídeo aparece en disco en cuanto se empieza a escribir | el vigía lo anuncia cuando deja de crecer |
+| Lo que se escribía mientras Claude arrancaba se perdía; entre enviar y el hook "trabajando" pasa un instante | estado "arrancando" y "trabajando" marcado al enviar: todo va a la cola |
+| Al cerrar la app, la transcripción que Claude había lanzado siguió viva y escribió sus ficheros | cerrar termina el árbol de procesos (taskkill /T en Windows, el grupo del pty en el resto) |
+| Abierta desde otra sesión de Claude Code, la de la app heredaba sus variables ("Transcript saving is off") | el terminal no las pasa |
 
 Las pruebas de la app (`pruebas/test_estudio.py`, `pruebas/test_material.py`) no abren ninguna sesión de Claude Code.

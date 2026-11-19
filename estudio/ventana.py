@@ -12,8 +12,9 @@ reparte el material y avisa de lo nuevo que deja Claude: la sección se marca co
 Todo lo que una sección le pide a Claude (`pedir`) se escribe en la sesión. Preferencias en QSettings.
 """
 import os
+import time
 
-from PySide6.QtCore import QSettings, Qt, QUrl
+from PySide6.QtCore import QSettings, Qt, QTimer, QUrl
 from PySide6.QtGui import QAction, QActionGroup, QDesktopServices, QKeySequence
 from PySide6.QtWidgets import (QApplication, QDockWidget, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
                                QMainWindow, QMessageBox, QPushButton, QStackedWidget, QWidget)
@@ -100,6 +101,14 @@ class Ventana(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock)
 
         # ---- barra de estado
+        self.l_claude = QLabel()                           # en qué está Claude (lo cuentan sus hooks)
+        self.l_claude.setAccessibleName("Estado de Claude")
+        self.b_cola = QPushButton()                        # peticiones guardadas mientras Claude trabaja
+        self.b_cola.setVisible(False)
+        self.b_cola.setToolTip("Claude está trabajando: lo que pides espera a que termine. Pulsa para enviarlo ya.")
+        self.b_cola.clicked.connect(self._vaciar_cola)
+        self.statusBar().addPermanentWidget(self.b_cola)
+        self.statusBar().addPermanentWidget(self.l_claude)
         self.l_sesion, self.l_material, self.l_vm = QLabel(), QLabel(), QLabel()
         for l in (self.l_sesion, self.l_material, self.l_vm):
             self.statusBar().addPermanentWidget(l)
@@ -117,6 +126,11 @@ class Ventana(QMainWindow):
         self.vigia.novedad.connect(self._novedad)
         self.material.actualizar.connect(self.vigia.sincronizar)
         self.resultados.revisar.connect(self._revisar_subtitulos)
+
+        self.estado_claude = ""
+        self.cola = []
+        self._t_quieto = QTimer(self, interval=2000, timeout=self._comprobar_quieto)
+        self._t_quieto.start()
 
         self._menus()
         self.nueva_sesion(comando)
@@ -156,6 +170,9 @@ class Ventana(QMainWindow):
             self.l_sesion.setText("sin Claude Code   ")
             return
         self.terminal.terminado.connect(self._sesion_terminada)
+        self.terminal.estado.connect(self._estado_claude)
+        self.cola.clear()
+        self._estado_claude("arrancando", "")
         self.terminal.ajustar(*self._estilo_terminal())
         self.dock.setWidget(self.terminal)
         self.l_sesion.setText(f"sesión: {' '.join(comando)}   ")
@@ -167,13 +184,72 @@ class Ventana(QMainWindow):
             self.lector
 
     def pedir(self, texto):
-        """Lo que una sección le pide a Claude. Si acaba en espacio, se deja escrito para que lo completes tú."""
+        """Lo que una sección le pide a Claude. Si acaba en espacio, se deja escrito para que lo completes tú.
+        Si Claude está trabajando o esperando tu respuesta, espera en cola: no se mezcla con lo que hace."""
+        if self.estado_claude in ("arrancando", "trabajando", "necesita") and self.terminal is not None:
+            self.cola.append(texto)
+            self._pintar_cola()
+            self.statusBar().showMessage("Claude está ocupado: se lo pido en cuanto termine.", 6000)
+            return
         self.enviar(texto, intro=not texto.endswith(" "))
+
+    def _pintar_cola(self):
+        n = len(self.cola)
+        self.b_cola.setVisible(bool(n))
+        self.b_cola.setText(f"{n} petición(es) en espera · enviar ya")
+        self.b_cola.setAccessibleName(f"{n} peticiones esperando a que Claude termine. Enviar ya")
+
+    def _vaciar_cola(self):
+        if self.cola:
+            texto = self.cola.pop(0)
+            self.enviar(texto, intro=not texto.endswith(" "))
+        self._pintar_cola()
+
+    # ---- en qué está Claude (hooks del proyecto -> estudio/hooks/estado_claude.py)
+    def _estado_claude(self, estado, mensaje):
+        self.estado_claude = estado
+        textos = {"arrancando": ("Claude arrancando…", "ayuda"),
+                  "trabajando": ("Claude trabajando…", "aviso"),
+                  "necesita": ("⚠ Claude espera tu respuesta", "error"),
+                  "libre": ("Claude listo", "ok")}
+        texto, clase = textos.get(estado, ("", "ayuda"))
+        self.l_claude.setText(texto + "   " if texto else "")
+        self.l_claude.setObjectName(clase)
+        apariencia.repintar(self.l_claude)
+        self.dock.setWindowTitle("Claude Code" + {"trabajando": " — trabajando…",
+                                                  "necesita": " — espera tu respuesta"}.get(estado, ""))
+        if estado == "necesita":
+            # que no pase desapercibido aunque estés en otra sección o en otra ventana
+            self.dock.show()
+            self.dock.raise_()
+            QApplication.alert(self)
+            self.statusBar().showMessage(f"Claude: {mensaje or 'necesita tu respuesta'}", 15000)
+        elif estado == "libre" and self.cola:
+            self._vaciar_cola()
+
+    def _comprobar_quieto(self):
+        """Lo que los hooks no cuentan: cuándo Claude ya puede recibir (arranque terminado) y que ha parado si lo
+        interrumpes con Esc. Mientras trabaja, su indicador escribe sin parar; si el terminal lleva rato quieto, está libre."""
+        if self.terminal is None:
+            return
+        quieto = time.monotonic() - self.terminal.ultima_salida
+        if (self.estado_claude == "arrancando" and quieto > 2.5) or (self.estado_claude == "trabajando" and quieto > 8):
+            self._estado_claude("libre", "")
+
+    def _confirmar_parar(self, que):
+        """Cerrar o cambiar de sesión detiene lo que Claude esté haciendo (y lo que haya lanzado)."""
+        if self.estado_claude not in ("trabajando", "necesita"):
+            return True
+        r = QMessageBox.question(self, "Claude está trabajando",
+                                 f"Claude está trabajando. Si {que}, se detiene lo que está haciendo. ¿Seguir?")
+        return r == QMessageBox.StandardButton.Yes
 
     def enviar(self, texto, intro=True):
         if self.terminal is None or not self.terminal.enviar(texto, intro):
             self.statusBar().showMessage("La sesión de Claude Code no está activa: Sesión → Nueva sesión.", 8000)
             return
+        if intro:                       # no esperar al hook: lo siguiente que pidas ya debe ir a la cola
+            self._estado_claude("trabajando", "")
         self.dock.show()
         self.dock.raise_()
         self.terminal.setFocus()
@@ -248,10 +324,12 @@ class Ventana(QMainWindow):
     def _menus(self):
         barra = self.menuBar()
         m = barra.addMenu("&Sesión")
-        self._accion(m, "&Nueva sesión de Claude Code", "Ctrl+Shift+N", lambda: self.nueva_sesion(["claude"]),
+        self._accion(m, "&Nueva sesión de Claude Code", "Ctrl+Shift+N",
+                     lambda: self._confirmar_parar("empiezas otra sesión") and self.nueva_sesion(["claude"]),
                      "Abre una sesión nueva en el repo")
         self._accion(m, "&Continuar la última conversación", "Ctrl+Shift+R",
-                     lambda: self.nueva_sesion(["claude", "--continue"]), "claude --continue")
+                     lambda: self._confirmar_parar("cambias de sesión") and self.nueva_sesion(["claude", "--continue"]),
+                     "claude --continue")
         m.addSeparator()
         self._accion(m, "&Salir", QKeySequence.StandardKey.Quit, self.close)
 
@@ -336,6 +414,9 @@ class Ventana(QMainWindow):
         self.nav.setCurrentRow(int(self.ajustes.value("seccion", 0)))
 
     def closeEvent(self, ev):
+        if not self._confirmar_parar("cierras cutly estudio"):
+            ev.ignore()
+            return
         self.ajustes.setValue("geometria", self.saveGeometry())
         self.ajustes.setValue("estado", self.saveState())
         self.ajustes.setValue("seccion", self.nav.currentRow())

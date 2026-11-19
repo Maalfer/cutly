@@ -6,13 +6,14 @@ Es la misma interfaz y la misma sesión que en cualquier terminal: comandos, per
     t = TerminalClaude(["claude"], cwd=REPO)        # o ["claude", "--continue"] para retomar la última sesión
     t.enviar("/subtitular-short")                    # escribe y pulsa Enter en la sesión
 """
+import json
 import os
-
-from PySide6.QtCore import QEvent, QObject, QTimer, QUrl, Signal, Slot
-from PySide6.QtGui import QDesktopServices, QGuiApplication
 import sys
+import tempfile
+import time
 
-from PySide6.QtCore import QFile, QIODevice
+from PySide6.QtCore import QEvent, QFile, QIODevice, QObject, QTimer, QUrl, Signal, Slot
+from PySide6.QtGui import QDesktopServices, QGuiApplication
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineSettings
 from PySide6.QtWebEngineWidgets import QWebEngineView
@@ -110,13 +111,31 @@ class _Pagina(QWebEnginePage):
         return not (self.cargada and principal)
 
 
+# si la app se abrió desde dentro de otra sesión de Claude Code, esa sesión deja estas variables: el Claude de la app
+# se creería una sesión hija (p. ej. no guardaría su conversación)
+HEREDADAS = {"CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SSE_PORT", "CLAUDE_CODE_SESSION_ID", "CLAUDE_PID",
+             "CLAUDE_EFFORT", "CLAUDE_CODE_SESSION_ATTENDED", "CLAUDE_CODE_EXECPATH", "CLAUDE_CODE_BRIDGE_SESSION_ID",
+             "CLAUDE_CODE_MESSAGING_SOCKET", "CLAUDE_CODE_MESSAGING_TOKEN"}     # las de configuración (p. ej. modelo) se quedan
+
+
 class TerminalClaude(QWebEngineView):
     terminado = Signal(int)
+    estado = Signal(str, str)      # (trabajando | necesita | libre, mensaje): lo que dicen los hooks de Claude Code
 
     def __init__(self, argv, cwd=None, parent=None):
         super().__init__(parent)
         self.setPage(_Pagina(self))
-        self.proceso = ProcesoPty(argv, cwd=cwd, parent=self)
+        # los hooks del proyecto (.claude/settings.json -> estudio/hooks/estado_claude.py) escriben aquí en qué está
+        # ESTA sesión; heredan la variable del entorno de `claude`, así que otras sesiones no la tocan
+        self.fichero_estado = os.path.join(tempfile.gettempdir(), f"cutly_estado_{os.getpid()}_{id(self)}.json")
+        env = {k: v for k, v in os.environ.items() if k not in HEREDADAS and not k.startswith("CLAUDE_CODE_CHILD")}
+        env["CUTLY_ESTADO_FICHERO"] = self.fichero_estado
+        self.proceso = ProcesoPty(argv, cwd=cwd, env=env, parent=self)
+        self.ultima_salida = time.monotonic()      # mientras Claude trabaja su indicador escribe sin parar
+        self.proceso.salida.connect(lambda _d: setattr(self, "ultima_salida", time.monotonic()))
+        self._visto = 0.0
+        self._t_estado = QTimer(self, interval=500, timeout=self._leer_estado)
+        self._t_estado.start()
         self.proceso.terminado.connect(self.terminado)
         self.puente = Puente(self.proceso, self)
         canal = QWebChannel(self.page())
@@ -168,5 +187,25 @@ class TerminalClaude(QWebEngineView):
         self.puente.foco.emit()
         return True
 
+    def _leer_estado(self):
+        try:
+            mt = os.path.getmtime(self.fichero_estado)
+        except OSError:
+            return
+        if mt == self._visto:
+            return
+        self._visto = mt
+        try:
+            with open(self.fichero_estado, encoding="utf-8") as f:
+                e = json.load(f)
+        except (OSError, ValueError):
+            return
+        self.estado.emit(e.get("estado", ""), e.get("mensaje", ""))
+
     def cerrar(self):
+        self._t_estado.stop()
         self.proceso.cerrar()
+        try:
+            os.remove(self.fichero_estado)
+        except OSError:
+            pass

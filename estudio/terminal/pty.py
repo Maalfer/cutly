@@ -6,6 +6,7 @@ macOS/Linux (ptyprocess). Para el programa es un terminal de verdad, así que mu
 La salida se lee en un hilo y se entrega por la señal `salida` (Qt la pasa al hilo de la interfaz).
 """
 import os
+import signal
 import shutil
 import subprocess
 import sys
@@ -89,7 +90,19 @@ class ProcesoPty(QObject):
         return self._p is not None and self._p.isalive()
 
     def cerrar(self):
+        """Termina el programa Y lo que haya lanzado (p. ej. una transcripción que Claude dejó corriendo): si no,
+        seguiría vivo y escribiendo resultados después de cerrar la sesión."""
         if self.vivo():
+            pid = getattr(self._p, "pid", None)
+            if pid:
+                try:
+                    if sys.platform == "win32":
+                        subprocess.run(["taskkill", "/T", "/F", "/PID", str(pid)], capture_output=True, timeout=10,
+                                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                    else:
+                        os.killpg(os.getpgid(pid), signal.SIGTERM)    # el pty es su propia sesión/grupo
+                except Exception:
+                    pass
             try:
                 self._p.terminate(force=True)
             except Exception:

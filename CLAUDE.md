@@ -20,6 +20,10 @@ Tú actúas y te mueves; el usuario solo graba. Entrada humana siempre (tecleo y
 - El usuario puede estar usándote dentro de **cutly estudio** (`estudio/ESTUDIO.md`): misma sesión, con una sección
   por cosa que hacer al lado. Cuando una skill pida su revisión (p. ej. los subtítulos), la hace en la sección que
   toca (se le abre sola cuando escribes el fichero) y te escribe en la sesión cuando termina.
+- `.claude/settings.json` (proyecto): permite sin preguntar SOLO las herramientas del repo de los flujos (más
+  ffmpeg/ffprobe y editar en `editor/crudo/` y `editor/videos-editados/`; `_cortes.log` siempre pregunta) y sus hooks
+  le cuentan a cutly estudio si estás trabajando, esperando permiso o libre (`estudio/hooks/estado_claude.py`; fuera
+  de la app no hacen nada). Si añades una herramienta a un flujo, añade su regla allí (lo comprueba una prueba).
 - **El material ya no se coloca en carpetas:** el usuario ARRASTRA cada vídeo a su sitio en la interfaz (la ranura
   "Cara", "Pantalla", "Short a subtitular", "Directo"...). Vive en `editor/crudo/` y el papel de cada archivo está en
   `editor/crudo/material.json`. Para saber qué hay: `python editor/comun/material.py` (y `... ruta <papel>`). No

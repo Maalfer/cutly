@@ -18,7 +18,10 @@
    marca como FALLA; sin él no hay `waitfor` ni `clicktext`. Lo demás de la integración con VirtualBox está medido
    en vivo (2026-11-19, doc 08 §1): canales ssh y guestcontrol, login, grabación a la resolución real, maximizar.
 3. **cutly estudio** (`estudio/ESTUDIO.md`): siguiente sección, el plan de fusión como línea de tiempo (voz, cara,
-   pantalla con miniaturas) editable; y xterm.js empaquetado en el repo para no depender de jsDelivr.
+   pantalla con miniaturas) editable; xterm.js empaquetado en el repo para no depender de jsDelivr; progreso de las
+   tareas largas (transcribir, render) en su sección. **Probar con Claude real el aviso "espera tu respuesta"** (hook
+   Notification `permission_prompt`) en una sesión que NO esté en auto mode: el resto del estado de Claude y la cola
+   de peticiones están medidos en vivo (2026-11-19).
 4. `suspend`/`resume`: medir tiempos y si las apps quedan bien al reanudar.
 5. Fichas de más apps de Kali (Wireshark, Metasploit, sqlmap…) en `METODOLOGIA/09-conducir-apps-kali.md`
    tras su primera sesión de reconocimiento con cada una.
