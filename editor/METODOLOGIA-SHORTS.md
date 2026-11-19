@@ -1,5 +1,12 @@
 # Metodología de SHORTS verticales (9:16) con hueco para la cara
 
+> **¿La toma viene de `crear-shorts/` (un agente controló la VM)?** Entonces NO sigas este documento:
+> usa `editor/scripts/short_desde_toma.py <toma> --titulo ...`, que ya aplica todas estas reglas
+> (banda fija, letterbox sin recortar, verificación de píxeles) de forma automática a partir del
+> registro `.steps.jsonl`. Este documento manual es para un vídeo que **no** tiene ese registro (un
+> directo real, una grabación suelta). Ver el árbol de decisión en `editor/CLAUDE.md` y la arquitectura
+> en `crear-shorts/ARQUITECTURA.md`.
+>
 > Complemento de `CLAUDE.md`. Aquel documento cubre el corte de un directo en **clips 16:9**.
 > Este cubre convertir una grabación (de pantalla, normalmente **muda** — la voz se pone
 > después) en un **Short vertical 1080×1920** con un **hueco negro arriba** donde el usuario

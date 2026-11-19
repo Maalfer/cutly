@@ -1,5 +1,13 @@
 # Editor de directos → clips para YouTube
 
+> **Antes de nada — ¿de dónde viene el vídeo? Dos caminos distintos:**
+> - **Viene de `crear-shorts/` (un agente controló la VM y generó `editor/crudo/<toma>.steps.jsonl`):**
+>   el Short se construye SOLO con `editor/scripts/short_desde_toma.py <toma> --titulo ...` — no sigas
+>   leyendo este documento para eso, ni montes nada a mano. Ver `crear-shorts/ARQUITECTURA.md` §1.
+> - **Es un directo/grabación SIN registro de pasos** (un stream real, un vídeo que no generó un agente):
+>   ese es el caso que cubre ESTE documento (clips 16:9) y `METODOLOGIA-SHORTS.md` (Shorts 9:16), a mano,
+>   con `scripts/construir_short.py`.
+>
 > **Contexto del repo:** este documento vive en `cutly/editor/` y cubre el corte de un
 > directo/grabación en **clips 16:9**. Para la visión global del proyecto lee `../README.md`.
 > Para **Shorts verticales 9:16** (1080×1920 con hueco arriba para la cara, recorte, paneo de

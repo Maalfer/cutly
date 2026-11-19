@@ -67,4 +67,18 @@ Varias terminales a la vez (p. ej. atacante + listener): dos ventanas comparten 
 defecto ("usuario@host: ~") — `vm_control.py launch_terminal("Título")` las abre y las distingue por **ID**
 de ventana (estable), no por título (frágil). `fontSize` por defecto (18pt) sale pequeño en un Short: súbelo
 a 24 en `~/.config/qterminal.org/qterminal.ini` (una vez por VM) — ver tabla de arriba.
-### (añadir aquí: nmap, Wireshark, Metasploit, sqlmap… cada una con su ficha tras su primera sesión de reconocimiento)
+### nmap
+Es solo un comando de terminal: no necesita conducción especial, pero sí verificación de que terminó de
+verdad, no que "parece que terminó": `waitfor("Nmap done", 25)` (el texto final de cualquier escaneo) +
+`waitfor("ssh", 5)` (o el servicio que toque) para confirmar que el resultado tiene lo que buscas, no solo
+que el proceso acabó. `-p-` (todos los puertos) con `--min-rate 2000` tarda ~5 s contra un solo host
+Docker: no hace falta recortar el escaneo para que la toma vaya rápida.
+### Docker (despliegue de laboratorios)
+Ver §3 de la tabla de arriba (`docker rm -f` no mata el script de despliegue). Para desplegar una imagen
+`.tar` de un laboratorio: `docker load -i archivo.tar` + `docker run -d --name X imagen` + `docker inspect
+-f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' X` para la IP — los tres EN PRIMER PLANO y
+SÍNCRONOS, nunca el script `auto_deploy.sh` del propio laboratorio en segundo plano (ver tabla, fila de
+`nohup`/`setsid`). La IP del bridge de Docker (`172.17.0.0/16` típico) es la misma red donde vive el
+propio Kali (`docker0`, normalmente `172.17.0.1`): úsala para que el objetivo pueda conectar DE VUELTA al
+Kali (p. ej. una reverse shell), sin tocar nada de red del anfitrión Windows/macOS.
+### (añadir aquí: Wireshark, Metasploit, sqlmap… cada una con su ficha tras su primera sesión de reconocimiento)

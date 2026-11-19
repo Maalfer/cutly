@@ -1,11 +1,15 @@
 # 🎬 CREAR-SHORTS — Demos controladas por IA dentro de una VM
 
-> **Propósito:** que un agente de IA ejecute demos de ciberseguridad **dentro de una VM de VirtualBox**
-> mientras el usuario graba (o mientras la propia VM graba con ffmpeg). **Nunca en el ordenador anfitrión.**
-> Funciona con anfitrión **Windows, macOS o Linux** (ver `../PORTABILIDAD.md`).
+> **Propósito:** que un agente de IA ejecute demos de ciberseguridad **dentro de una VM de VirtualBox**,
+> que VirtualBox graba en el anfitrión (`rec start`, sin OBS, sin que el usuario toque nada). **Nunca en
+> el ordenador anfitrión.** Funciona con anfitrión **Windows, macOS o Linux** (ver `../PORTABILIDAD.md`).
+> Arquitectura completa: [`ARQUITECTURA.md`](ARQUITECTURA.md).
 
 **Empieza por [`METODOLOGIA/00-empezar-aqui-vm.md`](METODOLOGIA/00-empezar-aqui-vm.md)** (montaje único, protocolo
-de toma, verificación, referencia). Estado real y pendientes: [`../PENDIENTE.md`](../PENDIENTE.md).
+de toma, verificación, referencia). Qué es el sistema y cómo encajan sus piezas: [`ARQUITECTURA.md`](ARQUITECTURA.md)
+(incluye la propuesta de pipeline con agentes especializados + verificación independiente). Estado real y
+pendientes (corto): [`../PENDIENTE.md`](../PENDIENTE.md) — historial detallado sesión a sesión:
+[`historial/HISTORIAL-SESIONES.md`](historial/HISTORIAL-SESIONES.md).
 
 ## 🤖 Qué puede hacer la IA
 Todo con **entrada humana** (ritmo de tecleo variable con errores corregidos, ratón con trayecto curvo):
@@ -35,3 +39,16 @@ Todo con **entrada humana** (ritmo de tecleo variable con errores corregidos, ra
 
 > Los docs 05-07 nacieron controlando el anfitrión macOS: los **comandos** de esos ejemplos ya no se usan (su
 > equivalente es `vm_control.py`), pero los **principios y fallos** siguen vigentes.
+
+## 🎞️ Catálogo de demos
+
+Añade una fila aquí cada vez que una demo nueva quede cerrada (la plantilla de código a copiar es siempre
+la última de tipo "terminal" o "GUI" más reciente, por ser la más depurada).
+
+| Demo | Tipo | Tema | Short generado | Estado |
+|---|---|---|---|---|
+| `DEMO-IDOR/` | GUI (navegador + Burp) | IDOR (Insecure Direct Object Reference) | sí | referencia |
+| `DEMO-SSHOLE/` | Terminal | CVE ficticio "sshole": bypass SSH por contraseña larga en musl `crypt()` + reverse shell | sí | referencia, dada por buena por el usuario |
+
+Antes de empezar una demo de un tema que te suene parecido a una ya hecha, mira esta tabla — puede que
+solo haga falta adaptar una existente en vez de partir de cero.

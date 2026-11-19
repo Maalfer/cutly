@@ -3,6 +3,8 @@
 > **⚠️ Vigencia:** este documento nació controlando el anfitrión macOS. Los **principios y fallos** siguen
 > vigentes; los **comandos** de los ejemplos (`cliclick`, `osascript`, `type_human`…) fueron sustituidos por
 > `herramientas/vm_control.py` dentro de la VM. Punto de entrada: `00-empezar-aqui-vm.md`.
+> Las referencias sueltas a "doc 01", "doc 02" o "doc 03" son a documentos YA RETIRADOS (control
+> del anfitrión macOS): ignora el número, el principio que acompañan sigue siendo válido.
 
 > Este documento nace de **probar de verdad** la navegación (abrir apps, colocar ventanas, dar foco,
 > clicar, escribir, esperar) en una máquina real y anotar **cada fallo**. Dos usos:

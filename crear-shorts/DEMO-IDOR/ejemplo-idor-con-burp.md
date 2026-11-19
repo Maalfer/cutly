@@ -1,8 +1,9 @@
 # Ejemplo completo — Demo de IDOR en vídeo (navegador + Burp Suite)
 
-> Segundo ejemplo de referencia (el primero es `DEMO-CLICKFIX/`). Muestra cómo el agente conduce
+> Ejemplo de referencia (GUI/navegador; para terminal ver `DEMO-SSHOLE/`). Muestra cómo el agente conduce
 > **varias apps** —navegador y Burp Suite— para explicar en vídeo una vulnerabilidad **IDOR**
-> (Insecure Direct Object Reference), mientras el usuario graba con OBS.
+> (Insecure Direct Object Reference). La grabación la hace VirtualBox en el anfitrión (`vm_control.py rec
+> start`), no OBS — ver `crear-shorts/ARQUITECTURA.md`.
 >
 > Usa los patrones de `METODOLOGIA/05-controlar-aplicaciones.md` (ciclo universal, wait-for,
 > multi-app) y `METODOLOGIA/06-navegador-y-herramientas-gui.md` (navegador + Burp). Todo se ejecuta en la VM con
@@ -132,11 +133,10 @@ Si algún acto falló, **rehacer solo ese acto** (el login y el estado persisten
 
 ## 6. Limpieza (FASE 4)
 
-- Cerrar Burp (`quit`) y las pestañas de Repeater; parar el lab (`pkill`/`docker stop` según cómo
-  se montó); logout en el navegador y cerrar sus pestañas.
-- Restaurar apps ocultas durante la toma (`set visible to true`, doc 03).
-- Borrar datos de prueba generados. Dejar la máquina como estaba (patrón de
-  `DEMO-CLICKFIX/limpieza-restore.md`).
+- Cerrar Burp y las pestañas de Repeater; parar el lab (`pkill -f lab_idor.py`); logout en el navegador.
+- Borrar datos de prueba generados. Dejar la VM como estaba.
+- Patrón real de referencia: el bloque final de `demo_idor.py` (limpieza fuera de la grabación, igual que
+  `demo_sshole.py` hace `docker rm -f` tras `take_end()`).
 
 ---
 

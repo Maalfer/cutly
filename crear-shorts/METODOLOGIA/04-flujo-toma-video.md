@@ -1,6 +1,8 @@
 # 04 — Flujo de toma de video (protocolo completo)
 
 > Protocolo para la VM (`00-empezar-aqui-vm.md`). Las fases, el pacing y la toma única "sin tocar" valen en cualquier SO.
+> Las referencias sueltas a "doc 03" son a un documento YA RETIRADO (control del anfitrión macOS): ignora
+> el número, el gate anti-solape en sí sigue siendo un principio válido (hoy: `vm_control.py windows`).
 
 ## El modelo de trabajo
 
