@@ -1,0 +1,101 @@
+{
+ "_comentario": "PLANTILLA de plan para construir_short.py (Short mudo 1080x1920 desde grabaciones sueltas, sin registro de pasos; metodología: editor/shorts/METODOLOGIA-SHORTS.md). Cópiala a editor/crudo/short_plan.json (local) y rellénala. fuentes: etiqueta -> archivo (relativo al repo). Segmento de vídeo: src,start,end,cx,cy,cw,ch (recorte cw x ch en (cx,cy), escalado a 1080 de ancho; 816x961 llena el marco, más ancho = letterbox); + panx para un paneo de cx a panx. Imagen fija: src,img_dur,cw,ch (tamaño real de la imagen). VALORES DE EJEMPLO de un Short antiguo.",
+ "salida": "editor/videos-editados/short_EJEMPLO_editado.mp4",
+ "fuentes": {
+  "intro": "editor/crudo/intro.mkv",
+  "main": "editor/crudo/editar.mkv",
+  "img": "editor/crudo/imagen.jpg"
+ },
+ "vbitrate": "8M",
+ "abitrate": "128k",
+ "segmentos": [
+  {
+   "src": "intro",
+   "start": 2.5,
+   "end": 10.8,
+   "cx": 190,
+   "cy": 40,
+   "cw": 816,
+   "ch": 961
+  },
+  {
+   "src": "intro",
+   "start": 12.8,
+   "end": 18.0,
+   "cx": 90,
+   "cy": 40,
+   "cw": 816,
+   "ch": 961
+  },
+  {
+   "src": "intro",
+   "start": 35.8,
+   "end": 40.3,
+   "cx": 40,
+   "cy": 20,
+   "cw": 816,
+   "ch": 961,
+   "panx": 330
+  },
+  {
+   "src": "img",
+   "img_dur": 4.5,
+   "cw": 450,
+   "ch": 353
+  },
+  {
+   "src": "main",
+   "start": 230.0,
+   "end": 236.0,
+   "cx": 552,
+   "cy": 8,
+   "cw": 816,
+   "ch": 961
+  },
+  {
+   "src": "main",
+   "start": 258.0,
+   "end": 265.0,
+   "cx": 552,
+   "cy": 8,
+   "cw": 816,
+   "ch": 961
+  },
+  {
+   "src": "main",
+   "start": 327.5,
+   "end": 333.0,
+   "cx": 135,
+   "cy": 2,
+   "cw": 816,
+   "ch": 961
+  },
+  {
+   "src": "main",
+   "start": 334.6,
+   "end": 341.0,
+   "cx": 968,
+   "cy": 2,
+   "cw": 816,
+   "ch": 961
+  },
+  {
+   "src": "main",
+   "start": 340.5,
+   "end": 344.5,
+   "cx": 968,
+   "cy": 636,
+   "cw": 816,
+   "ch": 444
+  },
+  {
+   "src": "main",
+   "start": 390.0,
+   "end": 405.5,
+   "cx": 135,
+   "cy": 2,
+   "cw": 816,
+   "ch": 961
+  }
+ ]
+}

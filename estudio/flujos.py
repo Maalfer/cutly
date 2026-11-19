@@ -12,6 +12,7 @@ ROTULOS = {
     "preparar-vm": "Preparar VM",
     "grabar-demo": "Grabar demo",
     "fusionar-cara-pantalla": "Fusionar cara + pantalla",
+    "short-desde-grabacion": "Grabación → Short",
     "subtitular-short": "Subtitular Short",
     "directo-a-clips": "Directo → clips",
 }

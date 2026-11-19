@@ -61,12 +61,13 @@ cutly/
 │   ├── audio.py · series.py          ←   energía a 10 ms, máscara de voz, LUFS; tramos de una máscara
 │   ├── formato.py                    ←   el lienzo del Short (1080x1920@60, banda de la cara 648)
 │   ├── toma.py                       ←   CONTRATO Fase 1 → Fase 2 (.steps.jsonl / .mapa.md)
-│   ├── material.py                   ←   el material arrastrado y el papel de cada archivo (material.json)
+│   ├── material.py · candidatos.py   ←   el material arrastrado y su papel · los fragmentos propuestos de un directo
 │   ├── transcripcion.py · subtitulos.py  ← Whisper medido; texto y tiempos de los subtítulos
 │   └── cortes.py                     ←   _cortes.log (solo APPEND)
 ├── pruebas/                          ← python -m unittest discover -s pruebas -t pruebas
 ├── estudio/                          ← INTERFAZ DE ESCRITORIO (PySide6): Claude Code dentro + pestañas Material, Fusión,
-│                                         Subtítulos, Directo, Shorts y VM; el material se ARRASTRA a cada pestaña
+│                                         una pestaña por cosa que hacer (Directo → clips, Cara + pantalla, Grabación →
+│                                         Short, Subtítulos, Resultados), Material y VM; el material se ARRASTRA a la suya
 │                                         (python -m estudio; ver estudio/ESTUDIO.md)
 ├── .claude/skills/                   ← los flujos de trabajo como skills (/preparar-vm, /fusionar-cara-pantalla…)
 │                                         = los botones de la interfaz

@@ -74,8 +74,10 @@ class Manifiesto(Carpeta):
         e = material.sincronizar()["material"][0]
         self.assertEqual((e["rol"], e["rol_manual"]), ("cara", True))      # sincronizar respeta lo fijado
         self.assertEqual(material.por_rol("cara"), [destino])
-        # el mismo nombre otra vez no pisa nada
-        self.assertTrue(material.anadir(origen).endswith("mi cara-2.mp4"))
+        # soltar otra vez EL MISMO archivo no lo duplica; otro distinto con el mismo nombre no pisa nada
+        self.assertEqual(material.anadir(origen), destino)
+        otro = video(os.path.join(self.d.name, "mi cara.mp4"), 108, 192, segundos=2)
+        self.assertTrue(material.anadir(otro).endswith("mi cara-2.mp4"))
 
     def test_lo_ultimo_asignado_va_primero(self):
         a = material.anadir(video(os.path.join(self.fuera, "a.mp4"), 108, 192))
@@ -158,3 +160,55 @@ class Ranura(Carpeta):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Candidatos(unittest.TestCase):
+    """Propuesta de fragmentos de un directo (nucleo/candidatos.py) y lo que la pestaña le dice a Claude."""
+
+    def test_validar(self):
+        from nucleo import candidatos
+        bien = {"fragmentos": [{"n": 1, "inicio": 10, "fin": 90, "titulo": "A", "tema": "x"}]}
+        self.assertEqual(candidatos.validar(bien), [])
+        mal = {"fragmentos": [{"n": 1, "inicio": 90, "fin": 10, "titulo": "A", "tema": "x"},
+                              {"n": 1, "inicio": 1, "fin": 2, "titulo": "B", "tema": "y"}, {"n": 3}]}
+        self.assertEqual(len(candidatos.validar(mal)), 3)
+        self.assertEqual(candidatos.hhmmss(3725), "01:02:05")
+
+    @unittest.skipUnless(HAY_QT, "PySide6 no instalado")
+    def test_mensaje_de_los_elegidos(self):
+        from estudio.paneles.directo import mensaje_elegidos
+        d = {"directo": "d.mp4", "fragmentos": [{"n": 1, "titulo": "Uno", "elegido": False},
+                                                {"n": 4, "titulo": "Cuatro", "elegido": True}]}
+        m = mensaje_elegidos(os.path.join(REPO, "editor", "crudo", "d.candidatos.json"), d)
+        self.assertIn("fragmentos 4 (Cuatro)", m)
+        self.assertIn("editor/crudo/d.candidatos.json", m)
+        self.assertIsNone(mensaje_elegidos("x", {"fragmentos": [{"n": 1, "titulo": "U"}]}))
+
+
+@unittest.skipUnless(HAY_QT and FF, "PySide6 y ffmpeg")
+class RepartoFusion(Carpeta):
+    def test_mudo_a_pantalla_con_voz_a_cara(self):
+        from estudio.paneles.fusion import papel_para_fusion
+        self.assertEqual(papel_para_fusion(video(os.path.join(self.fuera, "p.mp4"), 108, 192, voz=False)), "pantalla")
+        self.assertEqual(papel_para_fusion(video(os.path.join(self.fuera, "c.mp4"), 108, 192)), "cara")
+
+
+@unittest.skipUnless(FF, "hace falta ffmpeg")
+class ShortManual(Carpeta):
+    def test_plan_json_monta_el_short(self):
+        """construir_short.py ya no se edita: monta desde un plan (y la banda de la cara mide 648)."""
+        os.makedirs(self.crudo)
+        fuente = video(os.path.join(self.crudo, "g.mp4"), 1920, 1080, segundos=2, voz=False)
+        salida = os.path.join(self.d.name, "short_Prueba_editado.mp4")
+        plan = os.path.join(self.d.name, "plan.json")
+        from nucleo import archivos
+        archivos.escribir_json(plan, {"salida": salida, "fuentes": {"g": fuente}, "vbitrate": "2M",
+                                      "segmentos": [{"src": "g", "start": 0, "end": 1.5, "cx": 500, "cy": 50,
+                                                     "cw": 816, "ch": 961}]})
+        r = subprocess.run([sys.executable, os.path.join(REPO, "editor", "shorts", "construir_short.py"), plan],
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr[-400:])
+        from nucleo import medios
+        self.assertEqual(medios.probe_video(salida)[:2], (1080, 1920))
+        fila_banda = medios.fotograma_gris(salida, 0.5)[640]
+        self.assertLess(int(fila_banda.max()), 24)                  # filas 0-647: la banda negra de la cara

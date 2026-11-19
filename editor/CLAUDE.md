@@ -12,7 +12,7 @@ vive en `editor/crudo/` con su papel (cara, pantalla, short, toma, directo…) e
 | Una **toma de `crear-shorts/`** (hay `editor/crudo/<toma>.steps.jsonl`) | Short mudo automático | `python editor/shorts/short_desde_toma.py <toma> --titulo Titulo-Con-Gancho` |
 | El **Short de pantalla** (mudo, banda negra arriba) **+ un vídeo con su cara y su voz** | Fusión → Short final | `editor/shorts/METODOLOGIA-FUSION-CARA.md` |
 | Un **directo o grabación sin registro de pasos** que hay que convertir en **clips 16:9** | Directos | `editor/directos/CLAUDE.md` |
-| Una grabación suelta para hacer un **Short 9:16 a mano** | Short manual | `editor/shorts/METODOLOGIA-SHORTS.md` |
+| Una grabación suelta (sin registro) para hacer un **Short 9:16** | Short manual | `/short-desde-grabacion` · `editor/shorts/METODOLOGIA-SHORTS.md` (`construir_short.py` con un plan JSON) |
 
 **Objetivo de todo Short final:** `editor/shorts/SHORT-IDEAL.md` (referencia aprobada por el usuario). Antes de
 entregarlo, `python editor/shorts/verificar_short.py VIDEO.mp4` debe decir "cumple la especificación".
@@ -36,7 +36,7 @@ editor/
 │   ├── METODOLOGIA-FUSION-CARA.md  juntar el Short de pantalla con la cara y la voz del usuario
 │   ├── METODOLOGIA-SHORTS.md     Short mudo a mano (sin registro de pasos)
 │   ├── short_desde_toma.py       toma de la Fase 1 -> Short mudo (automático)
-│   ├── construir_short.py        Short mudo a mano (plantilla)
+│   ├── construir_short.py        Short mudo desde grabaciones sueltas, según un plan JSON
 │   ├── analizar_fusion.py        mide cara/pantalla/voz y avisa de tomas repetidas
 │   ├── fusionar_cara_pantalla.py cara + voz + pantalla según un plan -> Short montado
 │   ├── subtitular.py             subtítulos karaoke (preparar -> revisar -> quemar)

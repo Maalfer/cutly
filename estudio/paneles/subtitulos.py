@@ -133,6 +133,12 @@ class PanelSubtitulos(QWidget):
         self.vigia.fileChanged.connect(self._cambio_externo)
         self.recargar_lista()
 
+    def traer_soltados(self, rutas):
+        """Soltar en cualquier parte de la pestaña = a la ranura del Short a subtitular."""
+        videos = [r for r in rutas if r.lower().endswith(material.VIDEO)]
+        if videos:
+            self.ranura.traer(videos[0])
+
     # ---- lista de ficheros
     def recargar_lista(self):
         actual = self.combo.currentData()

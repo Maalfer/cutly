@@ -1,5 +1,6 @@
-"""Pestaña Shorts: los vídeos de editor/videos-editados/ (se actualiza sola cuando Claude escribe uno nuevo), su
-reproducción y la verificación contra la especificación del Short ideal (verificar_short.py)."""
+"""Pestaña Resultados: los vídeos de editor/videos-editados/ (se actualiza sola cuando Claude escribe uno nuevo), su
+reproducción y la verificación contra la especificación del Short ideal (verificar_short.py). Soltar aquí cualquier
+otro vídeo lo verifica."""
 import os
 
 from PySide6.QtCore import QFileSystemWatcher, Qt, QUrl, Signal
@@ -30,6 +31,7 @@ class PanelShorts(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._proc = None
+        self.externos = []              # vídeos soltados aquí para verificarlos (no están en videos-editados)
         self.lista = QListWidget()
         self.lista.setTextElideMode(Qt.TextElideMode.ElideMiddle)     # lo que distingue los nombres está en medio
         self.lista.setMinimumWidth(260)
@@ -65,18 +67,31 @@ class PanelShorts(QWidget):
         self.vigia.directoryChanged.connect(lambda _: self.recargar())
         self.recargar()
 
-    def recargar(self):
-        actual = self.lista.currentItem().data(Qt.ItemDataRole.UserRole) if self.lista.currentItem() else None
+    def traer_soltados(self, rutas):
+        """Soltar un vídeo en la pestaña = verificarlo (no hace falta que lo haya hecho Claude)."""
+        videos_ = [r for r in rutas if r.lower().endswith((".mp4", ".mov", ".mkv"))]
+        if not videos_:
+            return
+        for v in videos_:
+            if v not in self.externos:
+                self.externos.insert(0, v)
+        self.recargar(seleccionar=videos_[0])
+        self.verificar()
+
+    def recargar(self, seleccionar=None):
+        actual = seleccionar or (self.lista.currentItem().data(Qt.ItemDataRole.UserRole) if self.lista.currentItem() else None)
         self.lista.blockSignals(True)
         self.lista.clear()
-        for v in videos():
-            it = QListWidgetItem(os.path.basename(v))
+        for v in [e for e in self.externos if os.path.exists(e)] + videos():
+            it = QListWidgetItem(os.path.basename(v) + ("   (soltado)" if v in self.externos else ""))
             it.setData(Qt.ItemDataRole.UserRole, v)
             it.setToolTip(v)
             self.lista.addItem(it)
             if v == actual:
                 self.lista.setCurrentItem(it)
         self.lista.blockSignals(False)
+        if seleccionar and self.lista.currentItem():
+            self._elegido(self.lista.currentItem())
 
     def _elegido(self, it, _prev=None):
         if it:

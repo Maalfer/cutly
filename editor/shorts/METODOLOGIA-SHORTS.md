@@ -156,9 +156,10 @@ desde los originales (no recodifiques un clip ya codificado): un `-i` por fuente
 de imagen con `-loop 1 -framerate 60 -t <dur>`, una pista muda con
 `-f lavfi -t <total> -i anullsrc=r=48000:cl=stereo`, y `concat` de todos los `[vN]`.
 
-Usa el script `editor/shorts/construir_short.py` (plantilla parametrizada que implementa todo lo
-anterior: banda fija, recorte/relleno, paneo, imagen y audio mudo). Edita su lista `SEGS` y
-ejecútalo. Parámetros de codificación de referencia (ajusta `-b:v` al material):
+Usa `editor/shorts/construir_short.py` con un **plan JSON** (banda fija, recorte/relleno, paneo, imagen y audio
+mudo): copia `editor/shorts/plantillas/short_manual.ejemplo.json` a `editor/crudo/short_plan.json`, rellena fuentes y
+segmentos, y `python editor/shorts/construir_short.py editor/crudo/short_plan.json`. El script ya no se edita por
+cada vídeo. Parámetros de codificación de referencia (`vbitrate`/`abitrate` en el plan; ajusta al material):
 `libx264 -preset slow -b:v 8M -maxrate 9M -bufsize 16M -c:a aac -b:a 128k -movflags +faststart`.
 
 ---

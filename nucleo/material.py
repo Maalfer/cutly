@@ -161,6 +161,20 @@ def nombre_libre(nombre):
     return candidato
 
 
+def ya_esta(origen):
+    """El archivo del material que ES el origen (enlace al mismo fichero, o copia con el mismo tamaño y fecha)."""
+    if not os.path.isdir(carpeta()):
+        return None
+    st = os.stat(origen)
+    for nombre in os.listdir(carpeta()):
+        ruta = os.path.join(carpeta(), nombre)
+        if not os.path.isfile(ruta) or os.path.getsize(ruta) != st.st_size:
+            continue
+        if os.path.samefile(origen, ruta) or int(os.path.getmtime(ruta)) == int(st.st_mtime):
+            return ruta
+    return None
+
+
 def anadir(origen, modo="auto"):
     """Trae un archivo al material. modo: "auto" (enlace duro si está en el mismo disco: instantáneo y sin ocupar
     espacio; si no, copia), "copiar" o "mover". Devuelve la ruta en editor/crudo/."""
@@ -169,6 +183,9 @@ def anadir(origen, modo="auto"):
         raise FileNotFoundError(origen)
     if os.path.dirname(origen) == os.path.abspath(carpeta()):
         return origen                                  # ya está en el material
+    ya = ya_esta(origen)
+    if ya:
+        return ya                                      # soltar dos veces lo mismo no lo duplica
     os.makedirs(carpeta(), exist_ok=True)
     destino = os.path.join(carpeta(), nombre_libre(os.path.basename(origen)))
     if modo == "mover":

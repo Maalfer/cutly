@@ -36,8 +36,6 @@ class Dependencias(unittest.TestCase):
 class Clis(unittest.TestCase):
     def test_help_de_cada_cli(self):
         for f in SCRIPTS_PY + [os.path.join(REPO, "crear-shorts", "herramientas", x) for x in ("tipear.py", "mover.py")]:
-            if "construir_short" in f:          # plantilla, no CLI
-                continue
             r = subprocess.run([sys.executable, f, "--help"], capture_output=True, text=True, encoding="utf-8",
                                errors="replace")
             self.assertEqual(r.returncode, 0, f"{os.path.relpath(f, REPO)}: {r.stderr[-300:]}")

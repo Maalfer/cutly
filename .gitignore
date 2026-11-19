@@ -11,6 +11,8 @@ editor/videos-editados/*
 # Material de un vídeo concreto, esté donde esté
 *_transcripcion.*
 *.subtitulos.json
+*.candidatos.json
+material.json
 *.steps.jsonl
 *.mapa.md
 *.fusion.md

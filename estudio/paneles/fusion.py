@@ -5,13 +5,20 @@ import re
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 
-from ..entorno import para_claude
+from nucleo import material
+
+from ..entorno import en_segundo_plano, para_claude
 from .ranura import Ranura
 
 
 def titulo_valido(t):
     """Capitalized-Kebab-Case sin tildes ni símbolos (sirve de título de YouTube y de nombre de archivo)."""
     return bool(re.fullmatch(r"[A-Z0-9][A-Za-z0-9]*(-[A-Za-z0-9]+)*", t))
+
+
+def papel_para_fusion(ruta):
+    """Cara o pantalla, según el vídeo (sin pista que suene = el Short mudo de pantalla)."""
+    return "pantalla" if material.inferir_rol(ruta, material.describir(ruta)) == "pantalla" else "cara"
 
 
 class PanelFusion(QWidget):
@@ -50,6 +57,17 @@ class PanelFusion(QWidget):
         lay.addWidget(self.aviso)
         lay.addStretch(1)
         self._actualizar()
+
+    def traer_soltados(self, rutas):
+        """Soltar en cualquier parte de la pestaña: cada vídeo a su ranura según lo que es (mudo = pantalla,
+        con voz = cara)."""
+        videos = [r for r in rutas if r.lower().endswith(material.VIDEO)][:2]
+        if videos:
+            en_segundo_plano(lambda: [(r, papel_para_fusion(r)) for r in videos], self._repartir)
+
+    def _repartir(self, pares):
+        for ruta, papel in pares:
+            (self.pantalla if papel == "pantalla" else self.cara).traer(ruta)
 
     def cargar(self, m):
         self.cara.cargar_actual(m)

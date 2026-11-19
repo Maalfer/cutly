@@ -28,16 +28,20 @@ Requisitos: Claude Code instalado y con sesión iniciada (`claude` en el PATH) y
 necesita igual; xterm.js se carga de jsDelivr con la versión fijada). Para iniciar sesión en la VM desde la pestaña VM:
 `VM_GUEST_PASSFILE` en el entorno, como con `vm_control.py`.
 
-## Las pestañas
+## Las pestañas: una por cosa que quieres hacer, cada una con su sitio para soltar
 
-| Pestaña | Para qué | Qué le pide a Claude |
+| Pestaña | Qué sueltas ahí | Qué hace Claude |
 |---|---|---|
-| **Material** | la biblioteca: todo lo aportado, con miniatura, duración, resolución y **papel**; se arrastra dentro, y desde aquí a las ranuras | menú del botón derecho: el flujo que toque según el papel de lo seleccionado ("Fusionar cara + pantalla", "Subtitular", "Proponer clips", "Construir el Short de la toma"…) |
-| **Fusión** | ranuras **Cara** y **Pantalla** + título | `/fusionar-cara-pantalla <cara> <pantalla> [Título]` |
-| **Subtítulos** | ranura **Short a subtitular**; luego revisar el texto con el vídeo sincronizado | `/subtitular-short <short>` y, al revisar, "ya puedes quemarlos" |
-| **Directo** | ranura **Directo** (o un enlace) | `/directo-a-clips <directo o URL>` |
-| **Shorts** | los resultados: ver, verificar, abrir sus subtítulos | menú: subtitular, revisar, preguntar |
-| **VM** | estado, pantalla en directo, diagnóstico, arrancar, iniciar sesión, apagar | (CLIs de `vm_control.py`) |
+| **Directo → clips** | el directo (o pegas un enlace) | propone fragmentos (`/directo-a-clips`); salen en una tabla con el directo al lado: clic = saltar a ese momento, marcas los que quieres y "Cortar los elegidos" (`<directo>.candidatos.json`, `nucleo/candidatos.py`) |
+| **Cara + pantalla** | tu cara y el Short de pantalla (en sus ranuras, o los dos juntos en cualquier parte: cada uno va a la suya) | `/fusionar-cara-pantalla <cara> <pantalla> [Título]` |
+| **Grabación → Short** | grabaciones sueltas (sin registro de la VM) e intro/imágenes, **en orden** (se reordenan arrastrando) | `/short-desde-grabacion <fuentes…> [Título]`: decide los planos y monta el Short mudo con un plan JSON (`construir_short.py`) |
+| **Subtítulos** | el Short montado | `/subtitular-short <short>`; luego revisas el texto con el vídeo sincronizado y "Revisado" |
+| **Resultados** | cualquier vídeo, para verificarlo | lo que ha salido; menú: subtitular, revisar sus subtítulos, preguntar |
+| **Material** | lo que sea | la biblioteca: papel, miniatura, datos; menú "Pedir a Claude" según el papel |
+| **VM** | — | estado, pantalla en directo, diagnóstico, arrancar, iniciar sesión, apagar (`vm_control.py`) |
+
+Soltar **en la zona vacía** de una pestaña cuenta como soltarlo en su sitio (`traer_soltados` de cada panel); en una
+pestaña sin sitio para material (VM), va a Material.
 
 **El material**: soltar un archivo en una ranura lo trae a `editor/crudo/` (como **enlace**, sin copiar ni ocupar
 espacio, si está en el mismo disco; si no, se copia en segundo plano) y le fija ese papel en
@@ -76,14 +80,18 @@ directo…). Claude lo consulta con `python editor/comun/material.py`. Quitar al
 | El Short de pantalla lleva una pista de audio (muda): por tener audio salía como "cara" | `material.describir` mide el pico (volumedetect): por debajo de −60 dB cuenta como mudo |
 | Soltar un vídeo sobre el terminal haría que la página navegase a ese fichero (y el terminal desaparecería) | la página no navega tras cargar; el soltar se intercepta y pega la ruta en la sesión |
 | Soltar en la ranura un vídeo de otra carpeta del mismo disco | entra como enlace duro: instantáneo y sin duplicar (medido: 2 nombres, 1 fichero) |
+| Soltar dos veces el mismo vídeo lo duplicaba (`x-2.mp4`) | `material.ya_esta`: se reconoce el mismo fichero (enlace o copia idéntica) |
+| Usar tu cara como fuente de "Grabación → Short" le cambiaba el papel y vaciaba la ranura Cara | la lista de fuentes no pisa un papel fijado |
 
 ## Añadir cosas
 
 - **Un flujo nuevo:** una skill en `.claude/skills/<nombre>/SKILL.md` (frontmatter `name` + `description`). Sale como
   botón; si quieres rótulo u orden, añádela a `ROTULOS` en `estudio/flujos.py`.
-- **Una pestaña nueva:** un `QWidget` en `estudio/paneles/` que lea con `nucleo/` o `vm/`, actúe con
-  `entorno.ejecutar_cli` (CLIs del repo) y le pida cosas a Claude con una señal `pedir = Signal(str)` (la ventana la
-  conecta sola). Si necesita material con un papel, una `Ranura(papel, ...)` (`paneles/ranura.py`); un papel nuevo se
-  añade a `ROLES` en `nucleo/material.py`. Se registra en `ventana.py`.
+- **Una pestaña nueva** (una cosa nueva que hacer): un `QWidget` en `estudio/paneles/` que lea con `nucleo/` o `vm/`,
+  actúe con `entorno.ejecutar_cli` (CLIs del repo) y le pida cosas a Claude con una señal `pedir = Signal(str)` (la
+  ventana la conecta sola). Su sitio para soltar: una `Ranura(papel, ...)` (un archivo, `paneles/ranura.py`) o una
+  lista como `ListaFuentes` (varios, `paneles/grabacion.py`), más `traer_soltados(rutas)` para lo que se suelte en la
+  zona vacía. Normalmente va con su skill en `.claude/skills/`. Un papel nuevo se añade a `ROLES` en
+  `nucleo/material.py`. Se registra en `ventana.py`.
 - Atajos: Ctrl+1…6 cambian de pestaña; Ctrl+` vuelve al terminal.
 - Las pruebas de la app están en `pruebas/test_estudio.py` (sin abrir ninguna sesión de Claude Code).

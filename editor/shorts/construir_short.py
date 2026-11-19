@@ -1,73 +1,49 @@
 #!/usr/bin/env python3
 """
-construir_short.py — Monta un SHORT vertical 1080x1920@60 con hueco para la cara.
+construir_short.py — Monta un SHORT vertical 1080x1920@60 con hueco para la cara desde GRABACIONES SUELTAS (sin
+registro de pasos; si la toma viene de crear-shorts, usa short_desde_toma.py), según un PLAN JSON:
+
+    python editor/shorts/construir_short.py editor/crudo/short_plan.json
+
+Plan (plantilla con todos los campos: editor/shorts/plantillas/short_manual.ejemplo.json):
+    {"salida": ..., "fuentes": {etiqueta: archivo}, "segmentos": [...], "vbitrate": "8M", "abitrate": "128k"}
+    segmento de vídeo: src, start, end, cx, cy, cw, ch (+ panx para un paneo); imagen fija: src, img_dur, cw, ch.
 
 Implementa la metodologia de 'editor/shorts/METODOLOGIA-SHORTS.md':
   - Banda negra superior CONSTANTE (padtop) en todos los planos = donde va la cara.
   - Cada plano = recorte de una fuente escalado a 1080 de ancho y pegado bajo la banda.
   - Paneo horizontal opcional por plano (para mostrar contenido ancho a tamano completo).
-  - Soporta varias fuentes de video + imagenes fijas, todo en UNA pasada de ffmpeg.
+  - Varias fuentes de video + imagenes fijas, todo en UNA pasada de ffmpeg.
   - Pista de audio MUDA (el usuario graba la voz en off despues).
-
-NO es un CLI con mil flags: es una PLANTILLA. Edita las dos zonas marcadas (CONFIG y SEGS)
-y ejecutalo:  python editor/shorts/construir_short.py
-
-Requiere: ffmpeg, ffprobe (los localiza nucleo/ffmpeg.py), python 3.
+Ya no se edita este script por cada vídeo: cada vídeo tiene su plan (local, en editor/crudo/).
 """
-
-import subprocess, os, sys
+import argparse
+import os
+import subprocess
+import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))
-from nucleo import formato  # noqa: E402
+from nucleo import archivos, formato  # noqa: E402
 from nucleo.ffmpeg import FFMPEG, FFPROBE  # noqa: E402
-from nucleo.rutas import CRUDO, SALIDA  # noqa: E402  rutas del repo, esté donde esté
+from nucleo.rutas import REPO  # noqa: E402
 
-# ======================= CONFIG (editar) =======================
-OUT = os.path.join(SALIDA, "short_EJEMPLO_editado.mp4")
-
-# Fuentes: etiqueta -> ruta. La etiqueta se usa en SEGS.
-SOURCES = {
-    "intro": os.path.join(CRUDO, "intro.mkv"),
-    "main":  os.path.join(CRUDO, "editar.mkv"),
-    "img":   os.path.join(CRUDO, "imagen.jpg"),
-}
-
-PADTOP   = formato.BANDA_CARA   # banda negra superior (la cara): 648. CONSTANTE en todos los planos.
+PADTOP = formato.BANDA_CARA      # banda negra superior (la cara): 648. CONSTANTE en todos los planos.
 CANVAS_W = formato.ANCHO
 CANVAS_H = formato.ALTO
-FPS      = formato.FPS
-VBITRATE = "8M"    # ajustar a ~1.5-2x el bitrate nativo de la fuente (ver ffprobe)
-ABITRATE = "128k"
-
-# ======================= SEGS (editar) =======================
-# Cada segmento es un dict. Tipos:
-#   video normal:  {"src","start","end","cx","cy","cw","ch"}
-#       recorte cw x ch en (cx,cy) de la fuente, escalado a 1080 de ancho.
-#       Para "llenar el marco" usa proporcion cw:ch = 816:961 (como 1080:1272).
-#       Para "letterbox" (contenido ancho) usa cw mas grande; quedara negro debajo.
-#   paneo:         igual + {"panx": CX_FINAL}  -> cx se desplaza de cx a panx en el tiempo.
-#   imagen fija:   {"src","img_dur","cw","ch"}  (cw,ch = tamano real de la imagen)
-#
-# La banda superior (PADTOP) es la misma SIEMPRE: aqui no se toca.
-SEGS = [
-    # VALORES DE EJEMPLO (de un Short antiguo): sustitúyelos por los de tu vídeo.
-    # --- INTRO ---
-    {"src": "intro", "start": 2.5,  "end": 10.8, "cx": 190, "cy": 40, "cw": 816, "ch": 961},            # busqueda (desde que se teclea)
-    {"src": "intro", "start": 12.8, "end": 18.0, "cx": 90,  "cy": 40, "cw": 816, "ch": 961},            # resultados
-    {"src": "intro", "start": 35.8, "end": 40.3, "cx": 40,  "cy": 20, "cw": 816, "ch": 961, "panx": 330},  # comando: PANEO a tamano completo
-    {"src": "img",   "img_dur": 4.5, "cw": 450, "ch": 353},                                             # imagen fija (letterbox, banda arriba constante)
-    # --- EJERCICIO ---
-    {"src": "main",  "start": 230.0, "end": 236.0, "cx": 552, "cy": 8,   "cw": 816, "ch": 961},
-    {"src": "main",  "start": 258.0, "end": 265.0, "cx": 552, "cy": 8,   "cw": 816, "ch": 961},
-    {"src": "main",  "start": 327.5, "end": 333.0, "cx": 135, "cy": 2,   "cw": 816, "ch": 961},
-    {"src": "main",  "start": 334.6, "end": 341.0, "cx": 968, "cy": 2,   "cw": 816, "ch": 961},
-    {"src": "main",  "start": 340.5, "end": 344.5, "cx": 968, "cy": 636, "cw": 816, "ch": 444},         # plano bajo (letterbox) para subir una barra pegada al fondo
-    {"src": "main",  "start": 390.0, "end": 405.5, "cx": 135, "cy": 2,   "cw": 816, "ch": 961},
-]
-# =============================================================
+FPS = formato.FPS
 
 
-def main():
+def construir(plan):
+    """Monta el Short del plan; devuelve la ruta de salida."""
+    SOURCES = {k: _abs(v) for k, v in plan["fuentes"].items()}
+    SEGS = plan["segmentos"]
+    OUT = _abs(plan["salida"])
+    VBITRATE = plan.get("vbitrate", "8M")   # ajustar a ~1.5-2x el bitrate nativo de la fuente (ver ffprobe)
+    ABITRATE = plan.get("abitrate", "128k")
+    faltan = [p for p in SOURCES.values() if not os.path.exists(p)]
+    if faltan:
+        sys.exit("no existen: " + ", ".join(faltan))
+    os.makedirs(os.path.dirname(OUT), exist_ok=True)
     # mapear etiquetas de fuente a indices de -i, imagenes aparte (se cargan con -loop)
     # separar: para imagenes usamos -loop 1; se anaden como inputs propios en orden de uso
     inputs = []          # lista de (args_de_input, label_para_ffmpeg)
@@ -132,6 +108,18 @@ def main():
                                  "-of", "default=nw=1:nk=1", OUT]).decode().strip()
     print(f"[construir_short] LISTO. Duracion real: {d}s", file=sys.stderr)
     print("[construir_short] VERIFICA: banda superior constante, uniones y paneos con fotogramas.", file=sys.stderr)
+    return OUT
+
+
+def _abs(ruta):
+    return ruta if os.path.isabs(ruta) else os.path.join(REPO, ruta)
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Short mudo 1080x1920 con banda para la cara, desde grabaciones sueltas "
+                                             "(sin registro de pasos), según un plan JSON.")
+    ap.add_argument("plan", help="plan JSON (plantilla: editor/shorts/plantillas/short_manual.ejemplo.json)")
+    construir(archivos.leer_json(ap.parse_args().plan))
 
 
 if __name__ == "__main__":

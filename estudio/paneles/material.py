@@ -108,6 +108,9 @@ class PanelMaterial(QWidget):
         self.recargar()
 
     # ---- datos
+    def traer_soltados(self, rutas):
+        self.traer(rutas)
+
     def traer(self, rutas):
         self.estado.setText(f"Trayendo {len(rutas)} archivo(s)…")
         en_segundo_plano(lambda: _traer_varios(rutas), lambda _d: self.recargar(),

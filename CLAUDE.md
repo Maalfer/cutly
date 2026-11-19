@@ -15,7 +15,8 @@ Tú actúas y te mueves; el usuario solo graba. Entrada humana siempre (tecleo y
 
 ## Interfaz y flujos
 - Los flujos de trabajo son skills del proyecto (`.claude/skills/`: `/preparar-vm`, `/grabar-demo`,
-  `/fusionar-cara-pantalla`, `/subtitular-short`, `/directo-a-clips`). Cada una remite a su metodología.
+  `/fusionar-cara-pantalla`, `/short-desde-grabacion`, `/subtitular-short`, `/directo-a-clips`). Cada una remite a su
+  metodología.
 - El usuario puede estar usándote dentro de **cutly estudio** (`estudio/ESTUDIO.md`): misma sesión, pero con pestañas
   visuales al lado. Cuando una skill pida su revisión (p. ej. los subtítulos), la hace en la pestaña correspondiente y
   te escribe en la sesión cuando termina.

@@ -1,8 +1,9 @@
 """Ventana principal de cutly estudio: Claude Code (el instalado, con su interfaz completa) a la izquierda; a la
-derecha, las pestañas (Material, Fusión, Subtítulos, Directo, Shorts, VM); arriba, un botón por flujo (las skills).
+derecha, una pestaña por cosa que se quiere hacer; arriba, un botón por flujo (las skills).
 
-El material NO se coloca en carpetas a mano: se arrastra a la pestaña que toca (cada ranura le da su papel) o a
-cualquier parte de la ventana (va a Material). Todo lo que una pestaña le pide a Claude llega por `pedir` a la sesión.
+El material NO se coloca en carpetas a mano: se arrastra a la pestaña de lo que quieres hacer. Cada pestaña sabe qué
+hacer con lo que se suelta en ella (`traer_soltados`: a su ranura, a su lista, a verificar...); si la pestaña no
+tiene sitio para material, va a Material. Todo lo que una pestaña le pide a Claude llega por `pedir` a la sesión.
 """
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QKeySequence
@@ -12,6 +13,7 @@ from .entorno import REPO
 from .flujos import flujos
 from .paneles.directo import PanelDirecto
 from .paneles.fusion import PanelFusion
+from .paneles.grabacion import PanelGrabacion
 from .paneles.material import TODO, PanelMaterial
 from .paneles.ranura import rutas_soltadas
 from .paneles.shorts import PanelShorts
@@ -33,16 +35,19 @@ class Ventana(QMainWindow):
         self.pestanas = QTabWidget()
         self.material = PanelMaterial()
         self.fusion = PanelFusion()
+        self.grabacion = PanelGrabacion()
         self.subs = PanelSubtitulos()
         self.directo = PanelDirecto()
         self.shorts = PanelShorts()
         self.vm = PanelVM()
+        # una pestaña por cosa que se quiere hacer, y en cada una, dónde soltar su material
         for panel, nombre, ayuda in (
-                (self.material, "Material", "Todo lo que has aportado; arrastra aquí lo que sea"),
-                (self.fusion, "Fusión", "Cara + pantalla -> Short"),
-                (self.subs, "Subtítulos", "Subtitular un Short y revisar el texto"),
-                (self.directo, "Directo", "Directo -> clips 16:9"),
-                (self.shorts, "Shorts", "Resultados: ver y verificar"),
+                (self.directo, "Directo → clips", "Suelta un directo: Claude propone fragmentos, eliges y los corta"),
+                (self.fusion, "Cara + pantalla", "Suelta tu cara y el Short de pantalla: Claude los junta"),
+                (self.grabacion, "Grabación → Short", "Suelta grabaciones sueltas (e intro, imágenes): Short mudo"),
+                (self.subs, "Subtítulos", "Suelta un Short montado: subtítulos y revisión del texto"),
+                (self.shorts, "Resultados", "Lo que ha salido; suelta cualquier vídeo para verificarlo"),
+                (self.material, "Material", "Todo lo aportado y su papel; suelta aquí lo que sea"),
                 (self.vm, "VM", "La máquina virtual de las demos")):
             self.pestanas.addTab(panel, nombre)
             self.pestanas.setTabToolTip(self.pestanas.count() - 1, ayuda)
@@ -107,17 +112,21 @@ class Ventana(QMainWindow):
             self.subs.combo.setCurrentIndex(i)
         self.pestanas.setCurrentWidget(self.subs)
 
-    # ---- soltar en cualquier parte de la ventana = al material
+    # ---- soltar fuera de una ranura: lo decide la pestaña visible (o va a Material)
     def dragEnterEvent(self, ev):
         if rutas_soltadas(ev.mimeData(), TODO):
             ev.acceptProposedAction()
 
     def dropEvent(self, ev):
         rutas = rutas_soltadas(ev.mimeData(), TODO)
-        if rutas:
-            ev.acceptProposedAction()
-            self.material.traer(rutas)
-            self.statusBar().showMessage(f"{len(rutas)} archivo(s) al material (pestaña Material)", 6000)
+        if not rutas:
+            return
+        ev.acceptProposedAction()
+        panel = self.pestanas.currentWidget()
+        destino = panel if hasattr(panel, "traer_soltados") else self.material
+        destino.traer_soltados(rutas)
+        nombre = self.pestanas.tabText(self.pestanas.indexOf(destino))
+        self.statusBar().showMessage(f"{len(rutas)} archivo(s) a «{nombre}»", 6000)
 
     # ---- barra de flujos
     def _barra_flujos(self):
