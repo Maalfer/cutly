@@ -32,6 +32,9 @@ banda de 648 px y re-temporiza la pantalla para que cada frase caiga sobre su mo
         │ transcribir.py → analizar_fusion.py → fusion_plan.json → fusionar_cara_pantalla.py
         ▼
   editor/videos-editados/short_<Titulo>_editado.mp4   (cara en la banda, voz limpia, pantalla sincronizada)
+        │ verificar_short.py
+        ▼
+  cumple editor/SHORT-IDEAL.md  →  se entrega
 ```
 
 El contrato es el `.steps.jsonl`: cualquier pieza de Fase 2 (o un agente verificador) puede reconstruir

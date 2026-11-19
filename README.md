@@ -76,11 +76,13 @@ cutly/
 └── editor/                           ← FASE 2: editar la grabación en clips
     ├── CLAUDE.md                     ←   edición de un DIRECTO SIN registro → clips 16:9 (camino manual)
     ├── METODOLOGIA-SHORTS.md         ←   Shorts 9:16 a mano (camino manual, sin registro de pasos)
+    ├── SHORT-IDEAL.md                ←   CÓMO DEBE QUEDAR el Short final (referencia aprobada + especificación medible)
     ├── METODOLOGIA-FUSION-CARA.md    ←   juntar el Short de pantalla con el vídeo de la cara+voz del usuario
     ├── BENCHMARK-WHISPER.md          ←   qué modelo de transcripción usar y por qué (medido)
     ├── scripts/
     │   ├── short_desde_toma.py       ←   Short AUTOMÁTICO desde una toma de Fase 1 (el camino normal)
     │   ├── transcribir.py            ←   transcripción (faster-whisper: large-v3-turbo + VAD, timestamps por palabra)
+    │   ├── verificar_short.py        ←   comprueba un Short final contra la especificación del ideal
     │   ├── analizar_fusion.py        ←   mide cara/pantalla/voz y avisa de tomas repetidas antes de la fusión
     │   ├── fusionar_cara_pantalla.py ←   mete cara+voz en la banda del Short y sincroniza pantalla con la narración
     │   ├── asegurar_mejor_modelo.sh  ←   descarga el modelo Whisper recomendado (whisper.cpp)
@@ -111,6 +113,7 @@ Sí se versiona todo lo demás: documentación, scripts, transcripciones de ejem
 ## 🚀 Si eres un agente de IA que retoma este trabajo — lee en este orden
 
 1. **Este README** (visión global) y **`PENDIENTE.md`** (qué está pendiente de verdad, ahora mismo).
+   El objetivo de todo es **`editor/SHORT-IDEAL.md`**: cómo debe quedar el Short final.
 2. **`CLAUDE.md`** y **`PORTABILIDAD.md`** (reglas no negociables + instalación en tu anfitrión).
 3. **`crear-shorts/ARQUITECTURA.md`** — qué es el sistema, cómo encajan sus piezas.
 4. ¿Vas a **grabar/generar** una demo nueva?

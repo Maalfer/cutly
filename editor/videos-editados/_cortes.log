@@ -235,3 +235,19 @@ Segmentos (todos padtop=648; salida 1080x1920@60, 8M, audio silencioso):
   tramo 12: voz 181.60-188.60| pantalla 163.50-171.00 x1.07| "ya estamos dentro"
   tramo 13: voz 193.35-201.30| pantalla 171.00-179.50 x1.07| cierre; "Tal." en falso 191.7-192.0 descartado
   verificación: whisper large-v3 sobre cada empalme del resultado (sin palabras cortadas ni repetidas), fotogramas en cada punto de sincronía.
+
+[2026-11-19 17:30] ANÁLISIS de la re-edición del usuario: "ssh vuln.mp4" (73,43 s) frente a short_Entrar-Por-SSH-Sin-Saber-La-Contrasena_editado.mp4 (90,50 s)
+  método: huella de cada fotograma (36x64 gris, 30 fps) emparejada con la versión del agente + energía del audio a 10 ms en cada corte.
+  el usuario SOLO cortó (velocidad, encuadre y sincronía intactos). Tramos quitados de la versión del agente (s):
+    0.00-0.27 | 3.63-5.57 | 10.90-11.33 | 12.83-13.47 | 19.13-19.47 | 21.07-21.80 | 23.60-23.90 | 26.37-27.90 ("Y" titubeante 27.61-27.80)
+    36.63-41.23 (relleno de ambiente) | 47.40-47.77 | 55.53-56.07 | 72.30-75.93 (pausa dramática tras "ejecuto este comando")
+    81.83-82.83 | 83.90-84.27 | 89.70-90.50 + fundido a negro ~0,25 s
+  márgenes junto a la voz: 0-90 ms. Pausas restantes ≥150 ms: 3 (máx 290 ms). Volumen +5 dB uniforme: -19,4 -> -14,3 LUFS (pico +1,9 dBTP).
+  -> estilo incorporado a fusionar_cara_pantalla.py (apretar/lufs/fundido_final) y a METODOLOGIA-FUSION-CARA.md.
+  validación: rehecho con el nuevo estilo = 73,20 s, -14,1 LUFS, pico -0,84 dBTP, texto 99,5 % igual al del usuario, sincronía comprobada con fotogramas.
+
+[2026-11-19 17:45] short_Entrar-Por-SSH-Sin-Saber-La-Contrasena_editado.mp4 = VERSIÓN APROBADA ("este es el ideal de cómo quiero que queden los shorts")
+  generado con crudo/fusion_plan.json (H desde 102.54 sin el 'Y' titubeante) + fusionar_cara_pantalla.py con apretar/lufs/fundido por defecto.
+  20 trozos, 73,20 s, -14,1 LUFS / -0,9 dBTP, máx pausa 170 ms, fundido 0,25 s. verificar_short.py: cumple la especificación.
+  la versión anterior (90,5 s, sin apretar) se conserva como short_Entrar-Por-SSH-Sin-Saber-La-Contrasena_v1-sin-apretar.mp4.
+  referencia documentada en editor/SHORT-IDEAL.md.

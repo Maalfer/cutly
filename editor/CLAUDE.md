@@ -1,5 +1,8 @@
 # Editor de directos → clips para YouTube
 
+> **Objetivo de todo Short final: `SHORT-IDEAL.md`** (referencia aprobada por el usuario; se comprueba con
+> `scripts/verificar_short.py`).
+>
 > **Antes de nada — ¿de dónde viene el vídeo? Tres caminos distintos:**
 > - **Viene de `crear-shorts/` (un agente controló la VM y generó `editor/crudo/<toma>.steps.jsonl`):**
 >   el Short se construye SOLO con `editor/scripts/short_desde_toma.py <toma> --titulo ...` — no sigas

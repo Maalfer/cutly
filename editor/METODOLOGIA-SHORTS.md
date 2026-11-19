@@ -131,7 +131,10 @@ Esto sirve para cualquier contenido más ancho que alto que quieras ver completo
 
 ---
 
-## 4. Ritmo: mejor pecar de LENTO
+## 4. Ritmo: mejor pecar de LENTO (en el Short MUDO; el final con voz va al grano)
+
+> Esto vale para el Short mudo que luego se monta con la voz. Cuando ya hay voz, el usuario quiere el
+> resultado lo más al grano posible, sin pausas: ver `METODOLOGIA-FUSION-CARA.md` (estilo medido).
 
 El usuario corta a mano después, así que **es mejor que cada plano dure de más que de menos**.
 

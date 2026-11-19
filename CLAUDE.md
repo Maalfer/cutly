@@ -13,6 +13,11 @@ Tú actúas y te mueves; el usuario solo graba. Entrada humana siempre (tecleo y
   VirtualBox en el anfitrión (`rec start`), no con OBS ni dentro de la VM. La toma deja
   `editor/crudo/<toma>.mp4`, `.steps.jsonl` y `.mapa.md` para decidir los cortes.
 
+## Objetivo final: el Short ideal
+Cómo debe quedar TODO Short entregado (aprobado por el usuario, con especificación medible):
+`editor/SHORT-IDEAL.md`. Antes de entregar uno: `python editor/scripts/verificar_short.py VIDEO.mp4` debe
+cumplir la especificación. Estilo: lo más al grano posible, sin pausas.
+
 ## Límites (no negociables)
 - No adivines contraseñas ni aceptes EULA/acuerdos por el usuario.
 - No hagas snapshots ni clones de la VM `kali` (el usuario no los quiere). `suspend`/`resume` (savestate) sí está permitido.
