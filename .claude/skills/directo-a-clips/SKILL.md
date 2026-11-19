@@ -16,7 +16,7 @@ Por defecto, al recibir un directo nuevo y sin pedir permiso para estos dos paso
 2. Transcríbelo entero (`python editor/comun/transcribir.py`, o whisper-cli con `-mc 0` y VAD).
 3. Analiza y muestra la **tabla de fragmentos interesantes** (cronológica, con estrella en los mejores) y escríbela
    también en `<directo>.candidatos.json` junto al directo (formato en `nucleo/candidatos.py`: n, inicio y fin en
-   segundos del directo, titulo en Capitalized-Kebab-Case, tema, estrella). La pestaña "Directo → clips" de cutly
+   segundos del directo, titulo en Capitalized-Kebab-Case, tema, estrella). La sección "Directo → clips" de cutly
    estudio la muestra con el directo al lado para que el usuario salte a cada fragmento y marque los que quiere.
    **Espera** a que elija (te escribirá los números, y quedan con `"elegido": true` en ese JSON). No cortes nada
    todavía.

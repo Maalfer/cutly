@@ -1,9 +1,9 @@
 # 08 — Controlar una máquina virtual (VirtualBox) en vez del anfitrión
 
-> Alternativa a conducir el ordenador real: la IA maneja un **Kali Linux dentro de VirtualBox** y se graba
-> la ventana de la VM. Este documento recoge lo **medido** probándolo (VirtualBox 7.2.22 en un Mac con
-> Apple Silicon, invitado Kali ARM64 con XFCE/X11; probado primero en un clon y repetido después en la VM
-> `kali` original, con los mismos resultados). Comparación con el anfitrión al final.
+> La IA maneja un **Kali Linux dentro de VirtualBox** en vez del ordenador real, igual desde un anfitrión Windows,
+> macOS o Linux. Este documento recoge lo **medido**: primero con un invitado Kali ARM64 (XFCE/X11) y después con uno
+> x86-64 en un anfitrión Windows 11 (VirtualBox 7.2.22, §6 "medido en vivo"), con los mismos resultados en el control.
+> Por qué VM y no el anfitrión: comparación al final.
 >
 > Código: `herramientas/vm_control.py` (reutiliza `tipear.py` y `mover.py`; solo cambia el emisor).
 
@@ -53,7 +53,7 @@ el emisor (`xdotool` en vez de `teclear` Swift). Así la regla "entrada humana s
 
 ---
 
-## 3. Fallos hallados (continúa la numeración del doc 07)
+## 3. Fallos hallados (la numeración sigue la del antiguo doc 07, archivado en `historial/control-del-anfitrion/`)
 
 | # | Fallo | Causa | Arreglo |
 |---|---|---|---|
@@ -79,28 +79,25 @@ el emisor (`xdotool` en vez de `teclear` Swift). Así la regla "entrada humana s
 
 ## 5. ¿VM o anfitrión? Comparación medida
 
-| | **Anfitrión (macOS)** | **VM (Kali, X11)** |
+| | **Anfitrión (enfoque retirado)** | **VM (Kali, X11)** |
 |---|---|---|
 | Fallos encontrados hasta dejarlo estable | **36**, casi todos por **interferencias del propio ordenador**: foco robado, overlays, diálogos de permisos, perfil personal, ventanas apiladas, autocompletado del historial | **6** (nº 37-42), todos **de montaje** (teclado/locale/ratón), resueltos una sola vez en `vm_control.py` |
 | Fiabilidad al repetir | no medida con repeticiones | **10/10** a la primera |
 | ¿Puede el usuario usar su ordenador mientras tanto? | **No** (un solo cursor y teclado) | **Sí** (la VM tiene los suyos) |
 | Notificaciones, permisos, perfil personal en el vídeo | hay que vigilarlos (gate, perfil limpio, evitar `tell application`) | **no existen** dentro de la VM |
-| Captura de pantalla | `screencapture` (~0,3 s) + permiso de grabación | `screenshotpng` **0,08 s**, sin permisos |
+| Captura de pantalla | la del sistema (~0,3 s) + permiso de grabación | `screenshotpng` **0,08 s**, sin permisos |
 | Montaje inicial | enseguida (ya estaba el kit) | más trabajo: SSH, locale, `xdotool`, sin API de ratón |
-| Qué demos admite | **macOS** (ClickFix de Mac, Safari, Terminal de Mac) | **Linux/Kali**: pentesting, Burp, navegador, comandos. Un invitado **macOS no es posible** aquí; Windows requeriría otro emisor |
+| Qué demos admite | las del propio sistema anfitrión | **Linux/Kali**: pentesting, Burp, navegador, comandos. Un invitado Windows requeriría otro emisor (PENDIENTE) |
 | Dependencia del sistema anfitrión | un kit por SO (macOS, Windows, Linux) | **`VBoxManage` + `ssh`**, iguales en los tres; el control en sí no cambia de un anfitrión a otro |
 | Sesión gráfica | cualquiera | **X11** (con Wayland `xdotool` no funcionaría) |
 
-**Veredicto:** para demostraciones de **ciberseguridad con herramientas de Kali** (navegador, Burp, terminal,
-laboratorios), la VM es **más fiable y más cómoda de operar**, aunque **algo más costosa de montar una vez**.
-No es "mucho más fácil" en todo: el montaje tiene sus trampas (nº 37-42) y hay demos que solo existen en el
-anfitrión (las de macOS). Lo razonable es un **enfoque mixto**: VM para Kali, anfitrión para lo específico de
-macOS y, en el futuro, una VM Windows para lo de Windows.
+**Veredicto (y estándar del repo):** todas las demos se hacen **en la VM**. Es más fiable y más cómoda de operar,
+el control es idéntico desde cualquier anfitrión y el usuario puede seguir usando su ordenador; cuesta más montarla
+una vez (nº 37-42, hoy automatizado con `bootstrap` y `doctor`). Demos de Windows: con un invitado Windows cuando
+exista su emisor (PENDIENTE).
 
 ### Sin verificar todavía
 - **Burp dentro de la VM de punta a punta** (bloqueado por el EULA).
-- **Grabación:** OBS sobre la ventana de la VM, o `controlvm recording`; y si el **cursor** del invitado
-  aparece en esa grabación.
 - **Snapshots:** una toma *en caliente* con 4 GB de RAM llevaba más de 4 minutos (se canceló por indicación del
   usuario, que no quiere snapshots). No se midió restaurar.
 - **Windows** (`Win11-25H2`) como invitado, y Wayland.

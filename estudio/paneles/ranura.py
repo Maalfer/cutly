@@ -1,26 +1,33 @@
-"""Ranura de material: el sitio de cada menú donde se SUELTA un vídeo ("Cara", "Pantalla", "Short a subtitular"...).
-Soltarlo lo trae al material (editor/crudo/, sin copiar si está en el mismo disco) y le fija ese papel en
-material.json; así Claude sabe qué es cada archivo. También acepta lo que se arrastra desde la pestaña Material."""
+"""Ranura de material: el sitio de una sección donde se SUELTA un archivo con un papel ("Cara", "Pantalla", "Short a
+subtitular"...). Soltarlo lo trae al material (editor/crudo/, sin copiar si está en el mismo disco) y le fija ese
+papel en material.json; así Claude sabe qué es cada archivo.
+
+Accesible sin ratón: tiene foco de teclado; Intro/Espacio abre el selector de archivos, Supr la vacía y Ctrl+V pega
+una ruta copiada (o un archivo copiado en el explorador).
+"""
 import os
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QFileDialog, QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+from PySide6.QtGui import QGuiApplication, QKeySequence, QPixmap
+from PySide6.QtWidgets import QFileDialog, QFrame, QHBoxLayout, QLabel, QVBoxLayout
 
 from nucleo import material
 
+from ..apariencia import repintar
 from ..entorno import en_segundo_plano
 from ..miniaturas import miniatura
+from .comun import ayuda, boton
 
 
 def rutas_soltadas(mime, extensiones=None):
-    """Ficheros locales de un arrastre (filtrados por extensión si se da)."""
+    """Ficheros locales de un arrastre o del portapapeles (filtrados por extensión si se da). Acepta también texto
+    con rutas, una por línea (lo que deja "copiar como ruta" del explorador)."""
     out = []
-    for url in mime.urls() if mime.hasUrls() else []:
-        p = url.toLocalFile()
-        if p and os.path.isfile(p) and (not extensiones or p.lower().endswith(extensiones)):
-            out.append(p)
-    return out
+    if mime.hasUrls():
+        out = [u.toLocalFile() for u in mime.urls() if u.isLocalFile()]
+    elif mime.hasText():
+        out = [l.strip().strip('"') for l in mime.text().splitlines() if l.strip()]
+    return [p for p in out if p and os.path.isfile(p) and (not extensiones or p.lower().endswith(extensiones))]
 
 
 def duracion_txt(seg):
@@ -45,36 +52,31 @@ def resumen(e):
 
 def _traer_y_fijar(origen, rol):
     destino = material.anadir(origen)
-    e = material.fijar_rol(destino, rol)
-    return destino, e
+    return destino, material.fijar_rol(destino, rol)
 
 
 class Ranura(QFrame):
     cambiado = Signal(str)              # ruta del archivo en el material ("" si se vacía la ranura)
 
-    def __init__(self, rol, titulo, ayuda, extensiones=material.VIDEO, parent=None):
+    def __init__(self, rol, titulo, ayuda_txt, extensiones=material.VIDEO, parent=None):
         super().__init__(parent)
-        self.rol, self.extensiones = rol, extensiones
+        self.rol, self.extensiones, self.titulo_txt = rol, extensiones, titulo
         self.ruta = ""
-        self.setAcceptDrops(True)
+        self._vacia = f"Arrastra aquí {ayuda_txt}, o pulsa Elegir."
         self.setObjectName("ranura")
-        self._estilo(False)
+        self.setAcceptDrops(True)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setAccessibleName(f"Ranura {titulo}")
 
-        self.mini = QLabel()
-        self.mini.setFixedSize(108, 120)
+        self.mini = QLabel("⬇")
+        self.mini.setFixedSize(96, 108)
         self.mini.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.mini.setStyleSheet("background:#111;color:#777;border-radius:6px;")
+        self.mini.setAccessibleName(f"Miniatura de {titulo}")
         self.titulo = QLabel(f"<b>{titulo}</b>")
-        self._vacia = f"<span style='color:#999'>Arrastra aquí {ayuda}</span>"
-        self.nombre = QLabel(self._vacia)
-        self.nombre.setWordWrap(True)
-        self.info = QLabel()
-        self.info.setStyleSheet("color:#aaa")
-        b_elegir = QPushButton("Elegir…")
-        b_elegir.clicked.connect(self._elegir)
-        self.b_quitar = QPushButton("Quitar")
-        self.b_quitar.setToolTip("Vacía la ranura (el archivo sigue en el material)")
-        self.b_quitar.clicked.connect(lambda: self.poner(""))
+        self.nombre = ayuda(self._vacia)
+        self.info = ayuda("")
+        self.b_elegir = boton("Elegir…", f"Elegir el archivo para {titulo}", self.elegir)
+        self.b_quitar = boton("Quitar", "Vacía la ranura (el archivo sigue en el material)", lambda: self.poner(""))
 
         texto = QVBoxLayout()
         texto.addWidget(self.titulo)
@@ -82,7 +84,7 @@ class Ranura(QFrame):
         texto.addWidget(self.info)
         texto.addStretch(1)
         botones = QHBoxLayout()
-        botones.addWidget(b_elegir)
+        botones.addWidget(self.b_elegir)
         botones.addWidget(self.b_quitar)
         botones.addStretch(1)
         texto.addLayout(botones)
@@ -91,30 +93,43 @@ class Ranura(QFrame):
         lay.addLayout(texto, 1)
         self.poner("")
 
-    def _estilo(self, encima):
-        borde = "#4ea1ff" if encima else "#555"
-        fondo = "#22303f" if encima else "#262626"
-        self.setStyleSheet(f"QFrame#ranura {{ border: 2px dashed {borde}; border-radius: 10px; background: {fondo}; }}")
+    # ---- arrastrar y soltar / teclado
+    def _marcar(self, encima):
+        self.setProperty("encima", encima)
+        repintar(self)
 
-    # ---- arrastrar y soltar
     def dragEnterEvent(self, ev):
         if rutas_soltadas(ev.mimeData(), self.extensiones):
             ev.acceptProposedAction()
-            self._estilo(True)
+            self._marcar(True)
 
     def dragLeaveEvent(self, ev):
-        self._estilo(False)
+        self._marcar(False)
 
     def dropEvent(self, ev):
-        self._estilo(False)
+        self._marcar(False)
         rutas = rutas_soltadas(ev.mimeData(), self.extensiones)
         if rutas:
             ev.acceptProposedAction()
             self.traer(rutas[0])
 
-    def _elegir(self):
+    def keyPressEvent(self, ev):
+        if ev.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+            self.elegir()
+        elif ev.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace) and self.ruta:
+            self.poner("")
+        elif ev.matches(QKeySequence.StandardKey.Paste):
+            rutas = rutas_soltadas(QGuiApplication.clipboard().mimeData(), self.extensiones)
+            if rutas:
+                self.traer(rutas[0])
+            else:
+                self.nombre.setText("El portapapeles no tiene un archivo válido para esta ranura.")
+        else:
+            super().keyPressEvent(ev)
+
+    def elegir(self):
         filtro = "Material (" + " ".join("*" + e for e in self.extensiones) + ")"
-        ruta, _ = QFileDialog.getOpenFileName(self, f"Elegir {self.rol}", "", filtro)
+        ruta, _ = QFileDialog.getOpenFileName(self, f"Elegir: {self.titulo_txt}", "", filtro)
         if ruta:
             self.traer(ruta)
 
@@ -122,8 +137,12 @@ class Ranura(QFrame):
     def traer(self, origen):
         """Lleva el archivo al material con este papel (en segundo plano: copiar un directo puede tardar)."""
         self.nombre.setText(f"Trayendo {os.path.basename(origen)}…")
-        en_segundo_plano(lambda: _traer_y_fijar(origen, self.rol), lambda r: self.poner(r[0], r[1]),
-                         lambda err: self.nombre.setText(f"<span style='color:#f77'>No se pudo: {err}</span>"))
+        self.setCursor(Qt.CursorShape.BusyCursor)
+        en_segundo_plano(lambda: _traer_y_fijar(origen, self.rol), lambda r: self.poner(r[0], r[1]), self._fallo)
+
+    def _fallo(self, err):
+        self.unsetCursor()
+        self.nombre.setText(f"No se pudo traer: {err}")
 
     def cargar_actual(self, m=None):
         """Muestra lo último asignado a este papel (al abrir la app y cuando cambia el material)."""
@@ -133,14 +152,19 @@ class Ranura(QFrame):
             self.poner(nueva)
 
     def poner(self, ruta, entrada=None):
+        self.unsetCursor()
         self.ruta = ruta if ruta and os.path.exists(ruta) else ""
         self.b_quitar.setEnabled(bool(self.ruta))
+        self.setProperty("lleno", bool(self.ruta))
+        repintar(self)
+        guia = "Intro: elegir archivo. Suprimir: vaciar. Control+V: pegar una ruta."
         if not self.ruta:
             self.mini.setPixmap(QPixmap())
             self.mini.setText("⬇")
             self.nombre.setText(self._vacia)
             self.nombre.setToolTip("")
             self.info.setText("")
+            self.setAccessibleDescription(f"Vacía. {self._vacia} {guia}")
             self.cambiado.emit("")
             return
         if entrada is None:
@@ -148,6 +172,7 @@ class Ranura(QFrame):
         self.nombre.setText(os.path.basename(ruta))
         self.nombre.setToolTip(ruta)
         self.info.setText(resumen(entrada))
+        self.setAccessibleDescription(f"Contiene {os.path.basename(ruta)}, {resumen(entrada)}. {guia}")
         self.mini.setText("…")
         en_segundo_plano(lambda: miniatura(ruta, entrada.get("duracion")), self._pintar_mini)
         self.cambiado.emit(self.ruta)

@@ -7,7 +7,7 @@ el usuario elige en la interfaz. Un fichero junto al directo:
                      "tema": "explicación de la noticia/CVE + demo práctica completa, un solo tramo continuo",
                      "estrella": true, "elegido": false}]}
 
-Claude lo escribe (y sigue enseñando la tabla en la sesión); la pestaña "Directo → clips" de cutly estudio lo muestra
+Claude lo escribe (y sigue enseñando la tabla en la sesión); la sección "Directo → clips" de cutly estudio lo muestra
 con el directo al lado, el usuario marca "elegido" y se lo dice a Claude. Tiempos en segundos del directo original.
 """
 import os

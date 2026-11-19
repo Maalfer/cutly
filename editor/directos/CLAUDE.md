@@ -7,10 +7,8 @@
 > `editor/directos/construir_clip.sh`. Las pausas "naturales" que este documento deja en un clip 16:9 **no** valen
 > para un Short, que va sin pausas (`editor/shorts/SHORT-IDEAL.md`).
 >
-> **Multiplataforma:** funciona igual en macOS, Windows y Linux (ffmpeg, whisper.cpp o faster-whisper, python,
-> yt-dlp). Los comandos y rutas de abajo son los de la máquina macOS donde nació; para Windows/Linux (instalación,
-> binario de whisper, `.sh` con Git Bash/WSL) usa `PORTABILIDAD.md`. Las rutas `~/Desktop/cutly/editor/...` son
-> ejemplos: el repo puede estar en cualquier sitio.
+> **Multiplataforma:** igual en Windows, macOS y Linux. Los comandos se ejecutan desde la raíz del repo (rutas
+> relativas `editor/...`); los `.sh`, con bash (en Windows, Git Bash o WSL). Instalación por sistema: `PORTABILIDAD.md`.
 
 ## Principio rector: precisión por encima de coste (tokens/tiempo)
 
@@ -54,84 +52,51 @@ que el usuario pida explícitamente otra cosa.
 
 ## Disparador: qué hacer cuando el usuario te pasa un directo en bruto
 
-Cuando el usuario te indica que hay un directo completo en bruto nuevo (algo tipo "ahí tienes
-el directo entero", "ahora veras directoN-completo", un enlace de YouTube/Twitch para
-descargar, etc.), sin que pida explícitamente nada más, el flujo por defecto es SIEMPRE, en
-este orden, sin pedir permiso para los dos primeros pasos:
+Normalmente llega por la sección **Directo → clips** de cutly estudio (`/directo-a-clips <directo|URL>`; el directo ya
+está en el material, `editor/crudo/`, con papel `directo`) o diciéndolo en la sesión. Sin que pida nada más, el flujo
+por defecto es SIEMPRE, en este orden, sin pedir permiso para los dos primeros pasos:
 
-1. **Transcribir el directo completo con timestamps** (sección 1 de abajo) — esto deja todo
-   listo para poder aplicar cortes después sin tener que volver a procesar el vídeo entero.
-2. **Analizar la transcripción y mostrar la tabla de fragmentos interesantes** (sección 2) —
-   candidatos a clip, cronológicos, con ⭐ en los mejores.
-3. **Esperar** a que el usuario diga qué quiere extraer. No cortes nada todavía en este punto
-   — la tabla es solo propuesta.
-
-Es decir: transcripción + tabla van siempre juntas y automáticas al recibir un directo nuevo;
-cortar fragmentos concretos es un paso aparte que el usuario pide después, viendo la tabla.
+1. **Transcribir el directo completo con timestamps** (sección 1) — deja todo listo para cortar después sin volver a
+   procesar el vídeo entero.
+2. **Analizar la transcripción y proponer los fragmentos interesantes** (sección 2): tabla en la sesión Y el mismo
+   contenido en `<directo>.candidatos.json` (formato: `nucleo/candidatos.py`), que la sección muestra con el directo
+   al lado para que el usuario salte a cada fragmento.
+3. **Esperar** a que elija (te escribirá los números; quedan con `"elegido": true` en ese JSON). No cortes nada antes.
 
 ## Contexto del usuario
 
-- Los directos son streams de hacking ético/CTF en español, grabados en vídeo (1920x1080,
-  h264, aac), normalmente nombrados tipo `directoN-completo.mp4`.
-- El objetivo final siempre es el mismo: sacar fragmentos temáticos autocontenibles, limpios
-  de muletillas/tangentes/interrupciones, para subir como clips independientes a YouTube.
+- Los directos son streams de hacking ético/CTF en español (1920x1080, h264, aac). El objetivo siempre es el mismo:
+  fragmentos temáticos autocontenibles, limpios de muletillas/tangentes/interrupciones, como clips de YouTube.
 
-### Estructura de carpetas (toda la metodología vive en `~/Desktop/cutly/editor/`)
+### Dónde está cada cosa
 
-- **`~/Desktop/cutly/editor/crudo/`** — vídeos fuente en bruto (`directoN-completo.mp4`). Cuando el
-  usuario pasa un directo nuevo (archivo ya puesto ahí, o un enlace de YouTube/Twitch que hay
-  que descargar primero en máxima calidad con `yt-dlp`), el .mp4 final vive en esta carpeta.
-  La transcripción (`.srt`/`.txt`) se guarda **junto al vídeo, en esta misma carpeta** — debe
-  persistir entre sesiones, no es un archivo temporal de scratchpad.
-- **`~/Desktop/cutly/editor/videos-editados/`** — carpeta de salida de los clips ya montados
-  (créala si no existe). Aquí va también `_cortes.log` (registro de cortes, ver sección de
-  errores de proceso). El usuario vacía esta carpeta cuando ya ha subido los clips a
-  YouTube — que esté vacía NO significa que no se haya hecho nada antes, solo que ya se
-  subieron.
-- El flujo nunca descarga ni escribe directamente en `~/Desktop/` a secas — todo el trabajo
-  (crudo y editado) vive dentro de `~/Desktop/cutly/editor/`.
+- **El directo** está en el material (`editor/crudo/`): lo pone ahí la interfaz al soltarlo, o lo descargas tú si
+  llega un enlace (sección 0). `python editor/comun/material.py ruta directo` da su ruta. La transcripción
+  (`<directo>_transcripcion.*`) y la propuesta (`<directo>.candidatos.json`) van **junto al directo**: deben persistir
+  entre sesiones (nada de scratchpad).
+- **Los clips** van a `editor/videos-editados/` (la sección Resultados los muestra según aparecen), con
+  `_cortes.log` (registro de cortes, solo APPEND). El usuario vacía esa carpeta cuando sube los clips: que esté vacía
+  NO significa que no se haya hecho nada antes.
 - **Nomenclatura de los clips**: `<directoN>_<Titulo-Tipo-YouTube>_editado.mp4`. La parte
-  `<Titulo-Tipo-YouTube>` debe poder servir directamente como propuesta de título real para
-  subir el vídeo a YouTube — no un resumen telegráfico tipo `cve_propio`, sino algo con gancho
-  y que se entienda fuera de contexto, en Capitalized-Kebab-Case (palabras con mayúscula
-  inicial separadas por guiones, sin acentos ni símbolos, para que el archivo siga siendo
-  válido en cualquier sistema). Piensa en cómo titularías el vídeo en YouTube y conviértelo
-  en ese formato. Ejemplos:
+  `<Titulo-Tipo-YouTube>` debe servir tal cual como título real de YouTube — con gancho y entendible fuera de
+  contexto, en Capitalized-Kebab-Case (sin acentos ni símbolos). Ejemplos:
   - ✅ `directo2_Como-Consegui-Mi-Propio-CVE-Real_editado.mp4`
   - ✅ `directo2_Bypass-De-Content-Type-Para-Conseguir-RCE-Con-Webshell-En-Node_editado.mp4`
-  - ✅ `directo_Bug-Bounty-Es-Una-Estafa-Mi-Experiencia-Real_editado.mp4`
-  - ❌ `directo2_cve_propio_editado.mp4` (demasiado telegráfico, no sirve como título)
-  - ❌ `directo_bugbounty_editado.mp4` (igual, muy genérico)
+  - ❌ `directo2_cve_propio_editado.mp4` (telegráfico, no sirve como título)
 
-  Si un clip junta dos temas de la tabla de candidatos, el título debe reflejar la idea
-  unificada de ambos, no simplemente concatenar los dos temas por separado.
+  Si un clip junta dos temas de la tabla, el título refleja la idea unificada, no los dos temas pegados.
 
-## Herramientas instaladas (persistentes, no reinstalar)
+## Herramientas
 
-- **whisper.cpp** vía Homebrew (`whisper-cli`, `whisper-server`, etc. en `/opt/homebrew/bin`).
-- **Modelos Whisper** guardados en `~/.whisper-models/`, fuera de cualquier scratchpad de
-  sesión para que persistan entre sesiones. Comprueba que existen antes de descargar nada:
-  ```bash
-  ls -la ~/.whisper-models/
-  ```
-  - `ggml-large-v3-turbo.bin` (~1.6GB) — **modelo por defecto** (transcripción base y
-    verificación de cortes). Medido: igual o más preciso que `large-v3` en nuestro audio, al doble
-    de velocidad (`editor/comun/BENCHMARK-WHISPER.md`).
-  - `ggml-large-v3.bin` (~3GB) — **segunda opinión** para una ventana dudosa, no para todo el archivo.
-  - `ggml-medium.bin` — retirado (más lento que turbo y con más errores).
-  Si falta alguno:
-  ```bash
-  mkdir -p ~/.whisper-models
-  curl -L -o ~/.whisper-models/ggml-large-v3-turbo.bin \
-    https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin
-  curl -L -o ~/.whisper-models/ggml-large-v3.bin \
-    https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin
-  ```
-- **Alternativa en Python, multiplataforma (la usada en Windows):** `pip install faster-whisper` +
-  `python editor/comun/transcribir.py VIDEO` (turbo + VAD + timestamps por palabra → `.json`/`.srt`/`.txt`). Los
-  modelos van a la caché de Hugging Face (`~/.cache/huggingface`), no a `~/.whisper-models/`. En CPU
-  usa int8. GPU solo con NVIDIA (CUDA); con AMD, ver whisper.cpp + Vulkan en `PORTABILIDAD.md`.
-- **ffmpeg / ffprobe** vía Homebrew — para todo el corte, recodificación y análisis de audio.
+- **Transcripción (la usada hoy, cualquier SO):** `python editor/comun/transcribir.py VIDEO` (faster-whisper,
+  `large-v3-turbo` + VAD, timestamps por palabra -> `.json`/`.srt`/`.txt`). Por qué ese modelo:
+  `editor/comun/BENCHMARK-WHISPER.md`. Modelos en la caché de Hugging Face; CPU en int8, GPU solo NVIDIA.
+- **Afinar y verificar cortes:** `editor/comun/energia.py` (energía a 10 ms), `editor/comun/detectar_silencio.sh`,
+  `editor/comun/verificar_corte.sh` (re-transcribe la ventana de un empalme). Construir: `construir_clip.sh` (aquí).
+- **whisper.cpp (alternativa, p. ej. con GPU Apple/AMD):** `whisper-cli` + modelos `ggml-*.bin` en
+  `~/.whisper-models/` (`editor/comun/asegurar_mejor_modelo.sh` descarga `ggml-large-v3-turbo.bin`). Solo él tiene
+  probabilidad por token (`-ojf`, sección 6.9): úsalo para un corte fino dudoso si está instalado.
+- **ffmpeg / ffprobe** (instalación por SO: `PORTABILIDAD.md`) y **yt-dlp** para descargar.
 
 ## Errores de proceso detectados en auditoría retrospectiva (no repetir)
 
@@ -241,7 +206,7 @@ cortar fragmentos concretos es un paso aparte que el usuario pide después, vien
   revisión final a partir del historial de la conversación, pero fue puro azar no perder
   información real. Instrucción obligatoria para cualquier sub-agente (y para el hilo principal)
   que vaya a tocar este archivo compartido: si aparece ausente o truncado, tratarlo como un
-  problema transitorio (comprobar primero la Papelera: `~/.Trash/` en macOS, la Papelera de reciclaje en Windows), nunca como una señal para recrearlo desde
+  problema transitorio (comprobar primero la Papelera del sistema), nunca como una señal para recrearlo desde
   cero — y si hay cualquier duda, reportarlo como hallazgo en la respuesta final en vez de
   sobrescribir sin confirmar. Al editar este archivo compartido desde varios agentes en paralelo,
   usar siempre APPEND (añadir al final), nunca Write/recreate.
@@ -275,38 +240,31 @@ Si el usuario pasa una URL (YouTube, Twitch VOD, etc.) en vez de un `.mp4` ya co
 yt-dlp -F "<url>"
 yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" \
   --merge-output-format mp4 \
-  -o "~/Desktop/cutly/editor/crudo/directoN-completo.mp4" "<url>"
+  -o "editor/crudo/directoN-completo.mp4" "<url>"
 ```
 
 Lánzalo siempre en background (son descargas de varios minutos/GB) y **nunca lo trates como
-terminado solo porque llega la notificación de la tarea** — comprueba con `ps aux | grep
-yt-dlp` y el tamaño/existencia real del archivo final antes de pasar a transcribir, porque si
+terminado solo porque llega la notificación de la tarea** — comprueba que el proceso de
+yt-dlp ya no está y el tamaño/existencia real del archivo final antes de pasar a transcribir, porque si
 el proceso se interrumpe (p. ej. lo matas tú mismo para reiniciarlo con otra ruta) puede
 quedar un `.part`/`.ytdl` a medias en vez del `.mp4` completo.
 
 ### 1. Transcribir el directo completo con timestamps
 
-Usa siempre el directorio de scratchpad de la sesión para el audio intermedio (es grande y
-desechable), pero guarda la transcripción resultante **junto al vídeo en `~/Desktop/cutly/editor/crudo/`**
-(debe persistir entre sesiones, no es un archivo temporal).
+La transcripción va **junto al vídeo, en `editor/crudo/`** (debe persistir entre sesiones). Con lo instalado en
+cualquier sistema:
 
 ```bash
-# Asegura que tienes el mejor modelo disponible (lo descarga si falta)
-# OJO: captura solo stdout en $MODEL. Si el script imprime algo de diagnóstico por error
-# (sin redirigir a >&2), $MODEL queda corrupto y whisper-cli falla silenciosamente
-# imprimiendo su --help en vez de transcribir (bug real que ocurrió una vez, ya corregido
-# en el script, pero vuelve a comprobarlo con `echo "[$MODEL]"` si añades algo nuevo al script).
-MODEL=$(~/Desktop/cutly/editor/comun/asegurar_mejor_modelo.sh)
+python editor/comun/transcribir.py editor/crudo/<directo>.mp4      # -> <directo>_transcripcion.json / .srt / .txt
+```
 
-# Extraer audio (en el scratchpad de la sesión, es temporal)
-ffmpeg -y -i ~/Desktop/cutly/editor/crudo/<directo>.mp4 -ar 16000 -ac 1 -c:a pcm_s16le audio.wav
+`large-v3-turbo` + VAD y sin arrastre de contexto (equivale a `-mc 0`, ver "Errores de proceso": una alucinación al
+principio llegó a envenenar un directo entero). Con **whisper.cpp** (alternativa, p. ej. con GPU), lo mismo:
 
-# Transcribir con timestamps (salida persistente junto al vídeo, en crudo/)
-# -mc 0 es OBLIGATORIO en la transcripcion inicial de un directo completo: evita que una
-# alucinacion puntual (p.ej. sobre una intro sin voz clara) "envenene" el resto del archivo
-# por arrastre de contexto (ver "Errores de proceso" mas abajo).
-whisper-cli -m "$MODEL" -f audio.wav -l es -mc 0 \
-  -osrt -of ~/Desktop/cutly/editor/crudo/<directo>_transcripcion --output-txt
+```bash
+MODEL=$(editor/comun/asegurar_mejor_modelo.sh)          # solo su stdout es la ruta (comprueba con echo "[$MODEL]")
+ffmpeg -y -i editor/crudo/<directo>.mp4 -ar 16000 -ac 1 -c:a pcm_s16le audio.wav      # audio.wav en el scratchpad
+whisper-cli -m "$MODEL" -f audio.wav -l es -mc 0 -osrt -of editor/crudo/<directo>_transcripcion --output-txt
 ```
 
 Esto genera `<directo>_transcripcion.srt` (con timestamps `HH:MM:SS,mmm`) y `.txt` (texto
@@ -326,7 +284,7 @@ versiones recientes; comprueba `whisper-cli --help`). Si tu versión no lo tiene
 alucinaciones típicas en silencios ("Gracias.", "Gracias por ver el vídeo", "Subtítulos por…") y
 contrástalas con la energía del audio: si el nivel en ese tramo es el ruido de fondo, no hay voz.
 
-Borra el `audio.wav` del scratchpad en cuanto termine la transcripción (es grande, ~200-250MB
+Con whisper.cpp, borra el `audio.wav` del scratchpad en cuanto termine la transcripción (es grande, ~200-250MB
 por hora de directo, y ya no hace falta una vez tienes el `.srt`/`.txt`).
 
 ### 1.5. Atajo: catálogo de marcadores verbales recurrentes
@@ -426,7 +384,7 @@ habla continua). Nunca cortes directamente en el timestamp del segmento — siem
 
 ```bash
 # 1. Detección de silencio alrededor del punto aproximado (ventana de ~6-8s)
-ffmpeg -ss <aprox-3> -t 8 -i ~/Desktop/cutly/editor/crudo/<directo>.mp4 \
+ffmpeg -ss <aprox-3> -t 8 -i editor/crudo/<directo>.mp4 \
   -af silencedetect=noise=-22dB:d=0.1 -f null - 2>&1 | grep silence
 ```
 
@@ -438,7 +396,7 @@ Si el punto es ambiguo (varias palabras seguidas sin pausa clara, tartamudeo rea
 streamer), transcribe esa ventana concreta con precisión palabra por palabra:
 
 ```bash
-ffmpeg -y -ss <inicio> -t <dur> -i ~/Desktop/cutly/editor/crudo/<directo>.mp4 \
+ffmpeg -y -ss <inicio> -t <dur> -i editor/crudo/<directo>.mp4 \
   -ar 16000 -ac 1 -c:a pcm_s16le tmp.wav
 whisper-cli -m ~/.whisper-models/ggml-large-v3-turbo.bin -f tmp.wav -l es -ml 1 \
   2>&1 | grep -E "^\[00"
@@ -465,8 +423,8 @@ solo sirve para recortar la cola final sin cortes intermedios). Patrón para N s
 mantener:
 
 ```bash
-SRC=~/Desktop/cutly/editor/crudo/<directo>.mp4
-OUT=~/Desktop/cutly/editor/videos-editados/directo_<tema>_editado.mp4
+SRC=editor/crudo/<directo>.mp4
+OUT=editor/videos-editados/directo_<tema>_editado.mp4
 ffmpeg -y -i "$SRC" -filter_complex \
 "[0:v]trim=start=T0i:end=T0f,setpts=PTS-STARTPTS[v0];[0:a]atrim=start=T0i:end=T0f,asetpts=PTS-STARTPTS[a0]; \
  [0:v]trim=start=T1i:end=T1f,setpts=PTS-STARTPTS[v1];[0:a]atrim=start=T1i:end=T1f,asetpts=PTS-STARTPTS[a1]; \
@@ -483,7 +441,7 @@ Lánzalo siempre en background (son renders de varios minutos). **Nunca lances u
 render del mismo `OUT` sin confirmar que el anterior terminó o pararlo explícitamente con
 `TaskStop`** — dos procesos ffmpeg escribiendo al mismo path en paralelo compiten por CPU y
 dejan el primero en un archivo incompleto (`moov atom not found`) al renombrarlo a mitad de
-escritura. Si tienes dudas, comprueba `ps aux | grep ffmpeg` antes de lanzar otro.
+escritura. Si tienes dudas, comprueba que no queda ningún proceso ffmpeg escribiendo ese archivo antes de lanzar otro.
 
 ### 6. Pasada de micro-silencios y muletillas DENTRO de cada tramo mantenido
 
@@ -698,7 +656,7 @@ pausa de más de 0,4 s, `SHORT-IDEAL.md`.)
 ### 9. Limpieza
 
 Borra los `.wav` temporales de verificación del scratchpad al terminar cada clip. **Nunca
-borres** la transcripción `.srt`/`.txt` de `~/Desktop/cutly/editor/crudo/` (sirve para futuros
+borres** la transcripción `.srt`/`.txt` de `editor/crudo/` (sirve para futuros
 fragmentos del mismo directo) ni el modelo de `~/.whisper-models/`.
 
 ## Ver fotogramas del vídeo (no estás completamente a ciegas)

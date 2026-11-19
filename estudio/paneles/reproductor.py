@@ -1,4 +1,4 @@
-"""Reproductor de vídeo con controles (lo usan las pestañas Shorts y Subtítulos)."""
+"""Reproductor de vídeo con controles (lo usan las secciones Directo → clips, Subtítulos y Resultados)."""
 from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
@@ -22,12 +22,19 @@ class Reproductor(QWidget):
         self.video.setMinimumHeight(240)
         self.player.setVideoOutput(self.video)
 
-        self.b_play = QPushButton("▶")
-        self.b_play.setFixedWidth(40)
+        self.b_play = QPushButton("▶  Reproducir")
+        self.b_play.setAccessibleName("Reproducir o pausar")
         self.b_play.clicked.connect(self.alternar)
         self.barra = QSlider(Qt.Orientation.Horizontal)
+        self.barra.setAccessibleName("Posición del vídeo")
+        self.barra.setAccessibleDescription("Flechas: 1 segundo. Re Pág / Av Pág: 10 segundos.")
+        self.barra.setSingleStep(1000)
+        self.barra.setPageStep(10000)
         self.barra.sliderMoved.connect(self.player.setPosition)
+        self.barra.actionTriggered.connect(lambda _a: self.player.setPosition(self.barra.sliderPosition()))
         self.tiempo = QLabel("0:00.00 / 0:00.00")
+        self.tiempo.setAccessibleName("Tiempo")
+        self.video.setAccessibleName("Vídeo")
 
         controles = QHBoxLayout()
         controles.addWidget(self.b_play)
@@ -41,7 +48,7 @@ class Reproductor(QWidget):
         self.player.durationChanged.connect(lambda d: self.barra.setRange(0, d))
         self.player.positionChanged.connect(self._avanza)
         self.player.playbackStateChanged.connect(
-            lambda st: self.b_play.setText("⏸" if st == QMediaPlayer.PlaybackState.PlayingState else "▶"))
+            lambda st: self.b_play.setText("⏸  Pausa" if st == QMediaPlayer.PlaybackState.PlayingState else "▶  Reproducir"))
 
     def cargar(self, ruta):
         self.player.stop()

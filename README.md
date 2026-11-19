@@ -14,6 +14,19 @@ limpios de relleno.
 > las herramientas (VirtualBox, ssh, Tesseract, ffmpeg) — ver **[`PORTABILIDAD.md`](PORTABILIDAD.md)**, que incluye
 > la sección de **anfitrión Windows** (rutas, `VBoxManage`, Tesseract). Reglas para agentes: [`CLAUDE.md`](CLAUDE.md).
 
+## ▶️ Cómo se usa hoy
+
+```bash
+pip install -r estudio/requisitos.txt
+python -m estudio
+```
+
+Se abre **cutly estudio**: Claude Code (el instalado, con su interfaz completa) y, alrededor, una sección por cosa que
+quieres hacer — **Directo → clips**, **Cara + pantalla**, **Grabación → Short**, **Subtítulos**, **Resultados**,
+**Material** y **VM**. Sueltas el vídeo en la sección de lo que quieres hacer, pulsas su botón y Claude hace el
+trabajo en su panel; lo que termina aparece solo donde toca. Guía: [`estudio/ESTUDIO.md`](estudio/ESTUDIO.md).
+Sin interfaz, lo mismo funciona desde la terminal con las skills (`/directo-a-clips`, `/fusionar-cara-pantalla`…).
+
 ---
 
 ## 🧭 Las dos mitades del proceso
@@ -65,8 +78,8 @@ cutly/
 │   ├── transcripcion.py · subtitulos.py  ← Whisper medido; texto y tiempos de los subtítulos
 │   └── cortes.py                     ←   _cortes.log (solo APPEND)
 ├── pruebas/                          ← python -m unittest discover -s pruebas -t pruebas
-├── estudio/                          ← INTERFAZ DE ESCRITORIO (PySide6): Claude Code dentro + pestañas Material, Fusión,
-│                                         una pestaña por cosa que hacer (Directo → clips, Cara + pantalla, Grabación →
+├── estudio/                          ← INTERFAZ DE ESCRITORIO (PySide6): Claude Code dentro +
+│                                         una sección por cosa que hacer (Directo → clips, Cara + pantalla, Grabación →
 │                                         Short, Subtítulos, Resultados), Material y VM; el material se ARRASTRA a la suya
 │                                         (python -m estudio; ver estudio/ESTUDIO.md)
 ├── .claude/skills/                   ← los flujos de trabajo como skills (/preparar-vm, /fusionar-cara-pantalla…)
@@ -77,8 +90,7 @@ cutly/
 │   ├── historial/HISTORIAL-SESIONES.md ← archivo largo, sesión a sesión (rutas de entonces; no hace falta leerlo)
 │   ├── METODOLOGIA/
 │   │   ├── 00-empezar-aqui-vm.md     ←   PUNTO DE ENTRADA: montaje, toma, verificación, referencia
-│   │   ├── 04-flujo-toma-video.md · 05-controlar-aplicaciones.md · 06-navegador-y-herramientas-gui.md
-│   │   ├── 07-auditoria-de-pruebas.md · 08-maquina-virtual.md
+│   │   ├── 04-flujo-toma-video.md · 08-maquina-virtual.md
 │   │   ├── 09-conducir-apps-kali.md  ←   fallos medidos + fichas por app (Firefox, Burp, terminal, nmap, Docker)
 │   │   └── 10-plantilla-demo-terminal.md ← CHECKLIST para una demo de terminal "perfecta a la primera"
 │   ├── DEMO-IDOR/ · DEMO-SSHOLE/     ←   demos de referencia (GUI con Burp · terminal con nmap + reverse shell)
@@ -169,5 +181,5 @@ Comunes a los tres sistemas (instalación por SO en [`PORTABILIDAD.md`](PORTABIL
 - **VirtualBox + ssh + `vm_control.py`** (Fase 1) — control de la VM, igual en los tres SO; OCR con Tesseract
   (en macOS puede usarse Vision).
 
-Desarrollo: la metodología se midió primero en un Mac con Apple Silicon (invitado ARM64) y se portó a un anfitrión
-Windows 11 (invitado x86-64). Los resultados medidos de cada plataforma están en `crear-shorts/METODOLOGIA/08-maquina-virtual.md` y `PENDIENTE.md`.
+Medido en dos anfitriones distintos (invitado ARM64 y anfitrión Windows 11 con invitado x86-64): el control de la VM
+es el mismo en ambos. Los resultados medidos de cada plataforma están en `crear-shorts/METODOLOGIA/08-maquina-virtual.md` y `PENDIENTE.md`.

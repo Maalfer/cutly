@@ -1,17 +1,20 @@
-"""Pestaña Material: la biblioteca de todo lo aportado (como el panel de medios de un editor). Se arrastra aquí (o a
-cualquier parte de la ventana) y desde aquí se puede arrastrar a las ranuras de las demás pestañas. Cada archivo
-lleva su papel (deducido o fijado) y el menú contextual le pide a Claude el flujo que toca."""
+"""Sección "Material": la biblioteca de todo lo aportado (como el panel de medios de un editor). Se suelta aquí (o en
+cualquier sección sin sitio propio) y desde aquí se arrastra a las ranuras de las demás secciones. Cada archivo lleva
+su papel (deducido o fijado) y el menú le pide a Claude el flujo que toca. El inventario lo trae el vigía central.
+
+Teclado: Intro abre, Supr quita, tecla Menú (o Mayús+F10) abre las acciones: papel y "Pedir a Claude"."""
 import os
 
-from PySide6.QtCore import QFileSystemWatcher, QMimeData, QSize, Qt, QTimer, QUrl, Signal
-from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
-from PySide6.QtWidgets import (QAbstractItemView, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QMenu,
-                               QMessageBox, QPushButton, QVBoxLayout, QWidget)
+from PySide6.QtCore import QMimeData, QSize, Qt, QUrl, Signal
+from PySide6.QtGui import QDesktopServices, QIcon, QKeySequence, QPixmap, QShortcut
+from PySide6.QtWidgets import (QAbstractItemView, QFileDialog, QHBoxLayout, QListWidget, QListWidgetItem, QMenu,
+                               QMessageBox, QVBoxLayout, QWidget)
 
 from nucleo import material
 
 from ..entorno import en_segundo_plano, para_claude
 from ..miniaturas import miniatura
+from .comun import boton, cabecera, estado, nombrar
 from .ranura import resumen, rutas_soltadas
 
 TODO = material.VIDEO + material.AUDIO + material.IMAGEN
@@ -25,7 +28,7 @@ class ListaMaterial(QListWidget):
         super().__init__(parent)
         self.setViewMode(QListWidget.ViewMode.IconMode)
         self.setIconSize(QSize(160, 120))
-        self.setGridSize(QSize(190, 190))
+        self.setGridSize(QSize(200, 200))
         self.setResizeMode(QListWidget.ResizeMode.Adjust)
         self.setMovement(QListWidget.Movement.Static)
         self.setWordWrap(True)
@@ -64,131 +67,7 @@ class ListaMaterial(QListWidget):
 
 
 def _traer_varios(rutas):
-    destinos = [material.anadir(r) for r in rutas]
-    material.sincronizar()
-    return destinos
-
-
-class PanelMaterial(QWidget):
-    pedir = Signal(str)                 # mensaje / comando para la sesión de Claude Code
-    cambiado = Signal(dict)             # el manifiesto, cada vez que cambia (lo usan las ranuras y la barra de estado)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        aviso = QLabel("Arrastra aquí vídeos, audio o imágenes (o suéltalos en cualquier parte de la ventana). "
-                       "Para darles un papel concreto, arrástralos a la ranura de su pestaña (Fusión, Subtítulos, "
-                       "Directo) o usa el menú del botón derecho.")
-        aviso.setWordWrap(True)
-        aviso.setStyleSheet("color:#aaa")
-        self.lista = ListaMaterial()
-        self.lista.soltados.connect(self.traer)
-        self.lista.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.lista.customContextMenuRequested.connect(self._menu)
-        self.lista.itemDoubleClicked.connect(
-            lambda it: QDesktopServices.openUrl(QUrl.fromLocalFile(it.data(Qt.ItemDataRole.UserRole))))
-        self.estado = QLabel()
-        b_claude = QPushButton("Contar a Claude qué material hay")
-        b_claude.setToolTip("Le pide que lea el inventario (python editor/comun/material.py)")
-        b_claude.clicked.connect(lambda: self.pedir.emit(
-            "Mira el material que he aportado: `python editor/comun/material.py` (papel de cada archivo en "
-            "editor/crudo/material.json)."))
-        abajo = QHBoxLayout()
-        abajo.addWidget(self.estado, 1)
-        abajo.addWidget(b_claude)
-        lay = QVBoxLayout(self)
-        lay.addWidget(aviso)
-        lay.addWidget(self.lista, 1)
-        lay.addLayout(abajo)
-
-        os.makedirs(material.carpeta(), exist_ok=True)
-        self._pendiente = QTimer(self, singleShot=True, interval=600, timeout=self.recargar)
-        self.vigia = QFileSystemWatcher([material.carpeta()], self)
-        self.vigia.directoryChanged.connect(lambda _: self._pendiente.start())   # agrupa ráfagas de cambios
-        self._iconos = {}
-        self.recargar()
-
-    # ---- datos
-    def traer_soltados(self, rutas):
-        self.traer(rutas)
-
-    def traer(self, rutas):
-        self.estado.setText(f"Trayendo {len(rutas)} archivo(s)…")
-        en_segundo_plano(lambda: _traer_varios(rutas), lambda _d: self.recargar(),
-                         lambda err: self.estado.setText(f"No se pudo traer: {err}"))
-
-    def recargar(self):
-        en_segundo_plano(material.sincronizar, self._pintar)
-
-    def _pintar(self, m):
-        seleccion = {it.data(Qt.ItemDataRole.UserRole) for it in self.lista.selectedItems()}
-        self.lista.clear()
-        for e in m["material"]:
-            ruta = os.path.join(material.carpeta(), e["archivo"])
-            it = QListWidgetItem(f"{e['archivo']}\n[{e['rol']}{' ✓' if e.get('rol_manual') else ''}] {resumen(e)}")
-            it.setData(Qt.ItemDataRole.UserRole, ruta)
-            it.setToolTip(f"{ruta}\npapel: {e['rol']} — {material.ROLES.get(e['rol'], '')}"
-                          f"{' (fijado por ti)' if e.get('rol_manual') else ' (deducido)'}")
-            if ruta in self._iconos:
-                it.setIcon(self._iconos[ruta])
-            else:
-                en_segundo_plano(lambda r=ruta, d=e.get("duracion"): (r, miniatura(r, d)), self._poner_icono)
-            self.lista.addItem(it)
-            it.setSelected(ruta in seleccion)
-        n = len(m["material"])
-        self.estado.setText(f"{n} archivo(s) en el material" if n else "Aún no hay material: arrástralo aquí.")
-        self.cambiado.emit(m)
-
-    def _poner_icono(self, par):
-        ruta, png = par
-        if not png:
-            return
-        icono = QIcon(QPixmap(png))
-        self._iconos[ruta] = icono
-        for i in range(self.lista.count()):
-            if self.lista.item(i).data(Qt.ItemDataRole.UserRole) == ruta:
-                self.lista.item(i).setIcon(icono)
-
-    # ---- menú contextual
-    def _menu(self, pos):
-        items = self.lista.selectedItems()
-        if not items:
-            return
-        rutas = [it.data(Qt.ItemDataRole.UserRole) for it in items]
-        entradas = {e["archivo"]: e for e in material.cargar()["material"]}
-        roles = [entradas.get(os.path.basename(r), {}).get("rol") for r in rutas]
-        menu = QMenu(self)
-
-        claude = menu.addMenu("Pedir a Claude")
-        for texto, mensaje in acciones_claude(rutas, roles):
-            claude.addAction(texto, lambda m=mensaje: self.pedir.emit(m))
-        claude.setEnabled(not claude.isEmpty())
-
-        papel = menu.addMenu("Papel")
-        for rol, desc in material.ROLES.items():
-            a = papel.addAction(f"{rol} — {desc}")
-            a.setCheckable(True)
-            a.setChecked(len(set(roles)) == 1 and roles[0] == rol)
-            a.triggered.connect(lambda _=False, r=rol: self._fijar(rutas, r))
-        menu.addSeparator()
-        menu.addAction("Abrir", lambda: [QDesktopServices.openUrl(QUrl.fromLocalFile(r)) for r in rutas])
-        menu.addAction("Mostrar en la carpeta", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(material.carpeta())))
-        menu.addAction("Quitar del material…", lambda: self._quitar(rutas))
-        menu.exec(self.lista.mapToGlobal(pos))
-
-    def _fijar(self, rutas, rol):
-        en_segundo_plano(lambda: [material.fijar_rol(r, rol) for r in rutas], lambda _: self.recargar())
-
-    def _quitar(self, rutas):
-        enlazados = [r for r in rutas if os.stat(r).st_nlink > 1]
-        texto = f"¿Quitar {len(rutas)} archivo(s) del material?"
-        if enlazados:
-            texto += f"\n\n{len(enlazados)} son enlaces al original: el original NO se borra."
-        if len(enlazados) < len(rutas):
-            texto += "\n\nLos que se copiaron se borran del material (el original, si lo había, sigue donde estaba)."
-        if QMessageBox.question(self, "Quitar material", texto) == QMessageBox.StandardButton.Yes:
-            for r in rutas:
-                os.remove(r)
-            self.recargar()
+    return [material.anadir(r) for r in rutas]
 
 
 def acciones_claude(rutas, roles):
@@ -204,6 +83,9 @@ def acciones_claude(rutas, roles):
         out.append((f"Subtitular {os.path.basename(r)}", f"/subtitular-short {para_claude(r)}"))
     for r in por.get("directo", []):
         out.append((f"Proponer clips de {os.path.basename(r)}", f"/directo-a-clips {para_claude(r)}"))
+    grabaciones = por.get("grabacion", []) + por.get("imagen", [])
+    if grabaciones:
+        out.append(("Montar un Short con esto", "/short-desde-grabacion " + " ".join(para_claude(r) for r in grabaciones)))
     for r in por.get("toma", []):
         nombre = os.path.splitext(os.path.basename(r))[0]
         out.append((f"Construir el Short de la toma {nombre}",
@@ -213,3 +95,133 @@ def acciones_claude(rutas, roles):
         lista = ", ".join(f"{para_claude(r)} ({rol})" for r, rol in zip(rutas, roles))
         out.append(("Preguntar a Claude por esto…", f"Mira este material: {lista}. "))
     return out
+
+
+class PanelMaterial(QWidget):
+    TITULO = "Material"
+    pedir = Signal(str)                 # mensaje / comando para la sesión de Claude Code
+    actualizar = Signal()               # "sincroniza ya" (lo atiende el vigía central)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.lista = nombrar(ListaMaterial(), "Material",
+                             "Todo lo aportado. Intro: abrir. Suprimir: quitar. Tecla Menú: papel y pedir a Claude.")
+        self.lista.soltados.connect(self.traer)
+        self.lista.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.lista.customContextMenuRequested.connect(self._menu)
+        self.lista.itemActivated.connect(
+            lambda it: QDesktopServices.openUrl(QUrl.fromLocalFile(it.data(Qt.ItemDataRole.UserRole))))
+        QShortcut(QKeySequence(Qt.Key.Key_Delete), self.lista, activated=lambda: self._quitar(self._seleccion()),
+                  context=Qt.ShortcutContext.WidgetShortcut)
+        self.estado = estado()
+        b_anadir = boton("Añadir…", "Elegir archivos para el material", self._elegir)
+        b_claude = boton("Contar a Claude qué material hay",
+                         "Le pide que lea el inventario (python editor/comun/material.py)",
+                         lambda: self.pedir.emit("Mira el material que he aportado: `python editor/comun/material.py` "
+                                                 "(papel de cada archivo en editor/crudo/material.json)."))
+        abajo = QHBoxLayout()
+        abajo.addWidget(self.estado, 1)
+        abajo.addWidget(b_anadir)
+        abajo.addWidget(b_claude)
+        lay = QVBoxLayout(self)
+        lay.addWidget(cabecera(self.TITULO, "Todo lo que has aportado, con su papel. Suelta aquí lo que sea, o "
+                                            "arrástralo desde aquí a la sección donde lo quieras usar."))
+        lay.addWidget(self.lista, 1)
+        lay.addLayout(abajo)
+        self._iconos = {}
+        self.estado.setText("Cargando el material…")
+
+    # ---- contrato de sección
+    def traer_soltados(self, rutas):
+        self.traer(rutas)
+
+    def al_material(self, m):
+        self._pintar(m)
+
+    # ---- datos
+    def _elegir(self):
+        filtro = "Material (" + " ".join("*" + e for e in TODO) + ")"
+        rutas, _ = QFileDialog.getOpenFileNames(self, "Añadir al material", "", filtro)
+        if rutas:
+            self.traer(rutas)
+
+    def traer(self, rutas):
+        self.estado.setText(f"Trayendo {len(rutas)} archivo(s)…")
+        en_segundo_plano(lambda: _traer_varios(rutas), lambda _d: self.actualizar.emit(),
+                         lambda err: self.estado.setText(f"No se pudo traer: {err}"))
+
+    def _seleccion(self):
+        return [it.data(Qt.ItemDataRole.UserRole) for it in self.lista.selectedItems()]
+
+    def _pintar(self, m):
+        seleccion = set(self._seleccion())
+        self.lista.clear()
+        for e in m["material"]:
+            ruta = os.path.join(material.carpeta(), e["archivo"])
+            fijado = " ✓" if e.get("rol_manual") else ""
+            it = QListWidgetItem(f"{e['archivo']}\n{e['rol']}{fijado} · {resumen(e)}")
+            it.setData(Qt.ItemDataRole.UserRole, ruta)
+            it.setData(Qt.ItemDataRole.AccessibleTextRole, f"{e['archivo']}, papel {e['rol']}, {resumen(e)}")
+            it.setToolTip(f"{ruta}\npapel: {e['rol']} — {material.ROLES.get(e['rol'], '')}"
+                          f"{' (fijado por ti)' if e.get('rol_manual') else ' (deducido)'}")
+            if ruta in self._iconos:
+                it.setIcon(self._iconos[ruta])
+            else:
+                en_segundo_plano(lambda r=ruta, d=e.get("duracion"): (r, miniatura(r, d)), self._poner_icono)
+            self.lista.addItem(it)
+            it.setSelected(ruta in seleccion)
+        n = len(m["material"])
+        self.estado.setText(f"{n} archivo(s) en el material" if n else "Aún no hay material: suéltalo aquí o en la "
+                                                                       "sección de lo que quieras hacer.")
+
+    def _poner_icono(self, par):
+        ruta, png = par
+        if not png:
+            return
+        icono = QIcon(QPixmap(png))
+        self._iconos[ruta] = icono
+        for i in range(self.lista.count()):
+            if self.lista.item(i).data(Qt.ItemDataRole.UserRole) == ruta:
+                self.lista.item(i).setIcon(icono)
+
+    # ---- menú contextual (también con la tecla Menú)
+    def _menu(self, pos):
+        rutas = self._seleccion()
+        if not rutas:
+            return
+        entradas = {e["archivo"]: e for e in material.cargar()["material"]}
+        roles = [entradas.get(os.path.basename(r), {}).get("rol") for r in rutas]
+        menu = QMenu(self)
+        claude = menu.addMenu("&Pedir a Claude")
+        for texto, mensaje in acciones_claude(rutas, roles):
+            claude.addAction(texto, lambda m=mensaje: self.pedir.emit(m))
+        claude.setEnabled(not claude.isEmpty())
+        papel = menu.addMenu("P&apel")
+        for rol, desc in material.ROLES.items():
+            a = papel.addAction(f"{rol} — {desc}")
+            a.setCheckable(True)
+            a.setChecked(len(set(roles)) == 1 and roles[0] == rol)
+            a.triggered.connect(lambda _=False, r=rol: self._fijar(rutas, r))
+        menu.addSeparator()
+        menu.addAction("&Abrir", lambda: [QDesktopServices.openUrl(QUrl.fromLocalFile(r)) for r in rutas])
+        menu.addAction("Mostrar en la &carpeta",
+                       lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(material.carpeta())))
+        menu.addAction("&Quitar del material…", lambda: self._quitar(rutas))
+        menu.exec(self.lista.mapToGlobal(pos))
+
+    def _fijar(self, rutas, rol):
+        en_segundo_plano(lambda: [material.fijar_rol(r, rol) for r in rutas], lambda _: self.actualizar.emit())
+
+    def _quitar(self, rutas):
+        if not rutas:
+            return
+        enlazados = [r for r in rutas if os.stat(r).st_nlink > 1]
+        texto = f"¿Quitar {len(rutas)} archivo(s) del material?"
+        if enlazados:
+            texto += f"\n\n{len(enlazados)} son enlaces al original: el original NO se borra."
+        if len(enlazados) < len(rutas):
+            texto += "\n\nLos que se copiaron se borran del material (el original, si lo había, sigue donde estaba)."
+        if QMessageBox.question(self, "Quitar material", texto) == QMessageBox.StandardButton.Yes:
+            for r in rutas:
+                os.remove(r)
+            self.actualizar.emit()

@@ -37,6 +37,18 @@
 | "Se ve pequeño" en TODAS las demos, no solo una (pedido explícito: todo el vídeo debe verse grande) | El recorte letterbox de la ventana completa solo amplía ×1,125 (960→1080); probé primero estrechar el recorte a 700 px por comando (×1,54) pero exige MEDIR cada comando nuevo y falla si alguno es más largo de lo previsto | **Súbele el tamaño de letra al terminal, no estreches el recorte:** `fontSize=18` → `24` en `~/.config/qterminal.org/qterminal.ini` (una vez por VM). Agranda TODO sin tocar el recorte. Comando y porqué: `10-plantilla-demo-terminal.md` §0 y §3 |
 | HTTPS da `SEC_ERROR_UNKNOWN_ISSUER` / "Software is Preventing..." en CUALQUIER web, incluso legítima | El perfil `demo` tiene el proxy fijo a 127.0.0.1:8080 (Burp); su CA no está confiada por Firefox | Para navegación general (no-Burp) usar el perfil **`general`** (sin proxy, ver ficha). No es un aviso real del sitio: revisa primero si el perfil tiene proxy antes de desconfiar de la web |
 
+## 3b. Principios heredados (del control del anfitrión, siguen valiendo)
+- **Teclado antes que ratón** cuando hay atajo (un atajo es 100 % fiable; un clic depende del OCR). Ratón, con trayecto
+  humano, cuando el gesto se tiene que VER en el vídeo.
+- **Esperar a que la app esté LISTA** (`waitfor` de un texto que solo aparece al final de la carga), nunca un `sleep`
+  a ojo; y **verificar el foco tras cada cambio de ventana** antes de teclear (`--in`, `type_in` por ID).
+- **Leer el estado sin OCR cuando se pueda**: la URL o un valor por el portapapeles/selección (`xclip`), el lab por su
+  log (`labcheck`).
+- **Layout fijo pensado para la cámara**: cada app siempre en el mismo sitio y tamaño (`place`/`maximize`); revelar el
+  resultado con un clic deliberado, no con saltos bruscos.
+- **Navegador con perfil limpio** para grabar (sin historial, extensiones ni avisos): el perfil `demo` (ficha Firefox).
+- Si un paso falla a mitad de toma, **el guion se detiene** y se rehace ese acto (el mapa de edición lo marca).
+
 ## 4. Ritmo (fluidez en el vídeo)
 - Tecleo 35-45 wpm para que se lea; ratón con trayecto curvo (`move`); pausa de lectura 3-4 s en pantallas densas y 1,5-2 s
   antes del paso "peligroso". Las esperas por OCR (1-3 s) no se notan si caen entre actos; ponlas dentro de pausas.

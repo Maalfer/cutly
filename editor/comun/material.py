@@ -8,7 +8,7 @@ Contrato y lógica: nucleo/material.py (manifiesto editor/crudo/material.json).
     python editor/comun/material.py ruta ROL           # rutas con ese papel (p. ej. la cara y la pantalla a fundir)
     python editor/comun/material.py anadir RUTA [--copiar | --mover]   # trae un archivo al material
 
-El usuario suele aportar el material arrastrándolo a la pestaña Material de cutly estudio, que escribe lo mismo.
+El usuario suele aportar el material soltándolo en las secciones de cutly estudio, que escribe lo mismo.
 """
 import argparse
 import os

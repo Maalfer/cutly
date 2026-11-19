@@ -57,6 +57,14 @@ if (typeof Terminal === "undefined") {
     puente = canal.objects.puente;
     puente.datos.connect(d => term.write(d));
     puente.foco.connect(() => term.focus());
+    puente.estilo.connect(json => {            // tamaño de letra, colores y modo lector, desde la app
+      const e = JSON.parse(json);
+      term.options.fontSize = e.letra;
+      term.options.theme = Object.assign({}, term.options.theme, { background: e.fondo, foreground: e.texto });
+      term.options.screenReaderMode = !!e.lector;
+      document.body.style.background = e.fondo;
+      try { fit.fit(); } catch (err) {}
+    });
     term.onData(d => puente.entrada(d));
     term.onBinary(d => puente.entrada(d));
     term.onResize(s => puente.tam(s.cols, s.rows));

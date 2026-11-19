@@ -8,7 +8,7 @@ depender de nombres fijos ("cara.mp4").
 Papeles (ROLES): cara · pantalla · short · toma · directo · grabacion · audio · imagen. Se deducen solos (inferir_rol),
 pero lo normal es que los fije la interfaz: el usuario arrastra cada vídeo a la ranura de su papel ("Cara",
 "Pantalla"...) y queda rol_manual: true (sincronizar ya no lo toca). Nadie coloca archivos en carpetas a mano.
-Lo usan: editor/comun/material.py (CLI para Claude), estudio/paneles/material.py (la pestaña), las skills.
+Lo usan: editor/comun/material.py (CLI para Claude), estudio/paneles/material.py (la sección Material), las skills.
 """
 import os
 import shutil

@@ -1,7 +1,7 @@
 # Fusionar CARA + PANTALLA en un Short final
 
 > **Cuándo aplica:** el usuario pasa DOS vídeos verticales 1080×1920 (normalmente arrastrándolos a las ranuras
-> "Cara" y "Pantalla" de la pestaña Fusión de cutly estudio, que lanza `/fusionar-cara-pantalla <cara> <pantalla>`;
+> "Cara" y "Pantalla" de la sección «Cara + pantalla» de cutly estudio, que lanza `/fusionar-cara-pantalla <cara> <pantalla>`;
 > si no vienen como argumentos: `python editor/comun/material.py ruta cara|pantalla`). Abajo, `cara.mp4` y
 > `pantalla.mp4` son nombres de ejemplo:
 > - **pantalla** (p. ej. `crudo/pantalla.mp4`): el Short mudo ya construido (normalmente con `short_desde_toma.py`),

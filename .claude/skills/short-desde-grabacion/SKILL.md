@@ -1,6 +1,6 @@
 ---
 name: short-desde-grabacion
-description: Monta un Short vertical mudo (1080x1920, banda negra arriba para la cara) a partir de grabaciones sueltas que NO vienen de crear-shorts (sin registro de pasos), con intro o imágenes opcionales. Úsala cuando el usuario suelte grabaciones en la pestaña "Grabación → Short" o lo pida.
+description: Monta un Short vertical mudo (1080x1920, banda negra arriba para la cara) a partir de grabaciones sueltas que NO vienen de crear-shorts (sin registro de pasos), con intro o imágenes opcionales. Úsala cuando el usuario suelte grabaciones en la sección "Grabación → Short" o lo pida.
 argument-hint: "<fuente1> [fuente2 ...] [Titulo-Con-Gancho]"
 ---
 
@@ -19,5 +19,5 @@ Sigue **`editor/shorts/METODOLOGIA-SHORTS.md`** (fuente de verdad):
    `python editor/shorts/construir_short.py editor/crudo/short_plan.json`.
 3. Verifica la banda (constante en 648) y cada unión con un fotograma; entrada APPEND en
    `editor/videos-editados/_cortes.log`.
-4. El resultado es el Short MUDO: dile al usuario que grabe su cara y su voz y que los suelte en la pestaña
+4. El resultado es el Short MUDO: dile al usuario que grabe su cara y su voz y que los suelte en la sección
    "Cara + pantalla" (`/fusionar-cara-pantalla`).

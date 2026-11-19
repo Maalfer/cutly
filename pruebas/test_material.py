@@ -163,7 +163,7 @@ if __name__ == "__main__":
 
 
 class Candidatos(unittest.TestCase):
-    """Propuesta de fragmentos de un directo (nucleo/candidatos.py) y lo que la pestaña le dice a Claude."""
+    """Propuesta de fragmentos de un directo (nucleo/candidatos.py) y lo que la sección le dice a Claude."""
 
     def test_validar(self):
         from nucleo import candidatos

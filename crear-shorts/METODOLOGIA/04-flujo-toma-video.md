@@ -1,8 +1,7 @@
 # 04 — Flujo de toma de video (protocolo completo)
 
 > Protocolo para la VM (`00-empezar-aqui-vm.md`). Las fases, el pacing y la toma única "sin tocar" valen en cualquier SO.
-> Las referencias sueltas a "doc 03" son a un documento YA RETIRADO (control del anfitrión macOS): ignora
-> el número, el gate anti-solape en sí sigue siendo un principio válido (hoy: `vm_control.py windows`).
+> Desde cutly estudio: botón/skill `/grabar-demo`; la sección VM enseña la pantalla del invitado en directo.
 
 ## El modelo de trabajo
 
@@ -21,17 +20,18 @@ USUARIO: "haz X en video"
 1. Crear TODOS los archivos (páginas, payloads, servidores, decoys)
 2. **Probar el pipeline end-to-end** con un test que no ensucie la toma
    (borrar logs/loot del test antes de la toma real)
-3. Ocultar apps estorbosas, construir el escenario (orden back-to-front)
-4. **Pasar el gate anti-solape** (doc 03): `ventanas --only <apps del layout> --exit-code` → que
-   ninguna quede enterrada, cortada por el borde ni tapada por una notificación. Y **mirar la captura** (visión): confirmar a ojo que todo lo que
-   debe verse, se ve, y nada tapa lo importante.
+3. Cerrar lo que estorbe y construir el escenario: cada ventana en su sitio y tamaño (`place`/`maximize`), la
+   importante delante.
+4. **Comprobar el escenario antes de grabar:** `vm_control.py windows` (qué ventanas hay, dónde y de qué tamaño) y
+   **mirar la captura** (`shot`, o la sección VM): que nada quede enterrado, cortado por el borde ni tapado por una
+   notificación, y que todo lo que debe verse se vea.
 
 ### FASE 1 — El anuncio (crítico)
 ```
 "⚠️ TOMA ÚNICA — NO TOQUES LA VENTANA DE LA VM HASTA QUE TE DIGA CORTEN (~15s)"
 ```
-**Por qué:** una interacción del usuario a mitad de toma rompe el z-order
-(ver doc 03, lección 7). Anunciar duración reduce la tentación.
+**Por qué:** un clic del usuario dentro de la VM a mitad de toma le roba el foco al guion (y la guarda de foco
+para el tecleo). Anunciar la duración reduce la tentación.
 
 ### FASE 2 — La secuencia continua
 Un script con todos los pasos, cada uno con su verificación, bajo un registro de toma:

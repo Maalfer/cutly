@@ -26,6 +26,7 @@ class Puente(QObject):
     """Lo que ve el JavaScript de terminal.html (QWebChannel)."""
     datos = Signal(str)            # Python -> xterm.js: salida del programa
     foco = Signal()
+    estilo = Signal(str)           # JSON {letra, fondo, texto, lector}: tamaño de letra, colores, modo lector
 
     def __init__(self, proceso, parent=None):
         super().__init__(parent)
@@ -125,6 +126,10 @@ class TerminalClaude(QWebEngineView):
         s.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessRemoteUrls, True)   # xterm.js del CDN
         self.setHtml(_html(), QUrl.fromLocalFile(HTML))
         self.page().loadFinished.connect(self._vigilar_arrastres)
+        self.page().loadFinished.connect(lambda _ok: getattr(self, "_estilo", None) and self.puente.estilo.emit(self._estilo))
+        self.setAccessibleName("Sesión de Claude Code")
+        self.setAccessibleDescription("Terminal con Claude Code. Control+C con texto seleccionado copia; sin selección "
+                                      "interrumpe. Control+V pega.")
 
     # ---- soltar ficheros encima = pegar su ruta en la sesión (como en cualquier terminal)
     def _vigilar_arrastres(self, _ok=True):
@@ -145,6 +150,12 @@ class TerminalClaude(QWebEngineView):
             self.setFocus()
             return True
         return super().eventFilter(obj, ev)
+
+    def ajustar(self, letra=14, fondo="#1e1e1e", texto="#d4d4d4", lector=False):
+        """Tamaño de letra, colores y modo lector de pantalla de xterm.js (lo aplica en caliente)."""
+        import json
+        self._estilo = json.dumps({"letra": letra, "fondo": fondo, "texto": texto, "lector": lector})
+        self.puente.estilo.emit(self._estilo)
 
     def enviar(self, texto, intro=True):
         """Escribe `texto` en la sesión (como si lo tecleara el usuario) y, si intro, pulsa Enter."""

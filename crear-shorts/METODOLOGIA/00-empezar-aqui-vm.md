@@ -106,5 +106,6 @@ Git Bash convierte rutas `/home/...`: usa rutas relativas al home o `MSYS_NO_PAT
 Ver la cabecera de `herramientas/vm_control.py` (`python vm_control.py` sin argumentos la imprime).
 
 ## 6. Estado de lo verificado
-Ver [`../../PENDIENTE.md`](../../PENDIENTE.md). Resumen: control, tecleo humano, captura y fiabilidad 10/10 medidos en
-macOS/ARM (doc 08). **En Windows/x86 está portado y sin probar de punta a punta** hasta completar el montaje §1.
+Ver [`../../PENDIENTE.md`](../../PENDIENTE.md). Resumen: control, tecleo humano, captura y fiabilidad 10/10 medidos con un
+invitado ARM64; en un anfitrión Windows con invitado x86-64 están medidos en vivo los canales ssh y guestcontrol, el
+inicio de sesión, el tecleo con tildes, el ratón, maximizar y la grabación a la resolución real (doc 08 §6).

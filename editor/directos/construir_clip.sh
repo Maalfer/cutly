@@ -20,7 +20,7 @@
 # script los normaliza a segundos el mismo para evitar errores de conversion manual.
 #
 # Ejemplo:
-#   ./construir_clip.sh ~/Desktop/directo.mp4 ~/Desktop/clip.mp4 -b 1.5M \
+#   editor/directos/construir_clip.sh editor/crudo/directo4.mp4 editor/videos-editados/directo4_Titulo_editado.mp4 -b 1.5M \
 #     00:08:36.2 00:08:52.3  00:09:25.3 00:09:29.95  00:09:42.7 00:12:32.0
 
 set -euo pipefail

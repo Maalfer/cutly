@@ -18,19 +18,18 @@
 > ejercicio de robo por copiar-y-pegar). Sigue esto al pie de la letra salvo que el usuario
 > pida otra cosa.
 >
-> **Multiplataforma:** todo aquí es ffmpeg/ffprobe/python puro, así que funciona igual en macOS,
-> Windows y Linux. Los comandos de ejemplo son de shell POSIX (macOS/Linux); en Windows úsalos en
-> **Git Bash/WSL**, o usa directamente `editor/shorts/construir_short.py` (Python, portable). Instalación
-> y GPU por sistema: `PORTABILIDAD.md` (raíz).
+> **Multiplataforma:** todo aquí es ffmpeg/ffprobe/python, igual en Windows, macOS y Linux. Los fragmentos de shell
+> van con bash (en Windows, Git Bash o WSL); el montaje en sí es `editor/shorts/construir_short.py` (Python).
+> Instalación por sistema: `PORTABILIDAD.md` (raíz).
 
 ---
 
 ## 0. El disparador y el entregable
 
-- **Entrada típica:** uno o varios vídeos en `crudo/` (p. ej. `editar.mkv` = el ejercicio,
-  `intro.mkv` = la intro) + opcionalmente una maqueta `referencia.mp4` que enseña **cómo lo
-  quiere el usuario** (proporción del hueco de la cara, estilo de subtítulos, etc.) + a veces
-  imágenes sueltas de apoyo (`*.jpg`).
+- **Entrada típica:** el usuario suelta en la sección **Grabación → Short** de cutly estudio uno o varios vídeos
+  (p. ej. el ejercicio y una intro) y a veces imágenes de apoyo, **en el orden del vídeo**; llegan como argumentos de
+  `/short-desde-grabacion` y están en el material (`editor/crudo/`, papel `grabacion`/`imagen`). A veces trae una
+  maqueta que enseña **cómo lo quiere** (proporción del hueco de la cara, estilo).
 - **Salida:** un `.mp4` vertical **1080×1920 @60fps** en `videos-editados/`, con el hueco de
   la cara arriba y pista de audio **en silencio** (el usuario graba su voz en off luego).
 - **Nomenclatura:** `short_<Titulo-Tipo-YouTube>_editado.mp4` (Capitalized-Kebab-Case, sin

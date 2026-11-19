@@ -20,24 +20,6 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 import estudio.entorno  # noqa: E402,F401  (prepara las rutas de nucleo/ y vm/)
 
 
-def tema_oscuro(app):
-    """Fusion con paleta oscura: el mismo aspecto en Windows, macOS y Linux, a juego con el terminal."""
-    from PySide6.QtGui import QColor, QPalette
-    app.setStyle("Fusion")
-    p = QPalette()
-    for rol, color in ((QPalette.ColorRole.Window, "#252526"), (QPalette.ColorRole.WindowText, "#e6e6e6"),
-                       (QPalette.ColorRole.Base, "#1e1e1e"), (QPalette.ColorRole.AlternateBase, "#2a2a2a"),
-                       (QPalette.ColorRole.Text, "#e6e6e6"), (QPalette.ColorRole.Button, "#333337"),
-                       (QPalette.ColorRole.ButtonText, "#e6e6e6"), (QPalette.ColorRole.Highlight, "#2d6cdf"),
-                       (QPalette.ColorRole.HighlightedText, "#ffffff"), (QPalette.ColorRole.ToolTipBase, "#2d2d30"),
-                       (QPalette.ColorRole.ToolTipText, "#e6e6e6"), (QPalette.ColorRole.PlaceholderText, "#8a8a8a"),
-                       (QPalette.ColorRole.Link, "#4ea1ff")):
-        p.setColor(rol, QColor(color))
-    for rol in (QPalette.ColorRole.WindowText, QPalette.ColorRole.Text, QPalette.ColorRole.ButtonText):
-        p.setColor(QPalette.ColorGroup.Disabled, rol, QColor("#6d6d6d"))
-    app.setPalette(p)
-
-
 def main():
     ap = argparse.ArgumentParser(prog="python -m estudio", description="cutly estudio")
     ap.add_argument("--continuar", action="store_true", help="retomar la última conversación (claude --continue)")
@@ -51,9 +33,9 @@ def main():
     QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)   # requisito de QtWebEngine
     app = QApplication(sys.argv[:1])
     app.setApplicationName("cutly estudio")
-    tema_oscuro(app)
+    app.setOrganizationName("cutly")
     from estudio.ventana import Ventana
-    v = Ventana(comando)
+    v = Ventana(comando, app)
     v.show()
     if a.escribir:
         QTimer.singleShot(4000, lambda: v.enviar(a.escribir))

@@ -7,7 +7,7 @@ import time
 import ocr_buscar
 
 from .anfitrion import find_tesseract, vbox
-from .config import IS_WIN, TMP, VM, die
+from .config import TMP, VM, die
 from .registro import focus, logged
 
 
@@ -46,9 +46,11 @@ def _ocr_words(png, region=None, thorough=False):
             cr.resize((int(cr.width * rs), int(cr.height * rs)), Image.LANCZOS).save(png)
         except ImportError:
             ox = oy = 0
-    ctrl = os.path.expanduser("~/Desktop/ctrl-kit/ocr")
-    if os.environ.get("VM_OCR") != "tesseract" and not IS_WIN and os.access(ctrl, os.X_OK):
-        return subprocess.run([ctrl, "--words", png], capture_output=True, text=True).stdout
+    # OCR externo opcional (cualquier SO): VM_OCR_CMD=<programa> que, con `--words imagen.png`, imprima
+    # "palabra<TAB>[x,y WxH]" por línea (p. ej. herramientas/ocr.swift compilado, que usa Vision en macOS).
+    externo = os.environ.get("VM_OCR_CMD")
+    if externo and os.environ.get("VM_OCR") != "tesseract":
+        return subprocess.run([externo, "--words", png], capture_output=True, text=True).stdout
     tess = find_tesseract()
     if not tess:
         die("falta Tesseract (Windows: winget install UB-Mannheim.TesseractOCR; ver PORTABILIDAD.md)")

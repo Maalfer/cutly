@@ -61,8 +61,10 @@ brew install --cask virtualbox        # (Apple Silicon: VirtualBox 7.1+ con invi
 brew install python tesseract ffmpeg
 pip3 install pillow opencv-python     # opcionales
 ```
-`VBoxManage` queda en el PATH. Si existe `~/Desktop/ctrl-kit/ocr` (Vision), `vm_control.py` lo prefiere a Tesseract
-(`VM_OCR=tesseract` lo desactiva). Vision lee botones de interfaz que Tesseract no encuentra.
+`VBoxManage` queda en el PATH. OCR opcional con Vision: compila `crear-shorts/herramientas/ocr.swift` y apunta
+`VM_OCR_CMD` al binario; `vm_control.py` lo prefiere a Tesseract (`VM_OCR=tesseract` lo desactiva). Vision lee botones
+de interfaz que Tesseract no encuentra. `VM_OCR_CMD` sirve igual en cualquier SO con cualquier OCR que imprima
+"palabra<TAB>[x,y WxH]".
 
 ## 3. Anfitrión Linux
 ```bash
@@ -111,5 +113,5 @@ lados). Aceleración opcional: `h264_videotoolbox` (Apple), `h264_nvenc` (NVIDIA
 ## 5. Qué ya NO se usa
 El control del ordenador anfitrión (`cliclick`, AppleScript, AutoHotkey, `wmctrl`, `ydotool`, Vision como único OCR,
 gate anti-solape sobre ventanas del anfitrión…) **se retiró**: todo ocurre dentro de la VM. Los fallos históricos de ese
-enfoque siguen documentados en `crear-shorts/METODOLOGIA/07-auditoria-de-pruebas.md` como lecciones, no como
+enfoque siguen archivados en `crear-shorts/historial/control-del-anfitrion/` como lecciones, no como
 instrucciones.

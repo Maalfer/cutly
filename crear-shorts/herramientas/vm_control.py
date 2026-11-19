@@ -7,7 +7,7 @@ por SSH) y verifica (OCR / plantillas / log del lab).
 ESTÁNDAR DEL REPO: todas las tomas se hacen DENTRO de la VM (ver METODOLOGIA/00-empezar-aqui-vm.md).
 
 Requisitos en el ANFITRIÓN: VBoxManage (se localiza solo, ver find_vboxmanage), ssh (OpenSSH; viene con
-Windows 10/11), python3 y un OCR (Tesseract en cualquier SO; Vision de macOS si existe ctrl-kit).
+Windows 10/11), python3 y un OCR (Tesseract en cualquier SO, o el que indique VM_OCR_CMD).
 Opcionales: Pillow (OCR por región), opencv-python (clickimg: búsqueda por plantilla).
 Requisitos en el INVITADO: Guest Additions, sesión X11 iniciada, xdotool, xclip, x11-utils, wmctrl, python3;
 sshd para el canal ssh (ffmpeg solo para `rec start --guest`).
@@ -15,7 +15,7 @@ sshd para el canal ssh (ffmpeg solo para `rec start --guest`).
 Primera vez (una sola):  vm_control.py doctor  (dice qué falta y cómo arreglarlo)  ->  vm_control.py bootstrap
 Canal con el invitado: VM_CANAL=auto (defecto: ssh si responde, si no guestcontrol) | ssh | guestcontrol (vm/canales/)
 Variables: VM_NAME (kali) VM_KEY (~/.ssh/cutly_vm) VM_SSH_PORT (2222) VM_USER (kali) VBOXMANAGE (ruta)
-           VM_OCR=tesseract (fuerza Tesseract) VM_GUEST_PASS (contraseña del invitado, SOLO si la das tú,
+           VM_OCR=tesseract (fuerza Tesseract) VM_OCR_CMD (OCR externo, p. ej. ocr.swift compilado) VM_GUEST_PASS (contraseña del invitado, SOLO si la das tú,
            para instalar la clave con `guestcontrol` o para usar el canal guestcontrol; mejor VM_GUEST_PASSFILE=<fichero>;
            el script nunca adivina contraseñas)
 

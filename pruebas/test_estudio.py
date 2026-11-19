@@ -1,4 +1,4 @@
-"""cutly estudio (estudio/): flujos = skills, lógica de la pestaña Subtítulos, el pseudo-terminal y los paneles sin
+"""cutly estudio (estudio/): flujos = skills, lógica de la sección Subtítulos, el pseudo-terminal y los paneles sin
 mostrarlos (plataforma Qt "offscreen"). No abre ninguna sesión de Claude Code."""
 import os
 import sys
@@ -124,3 +124,69 @@ class PanelSubtitulos(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _luminancia(hexa):
+    r, g, b = (int(hexa[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    lin = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in (r, g, b)]
+    return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+
+def contraste(a, b):
+    la, lb = sorted((_luminancia(a), _luminancia(b)), reverse=True)
+    return (la + 0.05) / (lb + 0.05)
+
+
+@unittest.skipUnless(HAY_QT, "PySide6 no instalado")
+class Accesibilidad(unittest.TestCase):
+    def test_contraste_wcag_de_cada_tema(self):
+        """Texto, texto secundario y botón principal legibles en todos los temas (WCAG AA 4,5:1; alto contraste 7:1)."""
+        from estudio.apariencia import TEMAS
+        for nombre, c in TEMAS.items():
+            minimo = 7 if nombre == "alto contraste" else 4.5
+            for texto, fondo in (("texto", "fondo"), ("texto", "panel"), ("ayuda", "fondo"), ("ayuda", "panel"),
+                                 ("acento_texto", "acento")):
+                self.assertGreaterEqual(contraste(c[texto], c[fondo]), minimo, f"{nombre}: {texto} sobre {fondo}")
+
+    def test_cada_seccion_cumple_el_contrato(self):
+        app()
+        from estudio.paneles.directo import PanelDirecto
+        from estudio.paneles.fusion import PanelFusion
+        from estudio.paneles.grabacion import PanelGrabacion
+        from estudio.paneles.material import PanelMaterial
+        from estudio.paneles.resultados import PanelResultados
+        from estudio.paneles.subtitulos import PanelSubtitulos
+        titulos = []
+        for clase in (PanelDirecto, PanelFusion, PanelGrabacion, PanelSubtitulos, PanelResultados, PanelMaterial):
+            p = clase()
+            titulos.append(p.TITULO)
+            self.assertTrue(hasattr(p, "pedir"), clase.__name__)
+            self.assertTrue(hasattr(p, "traer_soltados"), clase.__name__)   # todas tienen sitio para soltar
+            p.deleteLater()
+        self.assertEqual(len(set(titulos)), len(titulos))
+
+
+@unittest.skipUnless(HAY_QT, "PySide6 no instalado")
+class Vigia(unittest.TestCase):
+    """El vigía central avisa de lo nuevo que deja Claude: subtítulos al momento, un vídeo cuando deja de crecer."""
+
+    def test_novedades(self):
+        from unittest import mock
+        from nucleo import rutas
+        import estudio.servicios as servicios
+        a = app()
+        with tempfile.TemporaryDirectory() as d:
+            crudo, salida = os.path.join(d, "crudo"), os.path.join(d, "salida")
+            with mock.patch.object(rutas, "CRUDO", crudo), mock.patch.object(servicios, "SALIDA", salida):
+                v = servicios.Vigia()
+                v._estable.setInterval(300)
+                vistos = []
+                v.novedad.connect(lambda t, r: vistos.append((t, os.path.basename(r))))
+                archivos.escribir_json(os.path.join(salida, "s.subtitulos.json"), {"bloques": []})
+                with open(os.path.join(salida, "short_X_editado.mp4"), "wb") as f:
+                    f.write(b"x" * 1000)
+                QTimer.singleShot(4000, a.quit)
+                a.exec()
+                v.deleteLater()
+        self.assertIn(("subtitulos", "s.subtitulos.json"), vistos)
+        self.assertIn(("resultado", "short_X_editado.mp4"), vistos)

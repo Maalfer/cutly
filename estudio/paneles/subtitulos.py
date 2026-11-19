@@ -1,21 +1,24 @@
-"""Pestaña Subtítulos: revisar y corregir el <video>.subtitulos.json que deja `subtitular.py preparar` (paso 3 de
-/subtitular-short) con el vídeo sincronizado, guardar, y avisar a Claude Code de que ya está revisado.
+"""Sección "Subtítulos": pedir a Claude los subtítulos de un Short (ranura + /subtitular-short) y revisar el
+<video>.subtitulos.json que deja `subtitular.py preparar`, con el vídeo sincronizado; guardar y avisar a Claude de que
+ya está revisado (paso 3 de /subtitular-short).
 
 Es el mismo fichero que lee `subtitular.py quemar`: aquí solo se cambia el "texto" de cada bloque (si cambia el número
 de palabras, quemar reparte los tiempos solo). Si Claude lo reescribe mientras está abierto, se recarga.
+Teclado: Ctrl+S guarda; Ctrl+Intro en una fila salta a ese momento del vídeo.
 """
 import glob
 import os
 
 from PySide6.QtCore import QFileSystemWatcher, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QKeySequence, QShortcut
-from PySide6.QtWidgets import (QComboBox, QHBoxLayout, QHeaderView, QLabel, QMessageBox, QPushButton, QSplitter,
-                               QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtGui import QFont, QKeySequence, QPalette, QShortcut
+from PySide6.QtWidgets import (QComboBox, QHBoxLayout, QHeaderView, QLabel, QMessageBox, QSplitter, QTableWidget,
+                               QTableWidgetItem, QVBoxLayout, QWidget)
 
 from nucleo import archivos, material
 from nucleo.rutas import REPO, SALIDA
 
 from ..entorno import para_claude
+from .comun import boton, cabecera, estado, nombrar, primario
 from .ranura import Ranura
 from .reproductor import Reproductor
 
@@ -58,8 +61,20 @@ def aplicar_textos(datos, textos):
 
 
 # ---------------------------------------------------------------- interfaz
+class TablaBloques(QTableWidget):
+    saltar = Signal(int)
+
+    def keyPressEvent(self, ev):
+        if (ev.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and ev.modifiers() & Qt.KeyboardModifier.ControlModifier
+                and self.currentRow() >= 0):
+            self.saltar.emit(self.currentRow())
+            return
+        super().keyPressEvent(ev)
+
+
 class PanelSubtitulos(QWidget):
-    pedir = Signal(str)           # mensaje para la sesión de Claude Code
+    TITULO = "Subtítulos"
+    pedir = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -68,49 +83,56 @@ class PanelSubtitulos(QWidget):
         self.sucio = False
         self._actual = -1
 
-        # 1) qué Short subtitular: se suelta en la ranura y se le pide a Claude
+        # 1) qué Short subtitular
         self.ranura = Ranura("short", "Short a subtitular", "el Short ya montado (con tu voz)")
-        self.ranura.cambiado.connect(lambda r: self.b_subtitular.setEnabled(bool(r)))
-        self.b_subtitular = QPushButton("Subtitular con Claude")
-        self.b_subtitular.setMinimumHeight(36)
+        self.b_subtitular = primario("Subtitular con Claude", "Claude transcribe, prepara los subtítulos y te pide "
+                                                              "que los revises aquí antes de quemarlos")
         self.b_subtitular.setEnabled(False)
+        self.ranura.cambiado.connect(lambda r: self.b_subtitular.setEnabled(bool(r)))
         self.b_subtitular.clicked.connect(lambda: self.pedir.emit(f"/subtitular-short {para_claude(self.ranura.ruta)}"))
-        # 2) revisión: el JSON que deja Claude
-        self.combo = QComboBox()
+        # 2) revisión del JSON que deja Claude
+        self.combo = nombrar(QComboBox(), "Subtítulos a revisar")
         self.combo.currentIndexChanged.connect(lambda _: self.abrir(self.combo.currentData()))
         self.rep = Reproductor()
         self.rep.posicion.connect(self._sigue)
-        self.rotulo = QLabel()
+        self.rotulo = QLabel()                             # vista previa: como saldrá quemado (caja negra, letra blanca)
+        self.rotulo.setObjectName("rotulo")
         self.rotulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.rotulo.setFont(QFont("Inter", 18, QFont.Weight.Bold))
-        self.rotulo.setStyleSheet("background:#000;color:#fff;padding:8px;border-radius:12px;")
-
-        self.tabla = QTableWidget(0, 4)
+        self.rotulo.setFont(QFont("Inter", 16, QFont.Weight.Bold))
+        self.rotulo.setStyleSheet("QLabel#rotulo { background: #000; color: #fff; padding: 8px; border-radius: 12px; }")
+        nombrar(self.rotulo, "Subtítulo actual")
+        self.tabla = nombrar(TablaBloques(0, 4), "Bloques de subtítulos",
+                             "Edita la columna Texto. Control+Intro: ver ese momento en el vídeo.")
         self.tabla.setHorizontalHeaderLabels(["#", "Inicio", "Fin", "Texto (editable)"])
-        self.tabla.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         self.tabla.verticalHeader().hide()
-        self.tabla.cellClicked.connect(lambda fila, _c: self.rep.ir_a(self.datos["bloques"][fila]["ini"]))
+        cab = self.tabla.horizontalHeader()               # columnas que se ajustan solas (también al cambiar la letra)
+        for c in range(3):
+            cab.setSectionResizeMode(c, QHeaderView.ResizeMode.ResizeToContents)
+        cab.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+        self.tabla.cellClicked.connect(lambda fila, c: c < 3 and self._saltar(fila))
+        self.tabla.saltar.connect(self._saltar)
         self.tabla.itemChanged.connect(self._editado)
 
-        self.b_guardar = QPushButton("Guardar")
-        self.b_guardar.clicked.connect(self.guardar)
+        self.b_guardar = boton("Guardar", "Ctrl+S", self.guardar)
         QShortcut(QKeySequence.StandardKey.Save, self, activated=self.guardar)
-        b_ok = QPushButton("Revisado: avisar a Claude para quemarlos")
-        b_ok.setToolTip("Guarda y escribe en la sesión de Claude Code que ya están revisados (paso 3 de /subtitular-short)")
-        b_ok.clicked.connect(self.revisado)
-        self.estado = QLabel()
+        self.b_ok = boton("Revisado: avisar a Claude", "Guarda y le dice a Claude que ya puede quemarlos", self.revisado)
+        self.b_ok.setProperty("primario", True)
+        self.estado = estado()
+        self.vigia_json = QFileSystemWatcher(self)                       # solo el fichero abierto
+        self.vigia_json.fileChanged.connect(self._cambio_externo)
 
         pedir = QHBoxLayout()
         pedir.addWidget(self.ranura, 1)
         pedir.addWidget(self.b_subtitular)
         arriba = QHBoxLayout()
-        arriba.addWidget(QLabel("Revisar:"))
+        etiqueta = QLabel("&Revisar:")
+        etiqueta.setBuddy(self.combo)
+        arriba.addWidget(etiqueta)
         arriba.addWidget(self.combo, 1)
         abajo = QHBoxLayout()
         abajo.addWidget(self.estado, 1)
         abajo.addWidget(self.b_guardar)
-        abajo.addWidget(b_ok)
-
+        abajo.addWidget(self.b_ok)
         izq = QWidget()
         li = QVBoxLayout(izq)
         li.setContentsMargins(0, 0, 0, 0)
@@ -119,25 +141,34 @@ class PanelSubtitulos(QWidget):
         div = QSplitter(Qt.Orientation.Horizontal)
         div.addWidget(izq)
         div.addWidget(self.tabla)
-        div.setSizes([380, 520])
+        div.setSizes([340, 560])
         lay = QVBoxLayout(self)
+        lay.addWidget(cabecera(self.TITULO, "Suelta el Short y pide los subtítulos. Cuando Claude los prepare aparecen "
+                                            "abajo: corrige el texto con el vídeo al lado y pulsa «Revisado»."))
         lay.addLayout(pedir)
         lay.addLayout(arriba)
         lay.addWidget(div, 1)
         lay.addLayout(abajo)
+        self.al_carpetas()
 
-        for c in carpetas():
-            os.makedirs(c, exist_ok=True)
-        self.vigia = QFileSystemWatcher(carpetas(), self)
-        self.vigia.directoryChanged.connect(lambda _: self.recargar_lista())
-        self.vigia.fileChanged.connect(self._cambio_externo)
-        self.recargar_lista()
-
+    # ---- contrato de sección
     def traer_soltados(self, rutas):
-        """Soltar en cualquier parte de la pestaña = a la ranura del Short a subtitular."""
         videos = [r for r in rutas if r.lower().endswith(material.VIDEO)]
         if videos:
             self.ranura.traer(videos[0])
+
+    def al_material(self, m):
+        self.ranura.cargar_actual(m)
+
+    def al_carpetas(self):
+        self.recargar_lista()
+
+    def al_novedad(self, tipo, ruta):
+        if tipo == "subtitulos":
+            self.recargar_lista()
+            i = self.combo.findData(ruta)
+            if i >= 0:
+                self.combo.setCurrentIndex(i)
 
     # ---- lista de ficheros
     def recargar_lista(self):
@@ -152,8 +183,9 @@ class PanelSubtitulos(QWidget):
         if self.combo.currentData() != self.ruta:
             self.abrir(self.combo.currentData())
         if not self.combo.count():
-            self.estado.setText("Aún no hay subtítulos que revisar: suelta un Short arriba y pulsa "
-                                "'Subtitular con Claude'; cuando los prepare aparecerán aquí.")
+            self.estado.setText("Aún no hay subtítulos que revisar: aparecerán aquí solos cuando Claude los prepare.")
+        self.b_ok.setEnabled(self.datos is not None)
+        self.b_guardar.setEnabled(self.datos is not None)
 
     # ---- abrir / mostrar
     def abrir(self, ruta):
@@ -161,12 +193,12 @@ class PanelSubtitulos(QWidget):
             return
         if self.sucio and not self._descartar():
             return
-        if self.ruta and self.ruta in self.vigia.files():
-            self.vigia.removePath(self.ruta)
+        if self.ruta and self.ruta in self.vigia_json.files():
+            self.vigia_json.removePath(self.ruta)
         self.ruta = ruta
-        self.datos = archivos.leer_json(ruta) if ruta else None
-        if ruta:
-            self.vigia.addPath(ruta)
+        self.datos = archivos.leer_json(ruta) if ruta and os.path.exists(ruta) else None
+        if self.datos:
+            self.vigia_json.addPath(ruta)
             self.rep.cargar(video_de(ruta, self.datos))
         self._llenar()
 
@@ -180,12 +212,16 @@ class PanelSubtitulos(QWidget):
                 if c < 3:
                     it.setFlags(it.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.tabla.setItem(i, c, it)
-        self.tabla.resizeColumnsToContents()
-        self.tabla.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         self.tabla.blockSignals(False)
         self.sucio = False
         self._actual = -1
+        self.b_ok.setEnabled(self.datos is not None)
+        self.b_guardar.setEnabled(self.datos is not None)
         self._pintar_estado()
+
+    def _saltar(self, fila):
+        if self.datos and 0 <= fila < len(self.datos["bloques"]):
+            self.rep.ir_a(self.datos["bloques"][fila]["ini"])
 
     def _sigue(self, t):
         if not self.datos:
@@ -193,12 +229,13 @@ class PanelSubtitulos(QWidget):
         i = bloque_en(self.datos["bloques"], t)
         if i == self._actual:
             return
+        resalte = self.palette().color(QPalette.ColorRole.Highlight)
+        resalte.setAlpha(110)
         self.tabla.blockSignals(True)             # resaltar no es editar: que no cuente como cambio sin guardar
         for fila in (self._actual, i):
             if 0 <= fila < self.tabla.rowCount():
-                color = QColor("#2d4f7c") if fila == i else QColor(0, 0, 0, 0)
                 for c in range(4):
-                    self.tabla.item(fila, c).setBackground(color)
+                    self.tabla.item(fila, c).setBackground(resalte if fila == i else Qt.GlobalColor.transparent)
         self.tabla.blockSignals(False)
         self._actual = i
         if i >= 0:
@@ -219,9 +256,9 @@ class PanelSubtitulos(QWidget):
         if not self.datos:
             return False
         aplicar_textos(self.datos, self.textos())
-        self.vigia.removePath(self.ruta)              # que nuestro propio guardado no cuente como cambio externo
+        self.vigia_json.removePath(self.ruta)          # que nuestro propio guardado no cuente como cambio externo
         archivos.escribir_json(self.ruta, self.datos)
-        self.vigia.addPath(self.ruta)
+        self.vigia_json.addPath(self.ruta)
         self.sucio = False
         self._pintar_estado()
         return True
@@ -231,7 +268,7 @@ class PanelSubtitulos(QWidget):
             return
         rel = os.path.relpath(self.ruta, REPO).replace(os.sep, "/")
         self.pedir.emit(f"He revisado y guardado los subtítulos de {rel}. Ya puedes quemarlos y verificar el resultado.")
-        self.estado.setText("Avisado a Claude Code (mira la sesión a la izquierda).")
+        self.estado.setText("Avisado a Claude (míralo en su panel).")
 
     def _cambio_externo(self, ruta):
         if ruta != self.ruta or not os.path.exists(ruta):
@@ -241,7 +278,7 @@ class PanelSubtitulos(QWidget):
             return
         self.datos = archivos.leer_json(ruta)
         self._llenar()
-        self.vigia.addPath(ruta)                      # algunos editores reemplazan el fichero: volver a vigilarlo
+        self.vigia_json.addPath(ruta)                  # algunos editores reemplazan el fichero: volver a vigilarlo
         self.estado.setText("Recargado: Claude ha actualizado el fichero.")
 
     def _descartar(self):
@@ -252,4 +289,4 @@ class PanelSubtitulos(QWidget):
         if not self.datos:
             return
         n = len(self.datos["bloques"])
-        self.estado.setText(f"{n} bloques · {'cambios SIN guardar' if self.sucio else 'guardado'}")
+        self.estado.setText(f"{n} bloques · {'cambios SIN guardar (Ctrl+S)' if self.sucio else 'guardado'}")

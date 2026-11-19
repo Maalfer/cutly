@@ -1,14 +1,24 @@
-"""Ventana principal de cutly estudio: Claude Code (el instalado, con su interfaz completa) a la izquierda; a la
-derecha, una pestaña por cosa que se quiere hacer; arriba, un botón por flujo (las skills).
+"""Ventana principal de cutly estudio.
 
-El material NO se coloca en carpetas a mano: se arrastra a la pestaña de lo que quieres hacer. Cada pestaña sabe qué
-hacer con lo que se suelta en ella (`traer_soltados`: a su ranura, a su lista, a verificar...); si la pestaña no
-tiene sitio para material, va a Material. Todo lo que una pestaña le pide a Claude llega por `pedir` a la sesión.
+    ┌ menús: Sesión · Ver · Flujos · Ayuda ───────────────────────────────────────────────┐
+    │ secciones      │ la sección elegida (su sitio para soltar,     │ Claude Code          │
+    │ (barra lateral │ su acción principal, lo que va saliendo)      │ (panel acoplable:    │
+    │  con avisos ●) │                                               │  F12 lo oculta)      │
+    └ barra de estado: sesión · material · VM ────────────────────────────────────────────┘
+
+El material NO se coloca en carpetas a mano: se suelta en la sección de lo que se quiere hacer (cada una sabe qué hacer
+con lo que se suelta en ella: `traer_soltados`; si no tiene sitio, va a Material). El vigía central (servicios.py)
+reparte el material y avisa de lo nuevo que deja Claude: la sección se marca con ● y la barra de estado ofrece ir.
+Todo lo que una sección le pide a Claude (`pedir`) se escribe en la sesión. Preferencias en QSettings.
 """
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import QLabel, QMainWindow, QSplitter, QTabWidget, QToolBar
+import os
 
+from PySide6.QtCore import QSettings, Qt, QUrl
+from PySide6.QtGui import QAction, QActionGroup, QDesktopServices, QKeySequence
+from PySide6.QtWidgets import (QApplication, QDockWidget, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
+                               QMainWindow, QMessageBox, QPushButton, QStackedWidget, QWidget)
+
+from . import apariencia
 from .entorno import REPO
 from .flujos import flujos
 from .paneles.directo import PanelDirecto
@@ -16,103 +26,198 @@ from .paneles.fusion import PanelFusion
 from .paneles.grabacion import PanelGrabacion
 from .paneles.material import TODO, PanelMaterial
 from .paneles.ranura import rutas_soltadas
-from .paneles.shorts import PanelShorts
+from .paneles.resultados import PanelResultados
 from .paneles.subtitulos import PanelSubtitulos
 from .paneles.vm import PanelVM
+from .servicios import Vigia
 from .terminal.widget import TerminalClaude
+
+GUIA = os.path.join(REPO, "estudio", "ESTUDIO.md")
+NOVEDAD = {"resultado": ("Resultados", "Claude ha terminado un vídeo"),
+           "subtitulos": ("Subtítulos", "Hay subtítulos listos para revisar"),
+           "propuesta": ("Directo → clips", "Claude ha propuesto fragmentos del directo")}
+ATAJOS = [("Ctrl+1 … Ctrl+7", "Ir a cada sección (en el orden de la barra lateral)"),
+          ("F12", "Mostrar u ocultar el panel de Claude Code"), ("Ctrl+`", "Llevar el foco a Claude Code"),
+          ("Ctrl+= / Ctrl+- / Ctrl+0", "Letra más grande / más pequeña / normal (toda la app y el terminal)"),
+          ("F11", "Pantalla completa"), ("Ctrl+Mayús+N", "Nueva sesión de Claude Code"),
+          ("Ctrl+Mayús+R", "Continuar la última conversación"), ("F1", "Esta ayuda"),
+          ("En una ranura", "Intro: elegir archivo · Supr: vaciar · Ctrl+V: pegar una ruta"),
+          ("En Grabación → Short", "Alt+↑/↓: mover la fuente · Supr: quitarla"),
+          ("En Directo → clips", "Intro: ver el fragmento · Espacio: elegirlo"),
+          ("En Subtítulos", "Ctrl+S: guardar · Ctrl+Intro: ver ese momento"),
+          ("En Material", "Intro: abrir · Supr: quitar · tecla Menú: papel y pedir a Claude"),
+          ("En el terminal", "Ctrl+C con selección: copiar (sin selección: interrumpir) · Ctrl+V: pegar · "
+                             "soltar un archivo: pega su ruta")]
 
 
 class Ventana(QMainWindow):
-    def __init__(self, comando):
+    def __init__(self, comando, app=None):
         super().__init__()
-        self.comando = comando
+        self.app = app or QApplication.instance()
+        # preferencias del usuario (tema, letra, disposición); CUTLY_AJUSTES las separa (p. ej. en pruebas)
+        self.ajustes = QSettings("cutly", os.environ.get("CUTLY_AJUSTES", "estudio"))
+        self.tema = self.ajustes.value("tema", apariencia.TEMA_DEFECTO)
+        self.escala = float(self.ajustes.value("escala", 1.0))
+        self.lector = self.ajustes.value("lector", False, type=bool)
+        apariencia.aplicar(self.app, self.tema, self.escala)
         self.setWindowTitle("cutly estudio")
-        self.resize(1700, 1000)
         self.setAcceptDrops(True)
-
+        self.resize(1680, 1000)
         self.terminal = None
-        self.div = QSplitter(Qt.Orientation.Horizontal)
-        self.pestanas = QTabWidget()
-        self.material = PanelMaterial()
-        self.fusion = PanelFusion()
-        self.grabacion = PanelGrabacion()
-        self.subs = PanelSubtitulos()
-        self.directo = PanelDirecto()
-        self.shorts = PanelShorts()
-        self.vm = PanelVM()
-        # una pestaña por cosa que se quiere hacer, y en cada una, dónde soltar su material
-        for panel, nombre, ayuda in (
-                (self.directo, "Directo → clips", "Suelta un directo: Claude propone fragmentos, eliges y los corta"),
-                (self.fusion, "Cara + pantalla", "Suelta tu cara y el Short de pantalla: Claude los junta"),
-                (self.grabacion, "Grabación → Short", "Suelta grabaciones sueltas (e intro, imágenes): Short mudo"),
-                (self.subs, "Subtítulos", "Suelta un Short montado: subtítulos y revisión del texto"),
-                (self.shorts, "Resultados", "Lo que ha salido; suelta cualquier vídeo para verificarlo"),
-                (self.material, "Material", "Todo lo aportado y su papel; suelta aquí lo que sea"),
-                (self.vm, "VM", "La máquina virtual de las demos")):
-            self.pestanas.addTab(panel, nombre)
-            self.pestanas.setTabToolTip(self.pestanas.count() - 1, ayuda)
-            if hasattr(panel, "pedir"):
-                panel.pedir.connect(self.pedir)
 
-        # el material manda: cuando cambia, las ranuras muestran lo último asignado a su papel
-        self.material.cambiado.connect(self._material_cambiado)
-        self.shorts.revisar.connect(self._revisar_subtitulos)
+        # ---- secciones (una por cosa que se quiere hacer) y su navegación
+        self.secciones = [PanelDirecto(), PanelFusion(), PanelGrabacion(), PanelSubtitulos(), PanelResultados(),
+                          PanelMaterial(), PanelVM()]
+        (self.directo, self.fusion, self.grabacion, self.subs, self.resultados, self.material, self.vm) = self.secciones
+        self.pila = QStackedWidget()
+        self.nav = QListWidget()
+        self.nav.setObjectName("navegacion")
+        self.nav.setAccessibleName("Secciones")
+        self.nav.setAccessibleDescription("Elige qué quieres hacer. Flechas para moverte.")
+        for s in self.secciones:
+            self.pila.addWidget(s)
+            it = QListWidgetItem(s.TITULO)
+            it.setData(Qt.ItemDataRole.UserRole, s.TITULO)
+            self.nav.addItem(it)
+            if hasattr(s, "pedir"):
+                s.pedir.connect(self.pedir)
+        self.nav.currentRowChanged.connect(self._ir)
+        self.nav.setFixedWidth(round(200 * self.escala))
+        centro = QWidget()                                 # barra lateral de ancho fijo + la sección, sin huecos
+        fila = QHBoxLayout(centro)
+        fila.setContentsMargins(0, 0, 0, 0)
+        fila.setSpacing(0)
+        fila.addWidget(self.nav)
+        fila.addWidget(self.pila, 1)
+        self.setCentralWidget(centro)
 
-        self.div.addWidget(QLabel())                      # sitio del terminal
-        self.div.addWidget(self.pestanas)
-        self.div.setSizes([950, 750])
-        self.setCentralWidget(self.div)
+        # ---- Claude Code, acoplable
+        self.dock = QDockWidget("Claude Code", self)
+        self.dock.setObjectName("dock_claude")
+        self.dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetMovable |
+                              QDockWidget.DockWidgetFeature.DockWidgetFloatable |
+                              QDockWidget.DockWidgetFeature.DockWidgetClosable)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock)
 
-        self.l_vm = QLabel()
-        self.l_material = QLabel()
-        self.statusBar().addPermanentWidget(self.l_material)
-        self.statusBar().addPermanentWidget(self.l_vm)
+        # ---- barra de estado
+        self.l_sesion, self.l_material, self.l_vm = QLabel(), QLabel(), QLabel()
+        for l in (self.l_sesion, self.l_material, self.l_vm):
+            self.statusBar().addPermanentWidget(l)
         self.vm.resumen.connect(self.l_vm.setText)
+        self._ir_a = QPushButton()                         # "Ir a <sección>" cuando Claude deja algo nuevo
+        self._ir_a.setVisible(False)
+        self._destino_novedad = None
+        self._ir_a.clicked.connect(self._ir_a_novedad)
+        self.statusBar().addWidget(self._ir_a)
 
-        self._barra_flujos()
-        self.nueva_sesion(self.comando)
+        # ---- vigía central: material, carpetas y novedades
+        self.vigia = Vigia(self)
+        self.vigia.material.connect(self._material)
+        self.vigia.carpetas.connect(lambda: [s.al_carpetas() for s in self.secciones if hasattr(s, "al_carpetas")])
+        self.vigia.novedad.connect(self._novedad)
+        self.material.actualizar.connect(self.vigia.sincronizar)
+        self.resultados.revisar.connect(self._revisar_subtitulos)
+
+        self._menus()
+        self.nueva_sesion(comando)
+        self._restaurar()
+        self.vigia.arrancar()
+
+    # ---- navegación
+    def _ir(self, fila):
+        if fila < 0:
+            return
+        self.pila.setCurrentIndex(fila)
+        it = self.nav.item(fila)
+        it.setText(it.data(Qt.ItemDataRole.UserRole))          # visto: fuera el aviso
+        it.setData(Qt.ItemDataRole.AccessibleDescriptionRole, "")
+
+    def ir_a(self, seccion):
+        self.nav.setCurrentRow(self.secciones.index(seccion))
+
+    def seccion_actual(self):
+        return self.pila.currentWidget()
 
     # ---- Claude Code
     def nueva_sesion(self, comando):
         if self.terminal is not None:
             self.terminal.cerrar()
             self.terminal.deleteLater()
-        self.terminal = TerminalClaude(comando, cwd=REPO)
+            self.terminal = None
+        try:
+            self.terminal = TerminalClaude(comando, cwd=REPO)
+        except FileNotFoundError:
+            aviso = QLabel("No encuentro Claude Code («claude» en el PATH).\n\nInstálalo e inicia sesión en él, y luego "
+                           "Sesión → Nueva sesión.")
+            aviso.setObjectName("aviso")
+            aviso.setWordWrap(True)
+            aviso.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.dock.setWidget(aviso)
+            self.l_sesion.setText("sin Claude Code   ")
+            return
         self.terminal.terminado.connect(self._sesion_terminada)
-        self.div.replaceWidget(0, self.terminal)
-        self.div.setSizes([950, 750])
-        self.statusBar().showMessage(f"sesión: {' '.join(comando)}  (en {REPO})", 8000)
+        self.terminal.ajustar(*self._estilo_terminal())
+        self.dock.setWidget(self.terminal)
+        self.l_sesion.setText(f"sesión: {' '.join(comando)}   ")
         self.terminal.setFocus()
 
+    def _estilo_terminal(self):
+        c = apariencia.colores(self.tema)
+        return round(14 * self.escala), c["terminal"], "#ffffff" if self.tema == "alto contraste" else "#d4d4d4", \
+            self.lector
+
     def pedir(self, texto):
-        """Lo que una pestaña le pide a Claude. Si acaba en espacio, se deja escrito para que lo completes tú."""
+        """Lo que una sección le pide a Claude. Si acaba en espacio, se deja escrito para que lo completes tú."""
         self.enviar(texto, intro=not texto.endswith(" "))
 
     def enviar(self, texto, intro=True):
-        if not self.terminal.enviar(texto, intro):
-            self.statusBar().showMessage("La sesión de Claude Code no está activa: abre una nueva (barra de arriba).")
+        if self.terminal is None or not self.terminal.enviar(texto, intro):
+            self.statusBar().showMessage("La sesión de Claude Code no está activa: Sesión → Nueva sesión.", 8000)
             return
+        self.dock.show()
+        self.dock.raise_()
         self.terminal.setFocus()
 
     def _sesion_terminada(self, codigo):
-        self.statusBar().showMessage(f"La sesión terminó (código {codigo}). 'Nueva sesión' o 'Continuar' para seguir.")
+        self.l_sesion.setText(f"sesión terminada ({codigo})   ")
+        self.statusBar().showMessage("La sesión de Claude Code terminó: Sesión → Nueva sesión o Continuar.", 10000)
 
-    def _material_cambiado(self, m):
-        self.fusion.cargar(m)
-        self.directo.cargar(m)
-        self.subs.ranura.cargar_actual(m)
-        n = len(m["material"])
+    # ---- vigía
+    def _material(self, m):
+        for s in self.secciones:
+            if hasattr(s, "al_material"):
+                s.al_material(m)
         roles = sorted({e["rol"] for e in m["material"]})
-        self.l_material.setText(f"material: {n}" + (f" ({', '.join(roles)})" if roles else "") + "   ")
+        self.l_material.setText(f"material: {len(m['material'])}" + (f" ({', '.join(roles)})" if roles else "") + "   ")
+
+    def _novedad(self, tipo, ruta):
+        titulo, mensaje = NOVEDAD.get(tipo, (None, None))
+        destino = next((s for s in self.secciones if s.TITULO == titulo), None)
+        if destino is None:
+            return
+        if hasattr(destino, "al_novedad"):
+            destino.al_novedad(tipo, ruta)
+        fila = self.secciones.index(destino)
+        if self.nav.currentRow() != fila:
+            it = self.nav.item(fila)
+            it.setText(f"{titulo}  ●")
+            it.setData(Qt.ItemDataRole.AccessibleDescriptionRole, "hay novedades")
+        self.statusBar().showMessage(f"{mensaje}: {os.path.basename(ruta)}", 15000)
+        self._ir_a.setText(f"Ir a {titulo}")
+        self._ir_a.setAccessibleName(f"Ir a {titulo}: {mensaje}")
+        self._destino_novedad = destino
+        self._ir_a.setVisible(True)
+
+    def _ir_a_novedad(self):
+        if self._destino_novedad is not None:
+            self.ir_a(self._destino_novedad)
+        self._ir_a.setVisible(False)
 
     def _revisar_subtitulos(self, ruta_json):
-        self.subs.recargar_lista()
-        i = self.subs.combo.findData(ruta_json)
-        if i >= 0:
-            self.subs.combo.setCurrentIndex(i)
-        self.pestanas.setCurrentWidget(self.subs)
+        self.subs.al_novedad("subtitulos", ruta_json)
+        self.ir_a(self.subs)
 
-    # ---- soltar fuera de una ranura: lo decide la pestaña visible (o va a Material)
+    # ---- soltar fuera de un sitio concreto: lo decide la sección visible (o va a Material)
     def dragEnterEvent(self, ev):
         if rutas_soltadas(ev.mimeData(), TODO):
             ev.acceptProposedAction()
@@ -122,39 +227,118 @@ class Ventana(QMainWindow):
         if not rutas:
             return
         ev.acceptProposedAction()
-        panel = self.pestanas.currentWidget()
-        destino = panel if hasattr(panel, "traer_soltados") else self.material
+        actual = self.seccion_actual()
+        destino = actual if hasattr(actual, "traer_soltados") else self.material
         destino.traer_soltados(rutas)
-        nombre = self.pestanas.tabText(self.pestanas.indexOf(destino))
-        self.statusBar().showMessage(f"{len(rutas)} archivo(s) a «{nombre}»", 6000)
+        self.statusBar().showMessage(f"{len(rutas)} archivo(s) a «{destino.TITULO}»", 6000)
 
-    # ---- barra de flujos
-    def _barra_flujos(self):
-        barra = QToolBar("Flujos")
-        barra.setMovable(False)
-        self.addToolBar(barra)
-        a = QAction("Nueva sesión", self, triggered=lambda: self.nueva_sesion(["claude"]))
-        a.setToolTip("Abre una sesión nueva de Claude Code en el repo")
-        barra.addAction(a)
-        a = QAction("Continuar la última", self, triggered=lambda: self.nueva_sesion(["claude", "--continue"]))
-        a.setToolTip("claude --continue: retoma la conversación más reciente de este repo")
-        barra.addAction(a)
-        barra.addSeparator()
-        for f in flujos():
-            a = QAction(f["rotulo"], self)
-            a.setToolTip(f"{f['comando']} {f['argumentos']}\n\n{f['descripcion']}".strip())
-            a.triggered.connect(lambda _=False, c=f["comando"]: self.enviar(c))
-            barra.addAction(a)
-        # atajos: Ctrl+1..6 para las pestañas, Ctrl+` para volver al terminal
-        for i in range(self.pestanas.count()):
-            atajo = QAction(self, shortcut=QKeySequence(f"Ctrl+{i + 1}"))
-            atajo.triggered.connect(lambda _=False, k=i: self.pestanas.setCurrentIndex(k))
-            self.addAction(atajo)
-        volver = QAction(self, shortcut=QKeySequence("Ctrl+`"), triggered=lambda: self.terminal.setFocus())
-        self.addAction(volver)
+    # ---- menús y atajos
+    def _accion(self, menu, texto, atajo=None, al_pulsar=None, ayuda=""):
+        a = QAction(texto, self)
+        if atajo:
+            a.setShortcuts(atajo if isinstance(atajo, list) else [QKeySequence(atajo)])
+        if ayuda:
+            a.setStatusTip(ayuda)
+            a.setToolTip(ayuda)
+        if al_pulsar:
+            a.triggered.connect(al_pulsar)
+        menu.addAction(a)
+        return a
+
+    def _menus(self):
+        barra = self.menuBar()
+        m = barra.addMenu("&Sesión")
+        self._accion(m, "&Nueva sesión de Claude Code", "Ctrl+Shift+N", lambda: self.nueva_sesion(["claude"]),
+                     "Abre una sesión nueva en el repo")
+        self._accion(m, "&Continuar la última conversación", "Ctrl+Shift+R",
+                     lambda: self.nueva_sesion(["claude", "--continue"]), "claude --continue")
+        m.addSeparator()
+        self._accion(m, "&Salir", QKeySequence.StandardKey.Quit, self.close)
+
+        v = barra.addMenu("&Ver")
+        for i, s in enumerate(self.secciones):
+            self._accion(v, s.TITULO, f"Ctrl+{i + 1}", lambda _=False, k=i: self.nav.setCurrentRow(k))
+        v.addSeparator()
+        accion_dock = self.dock.toggleViewAction()
+        accion_dock.setText("Panel de &Claude Code")
+        accion_dock.setShortcut(QKeySequence("F12"))
+        v.addAction(accion_dock)
+        self._accion(v, "&Foco en Claude Code", "Ctrl+`", lambda: (self.dock.show(), self.terminal and
+                                                                   self.terminal.setFocus()))
+        v.addSeparator()
+        temas = v.addMenu("&Tema")
+        grupo = QActionGroup(self)
+        for nombre in apariencia.TEMAS:
+            a = self._accion(temas, nombre.capitalize(), None, lambda _=False, n=nombre: self._cambiar(tema=n))
+            a.setCheckable(True)
+            a.setChecked(nombre == self.tema)
+            grupo.addAction(a)
+        self._accion(v, "Letra más &grande", [QKeySequence("Ctrl+="), QKeySequence("Ctrl++")],
+                     lambda: self._paso_letra(+1))
+        self._accion(v, "Letra más &pequeña", "Ctrl+-", lambda: self._paso_letra(-1))
+        self._accion(v, "Tamaño de letra &normal", "Ctrl+0", lambda: self._cambiar(escala=1.0))
+        lector = self._accion(v, "Modo &lector de pantalla en el terminal", None,
+                              lambda c: self._cambiar(lector=c), "Expone el texto del terminal a los lectores de "
+                                                                 "pantalla (algo más lento)")
+        lector.setCheckable(True)
+        lector.setChecked(self.lector)
+        v.addSeparator()
+        self._accion(v, "Pantalla &completa", "F11",
+                     lambda: self.showNormal() if self.isFullScreen() else self.showFullScreen())
+
+        f = barra.addMenu("&Flujos")
+        for fl in flujos():
+            self._accion(f, fl["rotulo"], None, lambda _=False, c=fl["comando"]: self.enviar(c),
+                         f"{fl['comando']} {fl['argumentos']} — {fl['descripcion']}")
+
+        a = barra.addMenu("A&yuda")
+        self._accion(a, "&Atajos de teclado", "F1", self._atajos)
+        self._accion(a, "&Guía de cutly estudio", None, lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(GUIA)))
+        self._accion(a, "Acerca de", None, lambda: QMessageBox.about(
+            self, "cutly estudio", "Claude Code (el instalado, con su interfaz completa) y, alrededor, una sección por "
+                                   "cosa que quieres hacer con tus vídeos.\n\nGuía: estudio/ESTUDIO.md"))
+
+    def _atajos(self):
+        filas = "".join(f"<tr><td style='padding:3px 12px 3px 0'><b>{k}</b></td><td>{d}</td></tr>" for k, d in ATAJOS)
+        caja = QMessageBox(self)
+        caja.setWindowTitle("Atajos de teclado")
+        caja.setTextFormat(Qt.TextFormat.RichText)
+        caja.setText(f"<table>{filas}</table>")
+        caja.exec()
+
+    # ---- apariencia
+    def _paso_letra(self, paso):
+        escalas = apariencia.ESCALAS
+        i = min(range(len(escalas)), key=lambda k: abs(escalas[k] - self.escala))
+        self._cambiar(escala=escalas[max(0, min(len(escalas) - 1, i + paso))])
+
+    def _cambiar(self, tema=None, escala=None, lector=None):
+        self.tema = tema or self.tema
+        self.escala = escala or self.escala
+        self.lector = self.lector if lector is None else bool(lector)
+        apariencia.aplicar(self.app, self.tema, self.escala)
+        self.nav.setFixedWidth(round(200 * self.escala))
+        if self.terminal is not None:
+            self.terminal.ajustar(*self._estilo_terminal())
+        for k, val in (("tema", self.tema), ("escala", self.escala), ("lector", self.lector)):
+            self.ajustes.setValue(k, val)
+        self.statusBar().showMessage(f"Tema {self.tema} · letra al {round(self.escala * 100)} %", 4000)
+
+    # ---- recordar la disposición
+    def _restaurar(self):
+        geo, estado = self.ajustes.value("geometria"), self.ajustes.value("estado")
+        if geo is not None:
+            self.restoreGeometry(geo)
+        if estado is not None:
+            self.restoreState(estado)
+        else:
+            self.resizeDocks([self.dock], [760], Qt.Orientation.Horizontal)
+        self.nav.setCurrentRow(int(self.ajustes.value("seccion", 0)))
 
     def closeEvent(self, ev):
+        self.ajustes.setValue("geometria", self.saveGeometry())
+        self.ajustes.setValue("estado", self.saveState())
+        self.ajustes.setValue("seccion", self.nav.currentRow())
         if self.terminal is not None:
             self.terminal.cerrar()
         super().closeEvent(ev)
-

@@ -27,9 +27,6 @@ Todo con **entrada humana** (ritmo de tecleo variable con errores corregidos, ra
 |---|---|
 | `METODOLOGIA/00-empezar-aqui-vm.md` | **Punto de entrada**: montaje, toma, verificación, referencia |
 | `METODOLOGIA/04-flujo-toma-video.md` | Protocolo de toma: fases, pacing cinematográfico, "no tocar" |
-| `METODOLOGIA/05-controlar-aplicaciones.md` | Patrón para conducir cualquier app: abrir/esperar/enfocar/verificar |
-| `METODOLOGIA/06-navegador-y-herramientas-gui.md` | Navegador y herramientas GUI (Burp Suite) |
-| `METODOLOGIA/07-auditoria-de-pruebas.md` | Fallos reales hallados (lecciones del enfoque anfitrión) y protocolo de pruebas |
 | `METODOLOGIA/09-conducir-apps-kali.md` | **Guía general** para conducir cualquier app de Kali + fichas por app (Firefox, Burp, terminal) |
 | `METODOLOGIA/10-plantilla-demo-terminal.md` | **Plantilla para una demo de terminal "perfecta a la primera"**: despliegue, ventanas, encuadre del Short, ritmo — empieza aquí para una demo nueva de nmap/ssh/exploits |
 | `METODOLOGIA/08-maquina-virtual.md` | Qué canal sirve para qué en VirtualBox, mediciones, fallos de montaje (37-42) |
@@ -37,8 +34,8 @@ Todo con **entrada humana** (ritmo de tecleo variable con errores corregidos, ra
 | `DEMO-SSHOLE/` | Demo de ejemplo (la más completa): nmap + bypass SSH + reverse shell contra un laboratorio Docker de BunkerLabs; plantilla de código a copiar |
 | `herramientas/` | `vm_control.py` (CLI + API) sobre el paquete `vm/` (un módulo por responsabilidad: ver `vm/__init__.py`), `tipear.py`/`mover.py` (planes humanos), `ocr_buscar.py`, `ocr.swift` (OCR Vision, opcional en macOS) |
 
-> Los docs 05-07 nacieron controlando el anfitrión macOS: los **comandos** de esos ejemplos ya no se usan (su
-> equivalente es `vm_control.py`), pero los **principios y fallos** siguen vigentes.
+> La primera etapa, en la que se controlaba el ordenador anfitrión en vez de la VM (docs 05-07 y el primer ejemplo
+> IDOR), está archivada en `historial/control-del-anfitrion/`: sus principios vigentes están en el doc 09.
 
 ## 🎞️ Catálogo de demos
 

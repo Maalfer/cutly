@@ -8,7 +8,7 @@ SOLO escucha en 127.0.0.1:8765 (nada sale del ordenador). Usuarios ficticios.
   /                -> página con un <input> (sirve para probar el tecleo en un formulario)
 
 Uso:   python3 crear-shorts/DEMO-IDOR/lab_idor.py &      ...   pkill -f lab_idor.py   (al terminar)
-Cómo se usa en la demo: ver ejemplo-idor-con-burp.md.
+Cómo se usa en la demo: ver demo_idor.py (el guion de la toma) y crear-shorts/METODOLOGIA/09-conducir-apps-kali.md.
 """
 import http.server, urllib.parse
 USERS={"1001":("usuarioA","a@lab.local"),"1002":("usuarioB","b@lab.local")}
