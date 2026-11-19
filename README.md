@@ -79,6 +79,7 @@ cutly/
 │       ├── vm_control.py             ←   CLI + API (`import vm_control as v`): fachada del paquete vm/
 │       ├── vm/                       ←   un módulo por responsabilidad: config, anfitrion, registro, conexion,
 │       │                                 pantalla (ver), entrada (actuar), ventanas, maquina, toma, escenario
+│       │                                 canales/: ssh · guestcontrol, intercambiables (VM_CANAL)
 │       ├── tipear.py · mover.py      ←   planes de tecleo y ratón humanos (lógica pura)
 │       └── ocr_buscar.py · ocr.swift ←   localizar texto por OCR (ocr.swift: Vision, opcional en macOS)
 │

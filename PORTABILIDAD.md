@@ -34,7 +34,7 @@ Abre una terminal **nueva** tras instalar para que el PATH se refresque.
 |---|---|
 | `VBoxManage.exe` | `C:\Program Files\Oracle\VirtualBox\` — **no está en el PATH**. `vm_control.py` lo localiza solo; para otros scripts: `$env:VBOXMANAGE="C:\Program Files\Oracle\VirtualBox\VBoxManage.exe"` |
 | Tesseract | `C:\Program Files\Tesseract-OCR\tesseract.exe` (el script lo encuentra aunque no esté en el PATH) |
-| Clave SSH de la VM | `%USERPROFILE%\.ssh\cutly_vm` (`ssh-keygen` ajusta los permisos; no la muevas a otra carpeta) |
+| Clave SSH de la VM | `%USERPROFILE%\.ssh\cutly_vm` (`ssh-keygen` ajusta los permisos; no la muevas a otra carpeta). Sin ella, `bootstrap` la crea; o usa el canal `guestcontrol` (`VM_CANAL`, ver doc 00 §1) |
 | Python | usa `python`, no `python3` (en Windows `python3` suele ser un acceso directo de la Store) |
 | Saltos de línea | `vm_control.py` envía los scripts por SSH en **bytes con `\n`**; con `text=True` Windows los convertiría en `\r\n` y bash fallaría (corregido) |
 | `ControlMaster` de SSH | **No existe en OpenSSH para Windows**: por eso cada plan largo va en **una sola conexión** (reproductor de planes) |

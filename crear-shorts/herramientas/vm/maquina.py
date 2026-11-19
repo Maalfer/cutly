@@ -6,6 +6,7 @@ import time
 
 from .anfitrion import vbox
 from .config import KEY, PORT, USER, VM
+from .canales.ssh import CanalSSH
 from .conexion import ssh_ok
 
 
@@ -77,7 +78,7 @@ def bootstrap():
         vbox("startvm", VM, "--type", "gui")
         print("VM arrancando; espera a ver el escritorio e inicia sesión (la sesión la pones tú)")
         time.sleep(40)
-    if ssh_ok():
+    if CanalSSH().disponible():          # bootstrap monta el canal SSH: comprobar ESE canal, no cualquiera
         print("ya está configurada (SSH con la clave dedicada funciona)")
         return
     with open(KEY + ".pub") as f:
@@ -99,4 +100,5 @@ def bootstrap():
             vbox("controlvm", VM, "keyboardputstring", line)
             enter()
     time.sleep(1)
-    print("OK: SSH operativo" if ssh_ok() else "FALLÓ: revisa la captura (shot), que sshd esté activo y la regla NAT")
+    print("OK: SSH operativo" if CanalSSH().disponible() else
+          "FALLÓ: revisa la captura (shot), que sshd esté activo y la regla NAT")

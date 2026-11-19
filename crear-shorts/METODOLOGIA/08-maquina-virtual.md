@@ -18,8 +18,9 @@
 | **Teclas sueltas** | `keyboardputscancode` | ✅ funciona (abrió un terminal con `Ctrl+Alt+T`), pero con errores esporádicos de envío |
 | **Mover/clicar el ratón** | `VBoxManage` | ❌ **no existe ningún comando de ratón** en `controlvm` |
 | **Ratón + teclado reales** | **`xdotool` dentro del invitado, por SSH** | ✅ ver §2 |
-| **Ejecutar comandos / copiar ficheros** | SSH (`natpf` 2222→22) + `scp` | ✅ rápido y sin depender del teclado |
-| **Grabar vídeo** | **`ffmpeg -f x11grab -draw_mouse 1` dentro del invitado** (`vm_control.py rec`), u OBS sobre la ventana de la VM | x11grab: cursor garantizado y instantes exactos para el registro; OBS: cursor no garantizado. Pendiente de medir en Windows |
+| **Ejecutar comandos / copiar ficheros** | SSH (`natpf` 2222→22) + `scp` | ✅ rápido y sin depender del teclado. Es el canal `ssh` de `vm/canales/` |
+| **Lo mismo SIN SSH** | `VBoxManage guestcontrol` (Guest Additions) con la contraseña que da el usuario | canal `guestcontrol` de `vm/canales/` (`VM_CANAL`); implementado y probado en simulación, **pendiente de medir** contra la VM |
+| **Grabar vídeo** | **grabación nativa de VirtualBox en el anfitrión** (`vm_control.py rec start`) | ✅ medido: cursor incluido, sin SSH. Alternativa: `rec start --guest` (`ffmpeg -f x11grab` dentro del invitado) |
 | **Resolución** | `controlvm setvideomodehint W H bpp` (`vm_control.py res W H`) | para fijar el formato del short antes de grabar |
 
 **Conclusión:** VirtualBox da el *ojo* (captura) y la *puerta* (SSH/puertos), pero **no el teclado ni el ratón**

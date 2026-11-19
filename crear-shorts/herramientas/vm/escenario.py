@@ -89,7 +89,7 @@ def prepare(cold=False):
         ok, s = resume()
         print(f"reanudado en {s}s" if ok else "no reanudó")
     if not ssh_ok():
-        die("la VM no responde por SSH (vm_control.py start)")
+        die("el invitado no responde por ningún canal (vm_control.py start; canal: VM_CANAL)")
     if not _is_running("lab_idor.py"):
         ssh("setsid python3 ~/lab/lab_idor.py </dev/null >/tmp/lab.log 2>&1 &")  # setsid: no cuelga el canal SSH (doc 09)
         time.sleep(1)

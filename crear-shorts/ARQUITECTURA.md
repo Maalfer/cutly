@@ -52,6 +52,7 @@ pierdan información entre sí.
   herramientas/vm_control.py      (fachada: CLI + API `import vm_control as v`)
   herramientas/vm/                config → anfitrion → registro → conexion → pantalla → entrada → ventanas
                                   → maquina → toma → escenario
+  herramientas/vm/canales/        ssh · guestcontrol (intercambiables: conexion elige; VM_CANAL)
   herramientas/tipear.py · mover.py · ocr_buscar.py                       (lógica pura, sin VM)
   nucleo/                         rutas, ffmpeg, medios, audio, series, formato, toma, cortes, archivos,
                                   transcripcion, subtitulos                                  ← base común

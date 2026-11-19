@@ -12,9 +12,11 @@ Opcionales: Pillow (OCR por región), opencv-python (clickimg: búsqueda por pla
 Requisitos en el INVITADO: Guest Additions, sshd, xdotool, xclip, ffmpeg (para grabar), sesión X11.
 
 Primera vez (una sola):  vm_control.py bootstrap
+Canal con el invitado: VM_CANAL=auto (defecto: ssh si responde, si no guestcontrol) | ssh | guestcontrol (vm/canales/)
 Variables: VM_NAME (kali) VM_KEY (~/.ssh/cutly_vm) VM_SSH_PORT (2222) VM_USER (kali) VBOXMANAGE (ruta)
            VM_OCR=tesseract (fuerza Tesseract) VM_GUEST_PASS (contraseña del invitado, SOLO si la das tú,
-           para instalar la clave con `guestcontrol`; el script nunca adivina contraseñas)
+           para instalar la clave con `guestcontrol` o para usar el canal guestcontrol; mejor VM_GUEST_PASSFILE=<fichero>;
+           el script nunca adivina contraseñas)
 
 CICLO DE VIDA
   start | stop | status | bootstrap
@@ -95,8 +97,9 @@ def main():
     elif cmd == "res":
         set_res(int(a[1]), int(a[2]))
     elif cmd == "status":
-        print(f"VM {VM}: {vm_state()} | ssh: {'sí' if ssh_ok() else 'no'}")
-        if ssh_ok():
+        ok = ssh_ok()
+        print(f"VM {VM}: {vm_state()} | invitado: {'responde' if ok else 'no responde'} | canal: {describir()}")
+        if ok:
             print("pantalla:", ssh("xrandr | grep '\\*' | head -1", capture=True))
             print("ventana activa:", active_title())
     elif cmd == "bootstrap":

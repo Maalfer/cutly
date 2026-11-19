@@ -28,6 +28,9 @@
    - **Alternativa:** teclea la clave en un terminal del invitado con `keyboardputscancode` (solo letras, con
      el teclado en US). Con tu sesión gráfica ya iniciada.
    - **El agente nunca adivina contraseñas** ni acepta acuerdos legales por ti (EULA de Burp: lo aceptas tú).
+   - **Sin SSH:** con `VM_CANAL=guestcontrol` y `VM_GUEST_PASSFILE=<fichero con la contraseña>`, todo el control va
+     por las Guest Additions (`vm/canales/guestcontrol.py`; pendiente de medir). Por defecto (`auto`) se usa SSH si
+     responde y, si no, guestcontrol si hay credenciales. `vm_control.py status` dice qué canal está activo.
 3. **Invitado:** `sudo apt install xdotool xclip wmctrl ffmpeg openssh-server` (X11, no Wayland), Guest Additions,
    salvapantallas y bloqueo desactivados, "no molestar". Perfil Firefox `demo` (proxy a Burp, sin
    autocompletado ni tráfico de fondo) y lab en `~/lab/lab_idor.py`.

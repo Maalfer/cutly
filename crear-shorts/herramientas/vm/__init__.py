@@ -4,7 +4,7 @@ vm — control de la VM de VirtualBox con entrada HUMANA, desde cualquier anfitr
     config     variables de entorno (VM, clave, puerto, usuario) y die()
     anfitrion  VBoxManage y Tesseract en el anfitrión
     registro   registro de la toma: @logged, focus, mark (lo lee la edición)
-    conexion   SSH y scp con el invitado
+    conexion   puerta única con el invitado: elige el canal (canales/: ssh | guestcontrol; VM_CANAL)
     pantalla   VER: capturas, OCR, waitfor / waitstill / waitgone
     entrada    ACTUAR: ratón y teclado humanos, clic por texto/imagen, selección, guarda de foco
     ventanas   lanzar apps, terminales por ID, foco, colocar, maximizar
@@ -28,7 +28,8 @@ for _p in (_HERRAMIENTAS, _REPO):      # tipear/mover/ocr_buscar y nucleo/
 from .config import VM, KEY, PORT, USER, TMP, STATE_FILE, IS_WIN, die  # noqa: E402,F401
 from .anfitrion import find_vboxmanage, find_tesseract, vbox  # noqa: E402,F401
 from .registro import _state, _save_state, _log, logged, focus, mark  # noqa: E402,F401
-from .conexion import _ssh_cmd, ssh, ssh_ok, scp_from, scp_to  # noqa: E402,F401
+from .conexion import (canal, reiniciar, describir, ssh, ssh_ok, scp_from, scp_to, ejecutar, invitado_ok, traer,
+    enviar)  # noqa: E402,F401
 from .pantalla import shot, _tess_tsv, _ocr_words, _words_text, waitfor, waitstill, waitgone  # noqa: E402,F401
 from .entrada import (_pos_cache, pos, active_title, require_focus, PLAYER, compile_plan, play, move, click,
     type_human, typeurl, _find, clicktext, clickimg, _find_detail, selecttext, type_in)  # noqa: E402,F401
@@ -40,7 +41,8 @@ from .escenario import labcheck, burp_up, MODALES, dismiss_modals, prepare  # no
 # API pública (vm_control.py la reexporta con `from vm import *`; incluye los _privados que usan las demos)
 __all__ = [
     "VM", "KEY", "PORT", "USER", "TMP", "STATE_FILE", "IS_WIN", "die", "find_vboxmanage", "find_tesseract", "vbox",
-    "_state", "_save_state", "_log", "logged", "focus", "mark", "_ssh_cmd", "ssh", "ssh_ok", "scp_from", "scp_to",
+    "_state", "_save_state", "_log", "logged", "focus", "mark", "canal", "reiniciar", "describir", "ssh", "ssh_ok", "scp_from", "scp_to",
+    "ejecutar", "invitado_ok", "traer", "enviar",
     "shot", "_tess_tsv", "_ocr_words", "_words_text", "waitfor", "waitstill", "waitgone", "_pos_cache", "pos",
     "active_title", "require_focus", "PLAYER", "compile_plan", "play", "move", "click", "type_human", "typeurl",
     "_find", "clicktext", "clickimg", "_find_detail", "selecttext", "type_in", "launch_terminal", "place_id",

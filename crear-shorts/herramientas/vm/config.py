@@ -1,7 +1,8 @@
 """Configuración de la VM (variables de entorno) y la salida de error común.
 
 VM_NAME (kali) · VM_KEY (~/.ssh/cutly_vm) · VM_SSH_PORT (2222) · VM_USER (kali) · VBOXMANAGE (ruta) ·
-VM_OCR=tesseract (fuerza Tesseract) · VM_GUEST_PASS (solo si la das tú, para bootstrap con guestcontrol)
+VM_OCR=tesseract (fuerza Tesseract) · VM_CANAL=auto|ssh|guestcontrol (canal con el invitado, vm/canales/) ·
+VM_GUEST_PASSFILE / VM_GUEST_PASS (solo si los das tú: bootstrap y canal guestcontrol; nunca se adivinan)
 """
 import os
 import sys
