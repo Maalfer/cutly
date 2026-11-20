@@ -111,7 +111,7 @@ class PanelDirecto(QWidget):
         div = QSplitter(Qt.Orientation.Horizontal)
         div.addWidget(self.rep)
         div.addWidget(self.tabla)
-        div.setSizes([320, 580])
+        div.setSizes([260, 640])
         abajo = QHBoxLayout()
         abajo.addWidget(self.estado, 1)
         abajo.addWidget(self.b_cortar)
@@ -119,7 +119,10 @@ class PanelDirecto(QWidget):
         lay.addWidget(cabecera(self.TITULO, "1. Suelta el directo (o pega un enlace) y pide la propuesta.  2. Los "
                                             "fragmentos aparecen abajo con el directo al lado.  3. Elige y pide que "
                                             "los corte."))
-        lay.addWidget(self.ranura)
+        fila_ranura = QHBoxLayout()
+        fila_ranura.addWidget(self.ranura)
+        fila_ranura.addStretch(1)
+        lay.addLayout(fila_ranura)
         lay.addLayout(fila)
         lay.addLayout(prop)
         lay.addWidget(div, 1)

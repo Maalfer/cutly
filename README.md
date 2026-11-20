@@ -21,10 +21,11 @@ pip install -r requirements.txt
 python -m estudio
 ```
 
-Se abre **cutly estudio**: Claude Code (el instalado, con su interfaz completa) y, alrededor, una sección por cosa que
-quieres hacer — **Directo → clips**, **Cara + pantalla**, **Grabación → Short**, **Subtítulos**, **Resultados**,
-**Material** y **VM**. Sueltas el vídeo en la sección de lo que quieres hacer, pulsas su botón y Claude hace el
-trabajo en su panel; lo que termina aparece solo donde toca. Guía: [`estudio/ESTUDIO.md`](estudio/ESTUDIO.md).
+Se abre **cutly estudio**: Claude Code u OpenCode (los instalados, con su interfaz completa; Sesión → Motor elige
+cuál) y, alrededor, una sección por cosa que quieres hacer — **Directo → clips**, **Cara + pantalla**,
+**Grabación → Short**, **Resultados**, **Material** y **VM**. Sueltas el vídeo en la sección de lo que quieres
+hacer, pulsas su botón y el agente hace el trabajo en su panel; lo que termina aparece solo donde toca (los
+subtítulos a revisar, en Resultados). Guía: [`estudio/ESTUDIO.md`](estudio/ESTUDIO.md).
 Sin interfaz, lo mismo funciona desde la terminal con las skills (`/directo-a-clips`, `/fusionar-cara-pantalla`…).
 
 ---
@@ -80,7 +81,7 @@ cutly/
 ├── pruebas/                          ← python -m unittest discover -s pruebas -t pruebas
 ├── estudio/                          ← INTERFAZ DE ESCRITORIO (PySide6): Claude Code dentro +
 │                                         una sección por cosa que hacer (Directo → clips, Cara + pantalla, Grabación →
-│                                         Short, Subtítulos, Resultados), Material y VM; el material se ARRASTRA a la suya
+│                                         Short, Resultados), Material y VM; el material se ARRASTRA a la suya
 │                                         (python -m estudio; ver estudio/ESTUDIO.md)
 ├── .claude/skills/                   ← los flujos de trabajo como skills (/preparar-vm, /fusionar-cara-pantalla…)
 │                                         = los botones de la interfaz
@@ -107,7 +108,7 @@ cutly/
     │                                     detectar_silencio.sh, BENCHMARK-WHISPER.md, glosario.json, fuentes/
     ├── shorts/                       ←   Short vertical: SHORT-IDEAL.md (CÓMO DEBE QUEDAR), fusión cara+pantalla,
     │                                     short_desde_toma.py, subtitular.py, verificar_short.py...
-    ├── directos/                     ←   clips 16:9 de un directo: CLAUDE.md + construir_clip.sh
+    ├── directos/                     ←   clips 16:9 de un directo: CLAUDE.md + construir_clip.sh + normalizar_audio.py (§5.1) + aplicar_zoom.py (§5.5)
     ├── crudo/                        ←   el material arrastrado + material.json (LOCAL, no se versiona)
     └── videos-editados/              ←   resultados + _cortes.log (LOCAL, no se versiona)
 ```

@@ -1,5 +1,5 @@
-"""cutly estudio (estudio/): flujos = skills, lógica de la sección Subtítulos, el pseudo-terminal y los paneles sin
-mostrarlos (plataforma Qt "offscreen"). No abre ninguna sesión de Claude Code."""
+"""cutly estudio (estudio/): flujos = skills, lógica de la revisión de subtítulos (dentro de Resultados), el
+pseudo-terminal y los paneles sin mostrarlos (plataforma Qt "offscreen"). No abre ninguna sesión de Claude Code."""
 import json
 import os
 import sys
@@ -91,7 +91,8 @@ class Pty(unittest.TestCase):
 
 
 @unittest.skipUnless(HAY_QT, "PySide6 no instalado")
-class PanelSubtitulos(unittest.TestCase):
+class RevisorSubtitulos(unittest.TestCase):
+    """RevisorSubtitulos vive dentro de Resultados (sin reproductor propio: usa el que le pasan)."""
     def setUp(self):
         app()
         from estudio.paneles import subtitulos as modulo
@@ -109,9 +110,10 @@ class PanelSubtitulos(unittest.TestCase):
         self.d.cleanup()
 
     def test_revisar_guardar_y_avisar(self):
-        p = self.modulo.PanelSubtitulos()
+        p = self.modulo.RevisorSubtitulos(None)
+        p.abrir(self.json)
         self.assertEqual(p.tabla.rowCount(), 2)
-        p._sigue(1.0)                                         # resaltar mientras suena
+        p.seguir(1.0)                                         # resaltar mientras suena
         self.assertFalse(p.sucio)                             # ...no es editar
         p.tabla.item(1, 3).setText("a conocer")               # corrección del usuario
         self.assertTrue(p.sucio)
@@ -157,15 +159,55 @@ class Accesibilidad(unittest.TestCase):
         from estudio.paneles.grabacion import PanelGrabacion
         from estudio.paneles.material import PanelMaterial
         from estudio.paneles.resultados import PanelResultados
-        from estudio.paneles.subtitulos import PanelSubtitulos
         titulos = []
-        for clase in (PanelDirecto, PanelFusion, PanelGrabacion, PanelSubtitulos, PanelResultados, PanelMaterial):
+        for clase in (PanelDirecto, PanelFusion, PanelGrabacion, PanelResultados, PanelMaterial):
             p = clase()
             titulos.append(p.TITULO)
             self.assertTrue(hasattr(p, "pedir"), clase.__name__)
             self.assertTrue(hasattr(p, "traer_soltados"), clase.__name__)   # todas tienen sitio para soltar
             p.deleteLater()
         self.assertEqual(len(set(titulos)), len(titulos))
+
+
+@unittest.skipUnless(HAY_QT, "PySide6 no instalado")
+class Motores(unittest.TestCase):
+    """Sesión → Motor: alternar entre Claude Code y OpenCode en el mismo panel (estudio/motores.py)."""
+
+    def setUp(self):
+        app()
+        self._ajustes_orig = os.environ.get("CUTLY_AJUSTES")
+        os.environ["CUTLY_AJUSTES"] = "prueba_motores"     # no tocar las preferencias reales del usuario
+
+    def tearDown(self):
+        from PySide6.QtCore import QSettings
+        QSettings("cutly", "prueba_motores").clear()        # no acumular entre tandas de pruebas
+        if self._ajustes_orig is None:
+            os.environ.pop("CUTLY_AJUSTES", None)
+        else:
+            os.environ["CUTLY_AJUSTES"] = self._ajustes_orig
+
+    def test_motores_bien_formados(self):
+        from estudio.motores import MOTOR_DEFECTO, MOTORES
+        self.assertIn(MOTOR_DEFECTO, MOTORES)
+        for clave, info in MOTORES.items():
+            for campo in ("nombre", "comando", "continuar", "binario"):
+                self.assertIn(campo, info, clave)
+            self.assertEqual(info["comando"][0], info["binario"])
+            self.assertEqual(info["continuar"][0], info["binario"])
+
+    def test_cambiar_motor_actualiza_ventana(self):
+        from estudio.motores import MOTORES
+        from estudio.ventana import Ventana
+        # programa inofensivo en vez de claude/opencode: no hace falta tenerlos instalados para esta prueba
+        v = Ventana(["python", "-c", "import time; time.sleep(30)"])
+        otro = next(c for c in MOTORES if c != v.motor)
+        v._cambiar_motor(otro)
+        self.assertEqual(v.motor, otro)
+        self.assertTrue(v._acciones_motor[otro].isChecked())
+        self.assertEqual(v.dock.windowTitle(), MOTORES[otro]["nombre"])
+        self.assertEqual(v.ajustes.value("motor"), otro)
+        v.terminal.cerrar()
+        v.deleteLater()
 
 
 @unittest.skipUnless(HAY_QT, "PySide6 no instalado")

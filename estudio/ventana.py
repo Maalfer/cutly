@@ -1,9 +1,9 @@
 """Ventana principal de cutly estudio.
 
     ┌ menús: Sesión · Ver · Flujos · Ayuda ───────────────────────────────────────────────┐
-    │ secciones      │ la sección elegida (su sitio para soltar,     │ Claude Code          │
-    │ (barra lateral │ su acción principal, lo que va saliendo)      │ (panel acoplable:    │
-    │  con avisos ●) │                                               │  F12 lo oculta)      │
+    │ secciones      │ la sección elegida (su sitio para soltar,     │ Claude Code u        │
+    │ (barra lateral │ su acción principal, lo que va saliendo)      │ OpenCode (panel      │
+    │  con avisos ●) │                                               │ acoplable; F12 oculta)│
     └ barra de estado: sesión · material · VM ────────────────────────────────────────────┘
 
 El material NO se coloca en carpetas a mano: se suelta en la sección de lo que se quiere hacer (cada una sabe qué hacer
@@ -15,12 +15,16 @@ import os
 import time
 
 from PySide6.QtCore import QSettings, Qt, QTimer, QUrl
-from PySide6.QtGui import QAction, QActionGroup, QDesktopServices, QKeySequence
+from PySide6.QtGui import QAction, QActionGroup, QDesktopServices, QIcon, QKeySequence, QPixmap
 from PySide6.QtWidgets import (QApplication, QDockWidget, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
                                QMainWindow, QMessageBox, QPushButton, QStackedWidget, QWidget)
 
+from .manija import ManijaPanel
+from .memoria import VigiaMemoria
+from .motores import MOTOR_DEFECTO, MOTORES
+
 from . import apariencia
-from .entorno import REPO
+from .entorno import LOGO, REPO
 from .flujos import flujos
 from .paneles.directo import PanelDirecto
 from .paneles.fusion import PanelFusion
@@ -28,48 +32,55 @@ from .paneles.grabacion import PanelGrabacion
 from .paneles.material import TODO, PanelMaterial
 from .paneles.ranura import rutas_soltadas
 from .paneles.resultados import PanelResultados
-from .paneles.subtitulos import PanelSubtitulos
 from .paneles.vm import PanelVM
 from .servicios import Vigia
 from .terminal.widget import TerminalClaude
 
 GUIA = os.path.join(REPO, "estudio", "ESTUDIO.md")
 NOVEDAD = {"resultado": ("Resultados", "Claude ha terminado un vídeo"),
-           "subtitulos": ("Subtítulos", "Hay subtítulos listos para revisar"),
+           "subtitulos": ("Resultados", "Hay subtítulos listos para revisar"),
            "propuesta": ("Directo → clips", "Claude ha propuesto fragmentos del directo")}
 ATAJOS = [("Ctrl+1 … Ctrl+7", "Ir a cada sección (en el orden de la barra lateral)"),
-          ("F12", "Mostrar u ocultar el panel de Claude Code"), ("Ctrl+`", "Llevar el foco a Claude Code"),
+          ("F12", "Mostrar u ocultar el panel del agente de IA (Claude Code u OpenCode)"),
+          ("Ctrl+`", "Llevar el foco al agente de IA"),
+          ("Borde del panel del agente", "Arrastra para ensanchar o encoger · con el foco ahí: ← →"),
           ("Ctrl+= / Ctrl+- / Ctrl+0", "Letra más grande / más pequeña / normal (toda la app y el terminal)"),
-          ("F11", "Pantalla completa"), ("Ctrl+Mayús+N", "Nueva sesión de Claude Code"),
+          ("F11", "Pantalla completa"), ("Ctrl+Mayús+N", "Nueva sesión (Sesión → Motor elige cuál)"),
           ("Ctrl+Mayús+R", "Continuar la última conversación"), ("F1", "Esta ayuda"),
           ("En una ranura", "Intro: elegir archivo · Supr: vaciar · Ctrl+V: pegar una ruta"),
           ("En Grabación → Short", "Alt+↑/↓: mover la fuente · Supr: quitarla"),
           ("En Directo → clips", "Intro: ver el fragmento · Espacio: elegirlo"),
-          ("En Subtítulos", "Ctrl+S: guardar · Ctrl+Intro: ver ese momento"),
+          ("Revisando subtítulos (en Resultados)", "Ctrl+S: guardar · Ctrl+Intro: ver ese momento"),
           ("En Material", "Intro: abrir · Supr: quitar · tecla Menú: papel y pedir a Claude"),
           ("En el terminal", "Ctrl+C con selección: copiar (sin selección: interrumpir) · Ctrl+V: pegar · "
                              "soltar un archivo: pega su ruta")]
 
 
 class Ventana(QMainWindow):
-    def __init__(self, comando, app=None):
+    def __init__(self, comando, app=None, continuar=False):
         super().__init__()
         self.app = app or QApplication.instance()
-        # preferencias del usuario (tema, letra, disposición); CUTLY_AJUSTES las separa (p. ej. en pruebas)
+        # preferencias del usuario (tema, letra, disposición, motor); CUTLY_AJUSTES las separa (p. ej. en pruebas)
         self.ajustes = QSettings("cutly", os.environ.get("CUTLY_AJUSTES", "estudio"))
         self.tema = self.ajustes.value("tema", apariencia.TEMA_DEFECTO)
         self.escala = float(self.ajustes.value("escala", 1.0))
         self.lector = self.ajustes.value("lector", False, type=bool)
+        self.motor = self.ajustes.value("motor", MOTOR_DEFECTO)
+        if self.motor not in MOTORES:
+            self.motor = MOTOR_DEFECTO
+        # `comando` explícito (p. ej. --comando de __main__.py, para pruebas) manda sobre el motor elegido
+        if comando is None:
+            comando = MOTORES[self.motor]["continuar" if continuar else "comando"]
         apariencia.aplicar(self.app, self.tema, self.escala)
         self.setWindowTitle("cutly estudio")
+        self.setWindowIcon(QIcon(LOGO))
         self.setAcceptDrops(True)
         self.resize(1680, 1000)
         self.terminal = None
 
         # ---- secciones (una por cosa que se quiere hacer) y su navegación
-        self.secciones = [PanelDirecto(), PanelFusion(), PanelGrabacion(), PanelSubtitulos(), PanelResultados(),
-                          PanelMaterial(), PanelVM()]
-        (self.directo, self.fusion, self.grabacion, self.subs, self.resultados, self.material, self.vm) = self.secciones
+        self.secciones = [PanelDirecto(), PanelFusion(), PanelGrabacion(), PanelResultados(), PanelMaterial(), PanelVM()]
+        (self.directo, self.fusion, self.grabacion, self.resultados, self.material, self.vm) = self.secciones
         self.pila = QStackedWidget()
         self.nav = QListWidget()
         self.nav.setObjectName("navegacion")
@@ -92,13 +103,24 @@ class Ventana(QMainWindow):
         fila.addWidget(self.pila, 1)
         self.setCentralWidget(centro)
 
-        # ---- Claude Code, acoplable
-        self.dock = QDockWidget("Claude Code", self)
+        # ---- el agente de IA elegido (Claude Code u OpenCode), acoplable
+        self.dock = QDockWidget(MOTORES[self.motor]["nombre"], self)
         self.dock.setObjectName("dock_claude")
         self.dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetMovable |
                               QDockWidget.DockWidgetFeature.DockWidgetFloatable |
                               QDockWidget.DockWidgetFeature.DockWidgetClosable)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock)
+        # el terminal es un QWebEngineView: se come el arrastre del separador nativo en su borde (medido), así que
+        # una manija propia (sin motor web) se encarga de ensanchar/encoger el panel — ver estudio/manija.py
+        self._manija_claude = ManijaPanel(self, self.dock, lado="izquierda", hueco=self.nav.width() + 260)
+        self.dock.topLevelChanged.connect(lambda flotando: self._manija_claude.setVisible(not flotando))
+        zona = QWidget()
+        zona.setObjectName("zona_claude")
+        self._fila_claude = QHBoxLayout(zona)
+        self._fila_claude.setContentsMargins(0, 0, 0, 0)
+        self._fila_claude.setSpacing(0)
+        self._fila_claude.addWidget(self._manija_claude)
+        self.dock.setWidget(zona)
 
         # ---- barra de estado
         self.l_claude = QLabel()                           # en qué está Claude (lo cuentan sus hooks)
@@ -125,7 +147,11 @@ class Ventana(QMainWindow):
         self.vigia.carpetas.connect(lambda: [s.al_carpetas() for s in self.secciones if hasattr(s, "al_carpetas")])
         self.vigia.novedad.connect(self._novedad)
         self.material.actualizar.connect(self.vigia.sincronizar)
-        self.resultados.revisar.connect(self._revisar_subtitulos)
+
+        # ---- memoria del sistema: cerrar a tiempo y ordenadamente si se pone crítica (ver estudio/memoria.py)
+        self._cerrando_por_memoria = False
+        self.vigia_memoria = VigiaMemoria(parent=self)
+        self.vigia_memoria.critica.connect(self._memoria_critica)
 
         self.estado_claude = ""
         self.cola = []
@@ -153,28 +179,38 @@ class Ventana(QMainWindow):
         return self.pila.currentWidget()
 
     # ---- Claude Code
+    def _en_panel_claude(self, widget):
+        """Pone `widget` (el aviso o el terminal) junto a la manija de ensanchar/encoger, dentro del panel."""
+        anterior = self._fila_claude.takeAt(1)
+        if anterior is not None and anterior.widget() is not None:
+            anterior.widget().setParent(None)
+        self._fila_claude.insertWidget(1, widget, 1)
+
     def nueva_sesion(self, comando):
         if self.terminal is not None:
             self.terminal.cerrar()
             self.terminal.deleteLater()
             self.terminal = None
+        binario = comando[0] if comando else ""
+        info_motor = next((m for m in MOTORES.values() if m["binario"] == binario), None)
+        nombre = info_motor["nombre"] if info_motor else binario
         try:
             self.terminal = TerminalClaude(comando, cwd=REPO)
         except FileNotFoundError:
-            aviso = QLabel("No encuentro Claude Code («claude» en el PATH).\n\nInstálalo e inicia sesión en él, y luego "
-                           "Sesión → Nueva sesión.")
+            aviso = QLabel(f"No encuentro {nombre} («{binario}» en el PATH).\n\nInstálalo e inicia sesión en él, y "
+                           "luego Sesión → Nueva sesión (o elige otro motor en Sesión → Motor).")
             aviso.setObjectName("aviso")
             aviso.setWordWrap(True)
             aviso.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.dock.setWidget(aviso)
-            self.l_sesion.setText("sin Claude Code   ")
+            self._en_panel_claude(aviso)
+            self.l_sesion.setText(f"sin {nombre}   ")
             return
         self.terminal.terminado.connect(self._sesion_terminada)
         self.terminal.estado.connect(self._estado_claude)
         self.cola.clear()
         self._estado_claude("arrancando", "")
         self.terminal.ajustar(*self._estilo_terminal())
-        self.dock.setWidget(self.terminal)
+        self._en_panel_claude(self.terminal)
         self.l_sesion.setText(f"sesión: {' '.join(comando)}   ")
         self.terminal.setFocus()
 
@@ -182,6 +218,25 @@ class Ventana(QMainWindow):
         c = apariencia.colores(self.tema)
         return round(14 * self.escala), c["terminal"], "#ffffff" if self.tema == "alto contraste" else "#d4d4d4", \
             self.lector
+
+    def _cambiar_motor(self, clave):
+        """Sesión → Motor: alterna entre los agentes de IA del panel (Claude Code, OpenCode)."""
+        if clave == self.motor:
+            return
+        if not self._confirmar_parar(f"cambias a {MOTORES[clave]['nombre']}"):
+            self._acciones_motor[self.motor].setChecked(True)      # deshace la marca visual del clic
+            return
+        self.motor = clave
+        self.ajustes.setValue("motor", clave)
+        self._acciones_motor[clave].setChecked(True)      # por si se llamó sin pasar por el clic del menú
+        nombre = MOTORES[clave]["nombre"]
+        self._accion_dock.setText(f"Panel de &{nombre}")
+        self._accion_nueva.setToolTip(f"Abre una sesión nueva de {nombre} en el repo")
+        self._accion_nueva.setStatusTip(f"Abre una sesión nueva de {nombre} en el repo")
+        continuar_txt = " ".join(MOTORES[clave]["continuar"])
+        self._accion_continuar.setToolTip(continuar_txt)
+        self._accion_continuar.setStatusTip(continuar_txt)
+        self.nueva_sesion(MOTORES[clave]["comando"])
 
     def pedir(self, texto):
         """Lo que una sección le pide a Claude. Si acaba en espacio, se deja escrito para que lo completes tú.
@@ -205,19 +260,21 @@ class Ventana(QMainWindow):
             self.enviar(texto, intro=not texto.endswith(" "))
         self._pintar_cola()
 
-    # ---- en qué está Claude (hooks del proyecto -> estudio/hooks/estado_claude.py)
+    # ---- en qué está el motor (Claude Code: sus hooks, estudio/hooks/estado_claude.py; OpenCode: el plugin
+    # .opencode/plugins/cutly-estado.js — mismo contrato de fichero, CUTLY_ESTADO_FICHERO)
     def _estado_claude(self, estado, mensaje):
         self.estado_claude = estado
-        textos = {"arrancando": ("Claude arrancando…", "ayuda"),
-                  "trabajando": ("Claude trabajando…", "aviso"),
-                  "necesita": ("⚠ Claude espera tu respuesta", "error"),
-                  "libre": ("Claude listo", "ok")}
+        n = MOTORES[self.motor]["nombre"]
+        textos = {"arrancando": (f"{n} arrancando…", "ayuda"),
+                  "trabajando": (f"{n} trabajando…", "aviso"),
+                  "necesita": (f"⚠ {n} espera tu respuesta", "error"),
+                  "libre": (f"{n} listo", "ok")}
         texto, clase = textos.get(estado, ("", "ayuda"))
         self.l_claude.setText(texto + "   " if texto else "")
         self.l_claude.setObjectName(clase)
         apariencia.repintar(self.l_claude)
-        self.dock.setWindowTitle("Claude Code" + {"trabajando": " — trabajando…",
-                                                  "necesita": " — espera tu respuesta"}.get(estado, ""))
+        self.dock.setWindowTitle(n + {"trabajando": " — trabajando…",
+                                      "necesita": " — espera tu respuesta"}.get(estado, ""))
         if estado == "necesita":
             # que no pase desapercibido aunque estés en otra sección o en otra ventana
             self.dock.show()
@@ -289,9 +346,16 @@ class Ventana(QMainWindow):
             self.ir_a(self._destino_novedad)
         self._ir_a.setVisible(False)
 
-    def _revisar_subtitulos(self, ruta_json):
-        self.subs.al_novedad("subtitulos", ruta_json)
-        self.ir_a(self.subs)
+    # ---- memoria crítica: cerrar YA, sin preguntar (preguntar en una emergencia es el riesgo, no la solución)
+    def _memoria_critica(self, mb_libres):
+        if self._cerrando_por_memoria:
+            return
+        self._cerrando_por_memoria = True
+        self.statusBar().showMessage(f"Memoria del sistema crítica ({mb_libres:.0f} MB libres): cutly estudio "
+                                     "se cierra solo para no dejar nada a medias. Vuelve a abrirlo cuando haya "
+                                     "más memoria libre.", 0)
+        QApplication.alert(self)
+        QTimer.singleShot(2000, self.close)
 
     # ---- soltar fuera de un sitio concreto: lo decide la sección visible (o va a Material)
     def dragEnterEvent(self, ev):
@@ -324,12 +388,25 @@ class Ventana(QMainWindow):
     def _menus(self):
         barra = self.menuBar()
         m = barra.addMenu("&Sesión")
-        self._accion(m, "&Nueva sesión de Claude Code", "Ctrl+Shift+N",
-                     lambda: self._confirmar_parar("empiezas otra sesión") and self.nueva_sesion(["claude"]),
-                     "Abre una sesión nueva en el repo")
-        self._accion(m, "&Continuar la última conversación", "Ctrl+Shift+R",
-                     lambda: self._confirmar_parar("cambias de sesión") and self.nueva_sesion(["claude", "--continue"]),
-                     "claude --continue")
+        motores = m.addMenu("&Motor")
+        grupo_motor = QActionGroup(self)
+        self._acciones_motor = {}
+        for clave, info in MOTORES.items():
+            a = self._accion(motores, info["nombre"], None, lambda _=False, c=clave: self._cambiar_motor(c),
+                             f"Cargar {info['nombre']} en el panel")
+            a.setCheckable(True)
+            a.setChecked(clave == self.motor)
+            grupo_motor.addAction(a)
+            self._acciones_motor[clave] = a
+        m.addSeparator()
+        self._accion_nueva = self._accion(m, "&Nueva sesión", "Ctrl+Shift+N",
+                                          lambda: self._confirmar_parar("empiezas otra sesión") and
+                                                  self.nueva_sesion(MOTORES[self.motor]["comando"]),
+                                          f"Abre una sesión nueva de {MOTORES[self.motor]['nombre']} en el repo")
+        self._accion_continuar = self._accion(m, "&Continuar la última conversación", "Ctrl+Shift+R",
+                                              lambda: self._confirmar_parar("cambias de sesión") and
+                                                      self.nueva_sesion(MOTORES[self.motor]["continuar"]),
+                                              " ".join(MOTORES[self.motor]["continuar"]))
         m.addSeparator()
         self._accion(m, "&Salir", QKeySequence.StandardKey.Quit, self.close)
 
@@ -337,12 +414,12 @@ class Ventana(QMainWindow):
         for i, s in enumerate(self.secciones):
             self._accion(v, s.TITULO, f"Ctrl+{i + 1}", lambda _=False, k=i: self.nav.setCurrentRow(k))
         v.addSeparator()
-        accion_dock = self.dock.toggleViewAction()
-        accion_dock.setText("Panel de &Claude Code")
-        accion_dock.setShortcut(QKeySequence("F12"))
-        v.addAction(accion_dock)
-        self._accion(v, "&Foco en Claude Code", "Ctrl+`", lambda: (self.dock.show(), self.terminal and
-                                                                   self.terminal.setFocus()))
+        self._accion_dock = self.dock.toggleViewAction()
+        self._accion_dock.setText(f"Panel de &{MOTORES[self.motor]['nombre']}")
+        self._accion_dock.setShortcut(QKeySequence("F12"))
+        v.addAction(self._accion_dock)
+        self._accion_foco = self._accion(v, "&Foco en el agente de IA", "Ctrl+`",
+                                         lambda: (self.dock.show(), self.terminal and self.terminal.setFocus()))
         v.addSeparator()
         temas = v.addMenu("&Tema")
         grupo = QActionGroup(self)
@@ -366,15 +443,27 @@ class Ventana(QMainWindow):
 
         f = barra.addMenu("&Flujos")
         for fl in flujos():
-            self._accion(f, fl["rotulo"], None, lambda _=False, c=fl["comando"]: self.enviar(c),
+            # si la skill espera argumentos (p. ej. el tema de una demo), se deja escrito el comando SIN pulsar
+            # Intro: hay hueco para completarlo antes de enviarlo (mismo criterio que pedir())
+            texto = fl["comando"] + " " if fl["argumentos"] else fl["comando"]
+            self._accion(f, fl["rotulo"], None, lambda _=False, t=texto: self.pedir(t),
                          f"{fl['comando']} {fl['argumentos']} — {fl['descripcion']}")
 
         a = barra.addMenu("A&yuda")
         self._accion(a, "&Atajos de teclado", "F1", self._atajos)
         self._accion(a, "&Guía de cutly estudio", None, lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(GUIA)))
-        self._accion(a, "Acerca de", None, lambda: QMessageBox.about(
-            self, "cutly estudio", "Claude Code (el instalado, con su interfaz completa) y, alrededor, una sección por "
-                                   "cosa que quieres hacer con tus vídeos.\n\nGuía: estudio/ESTUDIO.md"))
+        self._accion(a, "Acerca de", None, self._acerca_de)
+
+    def _acerca_de(self):
+        caja = QMessageBox(self)
+        caja.setWindowTitle("Acerca de")
+        caja.setTextFormat(Qt.TextFormat.RichText)
+        caja.setIconPixmap(QPixmap(LOGO).scaled(64, 64, Qt.AspectRatioMode.KeepAspectRatio,
+                                                Qt.TransformationMode.SmoothTransformation))
+        caja.setText(f"<b>cutly estudio</b><br>Claude Code u OpenCode (los instalados, con su interfaz completa; "
+                    f"Sesión → Motor elige cuál — ahora mismo: {MOTORES[self.motor]['nombre']}) y, alrededor, "
+                    "una sección por cosa que quieres hacer con tus vídeos.<br><br>Guía: estudio/ESTUDIO.md")
+        caja.exec()
 
     def _atajos(self):
         filas = "".join(f"<tr><td style='padding:3px 12px 3px 0'><b>{k}</b></td><td>{d}</td></tr>" for k, d in ATAJOS)
@@ -414,7 +503,8 @@ class Ventana(QMainWindow):
         self.nav.setCurrentRow(int(self.ajustes.value("seccion", 0)))
 
     def closeEvent(self, ev):
-        if not self._confirmar_parar("cierras cutly estudio"):
+        # con memoria crítica no se pregunta: parar a tiempo es justo lo que evita dejar algo a medias
+        if not self._cerrando_por_memoria and not self._confirmar_parar("cierras cutly estudio"):
             ev.ignore()
             return
         self.ajustes.setValue("geometria", self.saveGeometry())

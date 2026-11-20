@@ -67,9 +67,10 @@ class Ranura(QFrame):
         self.setAcceptDrops(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setAccessibleName(f"Ranura {titulo}")
+        self.setMaximumWidth(380)          # una tarjeta compacta: no un cuadro enorme aunque la ventana sea ancha
 
         self.mini = QLabel("⬇")
-        self.mini.setFixedSize(96, 108)
+        self.mini.setFixedSize(60, 68)
         self.mini.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.mini.setAccessibleName(f"Miniatura de {titulo}")
         self.titulo = QLabel(f"<b>{titulo}</b>")
@@ -77,8 +78,11 @@ class Ranura(QFrame):
         self.info = ayuda("")
         self.b_elegir = boton("Elegir…", f"Elegir el archivo para {titulo}", self.elegir)
         self.b_quitar = boton("Quitar", "Vacía la ranura (el archivo sigue en el material)", lambda: self.poner(""))
+        for b in (self.b_elegir, self.b_quitar):
+            b.setProperty("pequeno", True)                  # secundarios: la ranura es solo el paso de traer el archivo
 
         texto = QVBoxLayout()
+        texto.setSpacing(2)
         texto.addWidget(self.titulo)
         texto.addWidget(self.nombre)
         texto.addWidget(self.info)
@@ -89,6 +93,8 @@ class Ranura(QFrame):
         botones.addStretch(1)
         texto.addLayout(botones)
         lay = QHBoxLayout(self)
+        lay.setContentsMargins(8, 6, 8, 6)
+        lay.setSpacing(8)
         lay.addWidget(self.mini)
         lay.addLayout(texto, 1)
         self.poner("")

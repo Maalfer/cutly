@@ -1,26 +1,23 @@
-"""Sección "Subtítulos": pedir a Claude los subtítulos de un Short (ranura + /subtitular-short) y revisar el
-<video>.subtitulos.json que deja `subtitular.py preparar`, con el vídeo sincronizado; guardar y avisar a Claude de que
-ya está revisado (paso 3 de /subtitular-short).
+"""Revisión de subtítulos: vive DENTRO de «Resultados», no en su propia sección. Cuando el vídeo elegido en
+Resultados tiene un <video>.subtitulos.json al lado, `RevisorSubtitulos` aparece bajo el reproductor con la tabla
+editable de bloques (sincronizada con el vídeo que ya está reproduciendo Resultados); al terminar, guarda y avisa a
+Claude de que ya puede quemarlos (paso 3 de /subtitular-short).
 
 Es el mismo fichero que lee `subtitular.py quemar`: aquí solo se cambia el "texto" de cada bloque (si cambia el número
 de palabras, quemar reparte los tiempos solo). Si Claude lo reescribe mientras está abierto, se recarga.
-Teclado: Ctrl+S guarda; Ctrl+Intro en una fila salta a ese momento del vídeo.
+Teclado: Ctrl+S guarda; Ctrl+Intro en una fila salta a ese momento del vídeo (en el reproductor de Resultados).
 """
 import glob
 import os
 
 from PySide6.QtCore import QFileSystemWatcher, Qt, Signal
 from PySide6.QtGui import QFont, QKeySequence, QPalette, QShortcut
-from PySide6.QtWidgets import (QComboBox, QHBoxLayout, QHeaderView, QLabel, QMessageBox, QSplitter, QTableWidget,
-                               QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import QHeaderView, QHBoxLayout, QLabel, QMessageBox, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 
 from nucleo import archivos, material
 from nucleo.rutas import REPO, SALIDA
 
-from ..entorno import para_claude
-from .comun import boton, cabecera, estado, nombrar, primario
-from .ranura import Ranura
-from .reproductor import Reproductor
+from .comun import ayuda, boton, estado, nombrar
 
 
 # ---------------------------------------------------------------- lógica (sin interfaz: pruebas/test_estudio.py)
@@ -72,30 +69,21 @@ class TablaBloques(QTableWidget):
         super().keyPressEvent(ev)
 
 
-class PanelSubtitulos(QWidget):
-    TITULO = "Subtítulos"
+class RevisorSubtitulos(QWidget):
+    """Tabla editable de los bloques de un <video>.subtitulos.json, para revisarlos con el vídeo que ya se está viendo
+    en Resultados. `reproductor` es ESE reproductor (no tiene uno propio): `seguir(t)` resalta el bloque que suena
+    (Resultados conecta ahí su señal `posicion`) y hacer clic en una fila salta ese reproductor a ese momento."""
     pedir = Signal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, reproductor, parent=None):
         super().__init__(parent)
+        self.rep = reproductor
         self.ruta = None
         self.datos = None
         self.sucio = False
         self._actual = -1
 
-        # 1) qué Short subtitular
-        self.ranura = Ranura("short", "Short a subtitular", "el Short ya montado (con tu voz)")
-        self.b_subtitular = primario("Subtitular con Claude", "Claude transcribe, prepara los subtítulos y te pide "
-                                                              "que los revises aquí antes de quemarlos")
-        self.b_subtitular.setEnabled(False)
-        self.ranura.cambiado.connect(lambda r: self.b_subtitular.setEnabled(bool(r)))
-        self.b_subtitular.clicked.connect(lambda: self.pedir.emit(f"/subtitular-short {para_claude(self.ranura.ruta)}"))
-        # 2) revisión del JSON que deja Claude
-        self.combo = nombrar(QComboBox(), "Subtítulos a revisar")
-        self.combo.currentIndexChanged.connect(lambda _: self.abrir(self.combo.currentData()))
-        self.rep = Reproductor()
-        self.rep.posicion.connect(self._sigue)
-        self.rotulo = QLabel()                             # vista previa: como saldrá quemado (caja negra, letra blanca)
+        self.rotulo = QLabel()                              # vista previa: como saldrá quemado (caja negra, letra blanca)
         self.rotulo.setObjectName("rotulo")
         self.rotulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.rotulo.setFont(QFont("Inter", 16, QFont.Weight.Bold))
@@ -121,74 +109,21 @@ class PanelSubtitulos(QWidget):
         self.vigia_json = QFileSystemWatcher(self)                       # solo el fichero abierto
         self.vigia_json.fileChanged.connect(self._cambio_externo)
 
-        pedir = QHBoxLayout()
-        pedir.addWidget(self.ranura, 1)
-        pedir.addWidget(self.b_subtitular)
-        arriba = QHBoxLayout()
-        etiqueta = QLabel("&Revisar:")
-        etiqueta.setBuddy(self.combo)
-        arriba.addWidget(etiqueta)
-        arriba.addWidget(self.combo, 1)
         abajo = QHBoxLayout()
         abajo.addWidget(self.estado, 1)
         abajo.addWidget(self.b_guardar)
         abajo.addWidget(self.b_ok)
-        izq = QWidget()
-        li = QVBoxLayout(izq)
-        li.setContentsMargins(0, 0, 0, 0)
-        li.addWidget(self.rep, 1)
-        li.addWidget(self.rotulo)
-        div = QSplitter(Qt.Orientation.Horizontal)
-        div.addWidget(izq)
-        div.addWidget(self.tabla)
-        div.setSizes([340, 560])
         lay = QVBoxLayout(self)
-        lay.addWidget(cabecera(self.TITULO, "Suelta el Short y pide los subtítulos. Cuando Claude los prepare aparecen "
-                                            "abajo: corrige el texto con el vídeo al lado y pulsa «Revisado»."))
-        lay.addLayout(pedir)
-        lay.addLayout(arriba)
-        lay.addWidget(div, 1)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.addWidget(ayuda("Subtítulos de este Short: corrige el texto y pulsa «Revisado»."))
+        lay.addWidget(self.rotulo)
+        lay.addWidget(self.tabla, 1)
         lay.addLayout(abajo)
-        self.al_carpetas()
-
-    # ---- contrato de sección
-    def traer_soltados(self, rutas):
-        videos = [r for r in rutas if r.lower().endswith(material.VIDEO)]
-        if videos:
-            self.ranura.traer(videos[0])
-
-    def al_material(self, m):
-        self.ranura.cargar_actual(m)
-
-    def al_carpetas(self):
-        self.recargar_lista()
-
-    def al_novedad(self, tipo, ruta):
-        if tipo == "subtitulos":
-            self.recargar_lista()
-            i = self.combo.findData(ruta)
-            if i >= 0:
-                self.combo.setCurrentIndex(i)
-
-    # ---- lista de ficheros
-    def recargar_lista(self):
-        actual = self.combo.currentData()
-        self.combo.blockSignals(True)
-        self.combo.clear()
-        for f in ficheros():
-            self.combo.addItem(os.path.basename(f), f)
-        i = self.combo.findData(actual) if actual else (0 if self.combo.count() else -1)
-        self.combo.setCurrentIndex(max(i, 0) if self.combo.count() else -1)
-        self.combo.blockSignals(False)
-        if self.combo.currentData() != self.ruta:
-            self.abrir(self.combo.currentData())
-        if not self.combo.count():
-            self.estado.setText("Aún no hay subtítulos que revisar: aparecerán aquí solos cuando Claude los prepare.")
-        self.b_ok.setEnabled(self.datos is not None)
-        self.b_guardar.setEnabled(self.datos is not None)
+        self.setVisible(False)
 
     # ---- abrir / mostrar
     def abrir(self, ruta):
+        """`ruta` es el .subtitulos.json a revisar, o None para vaciar y ocultarse (el vídeo elegido no tiene)."""
         if ruta == self.ruta and self.datos is not None:
             return
         if self.sucio and not self._descartar():
@@ -199,7 +134,6 @@ class PanelSubtitulos(QWidget):
         self.datos = archivos.leer_json(ruta) if ruta and os.path.exists(ruta) else None
         if self.datos:
             self.vigia_json.addPath(ruta)
-            self.rep.cargar(video_de(ruta, self.datos))
         self._llenar()
 
     def _llenar(self):
@@ -223,7 +157,8 @@ class PanelSubtitulos(QWidget):
         if self.datos and 0 <= fila < len(self.datos["bloques"]):
             self.rep.ir_a(self.datos["bloques"][fila]["ini"])
 
-    def _sigue(self, t):
+    def seguir(self, t):
+        """Resultados conecta aquí la posición de SU reproductor: resalta el bloque que suena en ese instante."""
         if not self.datos:
             return
         i = bloque_en(self.datos["bloques"], t)

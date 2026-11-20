@@ -1,41 +1,61 @@
 # cutly estudio — la interfaz de escritorio
 
-Una ventana (PySide6, igual en Windows, macOS y Linux) con **el Claude Code instalado dentro, con su interfaz
-completa**, y alrededor una **sección por cosa que quieres hacer** con tus vídeos. El material no se coloca en
-carpetas: **se suelta en la sección de lo que quieres hacer**.
+Una ventana (PySide6, igual en Windows, macOS y Linux) con **Claude Code u OpenCode instalados dentro, con su
+interfaz completa** (Sesión → Motor elige cuál, y se puede ir alternando), y alrededor una **sección por cosa que
+quieres hacer** con tus vídeos. El material no se coloca en carpetas: **se suelta en la sección de lo que quieres
+hacer**.
 
 ```
 ┌ Sesión · Ver · Flujos · Ayuda ─────────────────────────────────────────────────────────────────────┐
-│ Directo → clips    │ ┌ Cara ─────────────┐ ┌ Pantalla ──────────┐  │ Claude Code                  │
-│ Cara + pantalla  ◀ │ │ suelta aquí       │ │ suelta aquí        │  │ (el de `claude`, de verdad:  │
-│ Grabación → Short  │ └───────────────────┘ └────────────────────┘  │  misma sesión, permisos,     │
-│ Subtítulos  ●      │ Título: [...........]   [Fusionar con Claude] │  comandos /…; soltar un      │
-│ Resultados         │                                               │  archivo aquí pega su ruta)  │
-│ Material · VM      │                                               │  F12 lo oculta / muestra     │
-└ sesión · material · VM ─────────────────────────── [Ir a Subtítulos] ──────────────────────────────┘
+│ Directo → clips    │ ┌ Cara ─────────────┐ ┌ Pantalla ──────────┐  │ Claude Code / OpenCode        │
+│ Cara + pantalla  ◀ │ │ suelta aquí       │ │ suelta aquí        │  │ (el que elijas en Sesión →    │
+│ Grabación → Short  │ └───────────────────┘ └────────────────────┘  │  Motor: misma sesión, permisos,│
+│ Resultados  ●       │ Título: [...] [x] Subtitular  [Fusionar con Claude] │ comandos /…; soltar un  │
+│ Material · VM      │                                               │  archivo aquí pega su ruta)  │
+│                     │                                               │  F12 lo oculta / muestra     │
+└ sesión · material · VM ─────────────────────────── [Ir a Resultados] ──────────────────────────────┘
 ```
 
 ## Arrancar
 
 ```bash
 pip install -r requirements.txt              # todo: estudio + los flujos de vídeo/VM (un solo paso)
-python -m estudio                            # sesión nueva de Claude Code en el repo
-python -m estudio --continuar                # retoma la última conversación (claude --continue)
+python -m estudio                            # sesión nueva, con el motor elegido (Sesión → Motor; Claude Code por defecto)
+python -m estudio --continuar                # retoma la última conversación de ese motor (--continue)
 ```
 
-Requisitos: Claude Code instalado y con sesión iniciada (`claude` en el PATH; si no está, el panel lo explica) y
-conexión a internet (Claude Code la necesita igual; xterm.js se carga de jsDelivr con versión fijada). Para iniciar
-sesión en la VM desde la sección VM: `VM_GUEST_PASSFILE` en el entorno.
+Requisitos: Claude Code y/o OpenCode instalados y con sesión iniciada (`claude` y/o `opencode` en el PATH; si el
+elegido no está, el panel lo explica y deja cambiar de motor desde ahí mismo) y conexión a internet (lo necesitan
+igual; xterm.js se carga de jsDelivr con versión fijada). Para iniciar sesión en la VM desde la sección VM:
+`VM_GUEST_PASSFILE` en el entorno.
+
+### Dos motores, un solo panel (Sesión → Motor)
+
+El panel acoplable no es específico de Claude Code: `estudio/terminal/widget.py` lanza CUALQUIER programa en un
+pseudo-terminal real y lo muestra con xterm.js — el programa en sí (`estudio/motores.py`) es lo único que cambia.
+Sesión → Motor dice cuál cargar (Claude Code u OpenCode), lo recuerda entre arranques (QSettings) y, si ya hay una
+sesión abierta, pregunta antes de cambiarla (como cerrar la app mientras trabaja).
+
+**Cómo sabe la app en qué está trabajando cada uno** (arrancando/trabajando/espera tu respuesta/listo, barra de
+estado): mismo contrato de fichero en los dos casos (`CUTLY_ESTADO_FICHERO`, JSON `{estado, mensaje}`), pero cada
+motor lo rellena con SU propio mecanismo de extensión — no hay una API común entre ellos:
+- **Claude Code**: sus hooks nativos (`.claude/settings.json` → `estudio/hooks/estado_claude.py`).
+- **OpenCode**: un plugin (`.opencode/plugins/cutly-estado.js`) que escucha `ctx.event.subscribe()`
+  (`session.execution.started/succeeded` → trabajando/libre) y `ctx.permission.hook("evaluate")` (`effect=="ask"`
+  → necesita tu respuesta).
+
+Las **skills del proyecto** (`.claude/skills/*/SKILL.md`, los botones de cada sección y el menú Flujos) funcionan
+con los dos motores sin ningún cambio: OpenCode las lee de ahí mismo de forma nativa (comprobado: `opencode run
+"lista tus comandos"` las devuelve junto a las suyas propias).
 
 ## Las secciones: dónde se suelta cada cosa
 
 | Sección | Qué sueltas | Qué hace Claude (skill) |
 |---|---|---|
 | **Directo → clips** | el directo (o pegas un enlace) | propone fragmentos (`/directo-a-clips`); aparecen en una tabla con el directo al lado: ver cada uno, elegir y "Cortar los elegidos" (`<directo>.candidatos.json`, `nucleo/candidatos.py`) |
-| **Cara + pantalla** | tu cara y el Short de pantalla (en sus ranuras, o los dos juntos: cada uno va al suyo) | `/fusionar-cara-pantalla <cara> <pantalla> [Título]` |
+| **Cara + pantalla** | tu cara y el Short de pantalla (en sus ranuras, o los dos juntos: cada uno va al suyo) | `/fusionar-cara-pantalla <cara> <pantalla> [Título]`; con la casilla «Subtitular también» (marcada por defecto), Claude sigue solo con `/subtitular-short` al terminar |
 | **Grabación → Short** | grabaciones sueltas (sin registro de la VM) e intro/imágenes, en orden | `/short-desde-grabacion <fuentes…> [Título]` (plan JSON + `construir_short.py`) |
-| **Subtítulos** | el Short montado | `/subtitular-short <short>`; los subtítulos aparecen solos para revisarlos con el vídeo al lado; "Revisado" se lo dice a Claude |
-| **Resultados** | cualquier vídeo, para verificarlo | lo que Claude termina aparece solo: ver, verificar contra el Short ideal (solo verticales), subtitular, revisar sus subtítulos |
+| **Resultados** | cualquier vídeo, para verificarlo | lo que Claude termina aparece solo: ver, verificar contra el Short ideal (solo verticales), pedir sus subtítulos («Subtitular con Claude»). Si tiene unos a medio revisar, la tabla de revisión aparece aquí mismo bajo el vídeo: corrige el texto y pulsa «Revisado» |
 | **Material** | lo que sea | la biblioteca: papel de cada archivo, miniatura, datos; menú "Pedir a Claude" según el papel |
 | **VM** | — | estado sin credenciales, pantalla en directo, diagnóstico, arrancar, iniciar sesión, guardar estado, apagar |
 

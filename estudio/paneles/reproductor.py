@@ -1,8 +1,16 @@
-"""Reproductor de vídeo con controles (lo usan las secciones Directo → clips, Subtítulos y Resultados)."""
-from PySide6.QtCore import Qt, QUrl, Signal
+"""Reproductor de vídeo con controles (lo usan las secciones Directo → clips y Resultados, con su revisor de
+subtítulos)."""
+from PySide6.QtCore import Qt, QTimer, QUrl, Signal
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
+
+from nucleo import medios
+
+from ..entorno import en_segundo_plano
+
+REINTENTO_MS = 1200             # un vídeo recién aparecido puede seguir escribiéndose: reintenta en vez de arriesgar
+REINTENTOS_MAXIMOS = 15         # ~18 s; pasado esto, probablemente no es un problema de "todavía escribiéndose"
 
 
 def mmss(ms):
@@ -15,6 +23,7 @@ class Reproductor(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._pedido, self._intentos = "", 0
         self.player = QMediaPlayer(self)
         self.audio = QAudioOutput(self)
         self.player.setAudioOutput(self.audio)
@@ -51,8 +60,29 @@ class Reproductor(QWidget):
             lambda st: self.b_play.setText("⏸  Pausa" if st == QMediaPlayer.PlaybackState.PlayingState else "▶  Reproducir"))
 
     def cargar(self, ruta):
+        """Cambia de vídeo. Antes de dárselo al reproductor NATIVO (que puede colgarse con un archivo a medio
+        escribir: medido, "moov atom not found" al elegir un resultado recién aparecido) comprueba con ffprobe
+        que ya se puede leer; si no, reintenta sin bloquear la interfaz en vez de arriesgarse."""
         self.player.stop()
-        self.player.setSource(QUrl.fromLocalFile(ruta) if ruta else QUrl())
+        self._pedido, self._intentos = ruta, 0
+        if not ruta:
+            self.player.setSource(QUrl())
+            return
+        self._comprobar(ruta)
+
+    def _comprobar(self, ruta):
+        en_segundo_plano(lambda: medios.legible(ruta), lambda ok, r=ruta: self._listo(r, ok))
+
+    def _listo(self, ruta, ok):
+        if ruta != self._pedido:
+            return                                      # se eligió otra cosa mientras comprobábamos esta
+        if ok:
+            self.player.setSource(QUrl.fromLocalFile(ruta))
+            return
+        self._intentos += 1
+        if self._intentos > REINTENTOS_MAXIMOS:
+            return                                       # ya no parece cuestión de "se está escribiendo todavía"
+        QTimer.singleShot(REINTENTO_MS, lambda: ruta == self._pedido and self._comprobar(ruta))
 
     def ir_a(self, segundos):
         self.player.setPosition(int(segundos * 1000))

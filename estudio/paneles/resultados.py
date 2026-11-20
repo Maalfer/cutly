@@ -1,6 +1,7 @@
 """Sección "Resultados": lo que va saliendo en editor/videos-editados/ (aparece solo cuando Claude lo termina), su
-reproducción, la verificación de un Short contra la especificación del Short ideal (verificar_short.py) y las acciones
-que siguen (subtitular, revisar sus subtítulos). Soltar aquí cualquier otro vídeo lo verifica."""
+reproducción, la verificación de un Short contra la especificación del Short ideal (verificar_short.py) y pedir sus
+subtítulos. Si el vídeo elegido tiene unos a medio revisar, la tabla de revisión (RevisorSubtitulos) aparece aquí
+mismo, bajo el reproductor. Soltar aquí cualquier otro vídeo lo verifica."""
 import os
 
 from PySide6.QtCore import Qt, QUrl, Signal
@@ -8,13 +9,14 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (QHBoxLayout, QListWidget, QListWidgetItem, QMenu, QPlainTextEdit, QSplitter,
                                QVBoxLayout, QWidget)
 
-from nucleo import material
+from nucleo import archivos, material
 from nucleo.rutas import SALIDA
 
 from ..entorno import REPO, ejecutar_cli, en_segundo_plano, para_claude
 from .comun import boton, cabecera, estado, nombrar
 from .ranura import resumen
 from .reproductor import Reproductor
+from .subtitulos import RevisorSubtitulos, video_de
 
 VERIFICAR = os.path.join(REPO, "editor", "shorts", "verificar_short.py")
 VIDEO = (".mp4", ".mov", ".mkv")
@@ -42,7 +44,6 @@ def veredicto(informe):
 class PanelResultados(QWidget):
     TITULO = "Resultados"
     pedir = Signal(str)
-    revisar = Signal(str)               # abrir estos subtítulos en la sección Subtítulos
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -57,6 +58,9 @@ class PanelResultados(QWidget):
         self.lista.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.lista.customContextMenuRequested.connect(self._menu)
         self.rep = Reproductor()
+        self.revisor = RevisorSubtitulos(self.rep)          # aparece solo si el vídeo elegido tiene subtítulos a medio revisar
+        self.rep.posicion.connect(self.revisor.seguir)
+        self.revisor.pedir.connect(self.pedir.emit)
         self.info = estado()
         self.veredicto = estado()
         self.log = nombrar(QPlainTextEdit(readOnly=True), "Informe de verificación")
@@ -65,11 +69,10 @@ class PanelResultados(QWidget):
         self.b_ver = boton("Verificar contra el Short ideal", "verificar_short.py: formato, banda de la cara, pausas, "
                                                               "volumen, subtítulos…", self.verificar)
         self.b_subs = boton("Subtitular con Claude", "Pide a Claude los subtítulos de este Short", self._subtitular)
-        self.b_revisar = boton("Revisar sus subtítulos", "Abre sus subtítulos en la sección Subtítulos", self._revisar)
         b_dir = boton("Abrir carpeta", "La carpeta de resultados en el explorador",
                       lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(SALIDA)))
         botones = QHBoxLayout()
-        for b in (self.b_ver, self.b_subs, self.b_revisar):
+        for b in (self.b_ver, self.b_subs):
             botones.addWidget(b)
         botones.addStretch(1)
         botones.addWidget(b_dir)
@@ -80,12 +83,13 @@ class PanelResultados(QWidget):
         d.addWidget(self.rep, 3)
         d.addWidget(self.info)
         d.addLayout(botones)
+        d.addWidget(self.revisor, 2)
         d.addWidget(self.veredicto)
         d.addWidget(self.log, 2)
         div = QSplitter(Qt.Orientation.Horizontal)
         div.addWidget(self.lista)
         div.addWidget(derecha)
-        div.setSizes([240, 620])
+        div.setSizes([220, 660])
         lay = QVBoxLayout(self)
         lay.addWidget(cabecera(self.TITULO, "Lo que Claude va terminando aparece aquí solo. Suelta cualquier otro vídeo "
                                             "para verificarlo."))
@@ -111,6 +115,11 @@ class PanelResultados(QWidget):
     def al_novedad(self, tipo, ruta):
         if tipo == "resultado":
             self.recargar(seleccionar=ruta)
+        elif tipo == "subtitulos":
+            video = video_de(ruta, archivos.leer_json(ruta))
+            if os.path.exists(video) and video not in self.externos and video not in videos():
+                self.externos.insert(0, video)
+            self.recargar(seleccionar=video)
 
     # ---- lista
     def recargar(self, seleccionar=None):
@@ -137,11 +146,19 @@ class PanelResultados(QWidget):
     def _elegido(self, it, _prev=None):
         v = it.data(Qt.ItemDataRole.UserRole) if it else None
         self._acciones(v)
+        self._abrir_revisor(v)
         if v:
             self.rep.cargar(v)
             self.log.clear()
             self.veredicto.setText("")
             en_segundo_plano(lambda: (v, material.describir(v)), self._datos)
+
+    def _abrir_revisor(self, v):
+        """Si el vídeo elegido tiene unos subtítulos (.subtitulos.json) a medio revisar, la tabla aparece aquí."""
+        ruta = os.path.splitext(v)[0] + ".subtitulos.json" if v else None
+        existe = bool(ruta and os.path.exists(ruta))
+        self.revisor.abrir(ruta if existe else None)
+        self.revisor.setVisible(existe)
 
     def _datos(self, par):
         v, d = par
@@ -156,15 +173,10 @@ class PanelResultados(QWidget):
         base = os.path.splitext(v)[0] if v else ""
         self.b_ver.setEnabled(bool(v))
         self.b_subs.setEnabled(bool(v) and "_subtitulado" not in base)
-        self.b_revisar.setEnabled(bool(v) and os.path.exists(base + ".subtitulos.json"))
 
     def _subtitular(self):
         if self._actual():
             self.pedir.emit(f"/subtitular-short {para_claude(self._actual())}")
-
-    def _revisar(self):
-        if self._actual():
-            self.revisar.emit(os.path.splitext(self._actual())[0] + ".subtitulos.json")
 
     def _menu(self, pos):
         it = self.lista.itemAt(pos) or self.lista.currentItem()
@@ -172,7 +184,7 @@ class PanelResultados(QWidget):
             return
         v = it.data(Qt.ItemDataRole.UserRole)
         menu = QMenu(self)
-        for b in (self.b_ver, self.b_subs, self.b_revisar):
+        for b in (self.b_ver, self.b_subs):
             if b.isEnabled():
                 menu.addAction(b.text(), b.click)
         menu.addAction("Preguntar a Claude por este vídeo…", lambda: self.pedir.emit(f"Mira el vídeo {para_claude(v)}: "))

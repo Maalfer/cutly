@@ -62,8 +62,10 @@ def hoja(tema, escala=1.0):
     QPushButton:hover {{ border-color: {c['foco']}; }}
     QPushButton:disabled {{ color: {c['ayuda']}; border-style: dashed; }}
     QPushButton[primario="true"] {{ background: {c['acento']}; color: {c['acento_texto']}; border-color: {c['acento']};
-                                    font-weight: 600; padding: {round(8 * escala)}px {round(16 * escala)}px; }}
+                                    font-weight: 600; font-size: {round(11 * escala)}pt;
+                                    padding: {round(9 * escala)}px {round(18 * escala)}px; }}
     QPushButton[primario="true"]:disabled {{ background: {c['panel']}; color: {c['ayuda']}; border-color: {c['borde']}; }}
+    QPushButton[pequeno="true"] {{ padding: {round(2 * escala)}px {round(8 * escala)}px; }}
     QPushButton:focus, QLineEdit:focus, QComboBox:focus, QListWidget:focus, QTableWidget:focus,
     QCheckBox:focus, QSlider:focus, QFrame#ranura:focus, QPlainTextEdit:focus {{
         outline: none; border: 2px solid {c['foco']}; }}
@@ -71,7 +73,8 @@ def hoja(tema, escala=1.0):
         background: {c['base']}; border: 1px solid {c['borde']}; border-radius: {r}px; padding: 3px; }}
     QHeaderView::section {{ background: {c['panel']}; border: none; border-bottom: 1px solid {c['borde']}; padding: 4px; }}
     QTableWidget::item:selected, QListWidget::item:selected {{ background: {c['acento']}; color: {c['acento_texto']}; }}
-    QFrame#ranura {{ border: 2px dashed {c['borde']}; border-radius: {round(10 * escala)}px; background: {c['panel']}; }}
+    QFrame#ranura {{ border: 1px dashed {c['borde']}; border-radius: {round(8 * escala)}px; background: {c['panel']};
+                     padding: {round(4 * escala)}px; }}
     QFrame#ranura[encima="true"] {{ border-color: {c['foco']}; background: {c['suelta']}; }}
     QFrame#ranura[lleno="true"] {{ border-style: solid; }}
     QListWidget#navegacion {{ background: {c['panel']}; border: none; border-right: 1px solid {c['borde']};
@@ -86,6 +89,8 @@ def hoja(tema, escala=1.0):
                                   width: {round(14 * escala)}px; margin: -{round(6 * escala)}px 0; border-radius: {round(8 * escala)}px; }}
     QCheckBox::indicator {{ width: {round(16 * escala)}px; height: {round(16 * escala)}px; }}
     QDockWidget::title {{ background: {c['panel']}; padding: 6px; border-bottom: 1px solid {c['borde']}; }}
+    QWidget#manija_panel {{ background: {c['panel']}; border-left: 1px solid {c['borde']}; }}
+    QWidget#manija_panel:hover, QWidget#manija_panel:focus {{ background: {c['foco']}; }}
     QStatusBar {{ background: {c['panel']}; border-top: 1px solid {c['borde']}; }}
     QMenuBar, QMenu {{ background: {c['panel']}; }}
     QMenu::item:selected, QMenuBar::item:selected {{ background: {c['acento']}; color: {c['acento_texto']}; }}

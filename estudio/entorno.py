@@ -9,6 +9,7 @@ import sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 HERRAMIENTAS = os.path.join(REPO, "crear-shorts", "herramientas")
+LOGO = os.path.join(REPO, "estudio", "recursos", "logo.png")
 for _p in (REPO, HERRAMIENTAS):
     if _p not in sys.path:
         sys.path.insert(0, _p)

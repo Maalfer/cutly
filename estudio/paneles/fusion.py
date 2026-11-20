@@ -4,7 +4,7 @@ Metodología: editor/shorts/METODOLOGIA-FUSION-CARA.md."""
 import re
 
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
 
 from nucleo import material
 
@@ -34,6 +34,10 @@ class PanelFusion(QWidget):
         self.titulo = nombrar(QLineEdit(), "Título del Short", "Opcional, en Capitalized-Kebab-Case")
         self.titulo.setPlaceholderText("Titulo-Con-Gancho (opcional: si lo dejas vacío lo propone Claude)")
         self.titulo.textChanged.connect(self._actualizar)
+        self.subtitular = QCheckBox("Subtitular también")
+        self.subtitular.setChecked(True)
+        self.subtitular.setToolTip("Al terminar el Short, Claude sigue con /subtitular-short sin que tengas que "
+                                   "pedírselo aparte (el entregable del Short ideal lleva subtítulos)")
         self.b = primario("Fusionar con Claude", "Claude quita tomas repetidas y pausas, mete tu cara en la banda y "
                                                  "sincroniza la pantalla con lo que dices")
         self.b.clicked.connect(self._fusionar)
@@ -44,15 +48,18 @@ class PanelFusion(QWidget):
         ranuras = QHBoxLayout()
         ranuras.addWidget(self.cara)
         ranuras.addWidget(self.pantalla)
+        ranuras.addStretch(1)
         fila = QHBoxLayout()
         etiqueta = QLabel("&Título:")
         etiqueta.setBuddy(self.titulo)
         fila.addWidget(etiqueta)
         fila.addWidget(self.titulo, 1)
+        fila.addWidget(self.subtitular)
         fila.addWidget(self.b)
         lay = QVBoxLayout(self)
         lay.addWidget(cabecera(self.TITULO, "Junta el Short de pantalla (mudo, con la banda negra arriba) con el vídeo "
-                                            "de tu cara y tu voz. Después, subtítulos en «Subtítulos»."))
+                                            "de tu cara y tu voz, y pide los subtítulos. La revisión aparece en "
+                                            "«Resultados» cuando Claude los prepare."))
         lay.addLayout(ranuras)
         lay.addLayout(fila)
         lay.addWidget(self.estado)
@@ -91,4 +98,8 @@ class PanelFusion(QWidget):
         partes = ["/fusionar-cara-pantalla", para_claude(self.cara.ruta), para_claude(self.pantalla.ruta)]
         if self.titulo.text().strip():
             partes.append(self.titulo.text().strip())
-        self.pedir.emit(" ".join(partes))
+        texto = " ".join(partes)
+        if self.subtitular.isChecked():
+            texto += ". Cuando el Short esté montado y verificado, sigue directamente con /subtitular-short sobre " \
+                     "él (no hace falta que me lo preguntes)."
+        self.pedir.emit(texto)
