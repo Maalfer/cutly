@@ -152,6 +152,7 @@ class Ranura(Carpeta):
         t.start()
         r.cambiado.connect(lambda ruta: ruta and QCoreApplication.instance().quit())
         app.exec()
+        t.stop()                        # que su tope no cierre el bucle de eventos de otra prueba
         destino = os.path.join(self.crudo, "yo.mp4")
         self.assertEqual(r.ruta, destino)
         e = material.cargar()["material"][0]

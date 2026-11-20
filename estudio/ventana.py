@@ -31,6 +31,7 @@ from .paneles.fusion import PanelFusion
 from .paneles.grabacion import PanelGrabacion
 from .paneles.material import TODO, PanelMaterial
 from .paneles.ranura import rutas_soltadas
+from .paneles.reproductor import Reproductor
 from .paneles.resultados import PanelResultados
 from .paneles.vm import PanelVM
 from .servicios import Vigia
@@ -146,6 +147,8 @@ class Ventana(QMainWindow):
         self.vigia.material.connect(self._material)
         self.vigia.carpetas.connect(lambda: [s.al_carpetas() for s in self.secciones if hasattr(s, "al_carpetas")])
         self.vigia.novedad.connect(self._novedad)
+        # una herramienta va a reemplazar un vídeo: todo reproductor que lo tenga abierto lo suelta (Windows)
+        self.vigia.reescribiendo.connect(lambda base: [r.soltar_si(base) for r in self.findChildren(Reproductor)])
         self.material.actualizar.connect(self.vigia.sincronizar)
 
         # ---- memoria del sistema: cerrar a tiempo y ordenadamente si se pone crítica (ver estudio/memoria.py)

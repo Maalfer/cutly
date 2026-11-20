@@ -31,7 +31,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))
 from nucleo import archivos, audio, formato, medios  # noqa: E402
-from nucleo.ffmpeg import FFMPEG, salida_atomica  # noqa: E402
+from nucleo.ffmpeg import FFMPEG, ruta_temporal, salida_atomica  # noqa: E402
 
 FPS = formato.FPS
 W, H = formato.ANCHO, formato.ALTO
@@ -138,7 +138,7 @@ def main():
     # El intermedio NO es el entregable (ya lleva ".tmp." y se borra al final); el entregable final, en los
     # dos casos, se escribe con salida_atomica: un corte a medias (memoria, Ctrl+C...) nunca deja el .mp4
     # final roto con el nombre bueno.
-    intermedio = os.path.splitext(plan["salida"])[0] + ".tmp.mov"
+    intermedio = ruta_temporal(plan["salida"], ".mov")
     cmd = [FFMPEG, "-v", "error", "-y", "-i", plan["cara"], "-i", plan["pantalla"],
            "-filter_complex", ";".join(fil), "-map", "[outv]", "-map", "[outa]",
            "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-c:a", "pcm_s16le" if lufs else "aac", "-ar", "48000"]
@@ -146,14 +146,18 @@ def main():
         cmd += ["-b:a", "192k", "-movflags", "+faststart"]
         salida_atomica(cmd, plan["salida"], check=True)
     else:
-        subprocess.run(cmd + [intermedio], check=True)
-        # volumen del usuario: ~-14 LUFS (lo subió +5 dB a mano). Normalización LINEAL en dos pasadas (misma
-        # ganancia en todo el vídeo, sin compresión) con techo de -1 dBTP para no saturar como el ajuste a mano.
-        m = audio.medir_sonoridad(intermedio, f"loudnorm=I={lufs}:TP=-1:LRA=11:print_format=json")
-        an = audio.filtro_normalizar(m, lufs)
-        salida_atomica([FFMPEG, "-v", "error", "-y", "-i", intermedio, "-c:v", "copy", "-af", an, "-ar", "48000",
-                        "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"], plan["salida"], check=True)
-        os.remove(intermedio)
+        try:
+            subprocess.run(cmd + [intermedio], check=True)
+            # volumen del usuario: ~-14 LUFS (lo subió +5 dB a mano). Normalización LINEAL en dos pasadas (misma
+            # ganancia en todo el vídeo, sin compresión) con techo de -1 dBTP para no saturar como el ajuste a mano.
+            m = audio.medir_sonoridad(intermedio, f"loudnorm=I={lufs}:TP=-1:LRA=11:print_format=json")
+            an = audio.filtro_normalizar(m, lufs)
+            salida_atomica([FFMPEG, "-v", "error", "-y", "-i", intermedio, "-c:v", "copy", "-af", an, "-ar",
+                            "48000", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"], plan["salida"],
+                           check=True)
+        finally:                                    # falle lo que falle, el intermedio no se queda suelto
+            if os.path.exists(intermedio):
+                os.remove(intermedio)
         print(f"volumen: {m['input_i']} LUFS -> {lufs} LUFS (techo -1 dBTP)")
     tot = 0
     for i, t in enumerate(tramos):

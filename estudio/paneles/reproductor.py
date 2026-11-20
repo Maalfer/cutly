@@ -5,12 +5,29 @@ from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
 
+import os
+import time
+
 from nucleo import medios
+from nucleo.ffmpeg import temporales_de
 
 from ..entorno import en_segundo_plano
 
 REINTENTO_MS = 1200             # un vídeo recién aparecido puede seguir escribiéndose: reintenta en vez de arriesgar
 REINTENTOS_MAXIMOS = 15         # ~18 s; pasado esto, probablemente no es un problema de "todavía escribiéndose"
+ESPERA_TEMPORAL_MS = 1000       # mientras una herramienta REHACE el vídeo (<base>.tmp.<ext>), no se abre
+TEMPORAL_ABANDONADO_S = 600     # un temporal que no cambia en 10 min es de un proceso que murió: no se espera
+
+
+def _rehaciendose(ruta):
+    """¿Hay una herramienta reescribiendo `ruta` ahora mismo? (nucleo/ffmpeg.py:salida_atomica y los intermedios)."""
+    ahora = time.time()
+    return any(ahora - os.path.getmtime(t) < TEMPORAL_ABANDONADO_S for t in temporales_de(ruta) if os.path.exists(t))
+
+
+def _misma_base(ruta, base):
+    norma = lambda r: os.path.normcase(os.path.abspath(r))  # noqa: E731
+    return bool(ruta) and norma(os.path.splitext(ruta)[0]) == norma(base)
 
 
 def mmss(ms):
@@ -23,7 +40,7 @@ class Reproductor(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._pedido, self._intentos = "", 0
+        self._pedido, self._intentos, self._ir_al_cargar = "", 0, None
         self.player = QMediaPlayer(self)
         self.audio = QAudioOutput(self)
         self.player.setAudioOutput(self.audio)
@@ -54,6 +71,7 @@ class Reproductor(QWidget):
         lay.addWidget(self.video, 1)
         lay.addLayout(controles)
 
+        self.player.mediaStatusChanged.connect(self._estado_medio)
         self.player.durationChanged.connect(lambda d: self.barra.setRange(0, d))
         self.player.positionChanged.connect(self._avanza)
         self.player.playbackStateChanged.connect(
@@ -64,13 +82,31 @@ class Reproductor(QWidget):
         escribir: medido, "moov atom not found" al elegir un resultado recién aparecido) comprueba con ffprobe
         que ya se puede leer; si no, reintenta sin bloquear la interfaz en vez de arriesgarse."""
         self.player.stop()
-        self._pedido, self._intentos = ruta, 0
+        self._pedido, self._intentos, self._ir_al_cargar = ruta, 0, None
         if not ruta:
             self.player.setSource(QUrl())
             return
         self._comprobar(ruta)
 
+    def soltar_si(self, base):
+        """Una herramienta va a reemplazar <base>.<ext> (servicios.Vigia.reescribiendo). Si es el vídeo abierto, se
+        SUELTA (en Windows, abierto no se puede reemplazar; stop() no basta, hay que vaciar la fuente: medido) y se
+        vuelve a abrir solo, en el mismo punto, cuando la herramienta termina."""
+        if not _misma_base(self._pedido, base):
+            return
+        pos = self.player.position()
+        self.player.stop()
+        self.player.setSource(QUrl())
+        self._intentos, self._ir_al_cargar = 0, pos
+        self._comprobar(self._pedido)
+
     def _comprobar(self, ruta):
+        if _rehaciendose(ruta):
+            self.tiempo.setText("rehaciéndose…")
+            QTimer.singleShot(ESPERA_TEMPORAL_MS, lambda: ruta == self._pedido and self._comprobar(ruta))
+            return
+        if not os.path.exists(ruta):
+            return
         en_segundo_plano(lambda: medios.legible(ruta), lambda ok, r=ruta: self._listo(r, ok))
 
     def _listo(self, ruta, ok):
@@ -83,6 +119,11 @@ class Reproductor(QWidget):
         if self._intentos > REINTENTOS_MAXIMOS:
             return                                       # ya no parece cuestión de "se está escribiendo todavía"
         QTimer.singleShot(REINTENTO_MS, lambda: ruta == self._pedido and self._comprobar(ruta))
+
+    def _estado_medio(self, estado):
+        if estado == QMediaPlayer.MediaStatus.LoadedMedia and self._ir_al_cargar is not None:
+            self.player.setPosition(self._ir_al_cargar)
+            self._ir_al_cargar = None
 
     def ir_a(self, segundos):
         self.player.setPosition(int(segundos * 1000))

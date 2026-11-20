@@ -5,6 +5,9 @@ sincroniza el material una sola vez (en segundo plano) y avisa de lo nuevo que d
     carpetas()              algo cambió en editor/crudo/ o editor/videos-editados/ (listas que se recargan)
     novedad(tipo, ruta)     "resultado" (vídeo nuevo), "subtitulos" (listos para revisar), "propuesta" (fragmentos
                             de un directo): la ventana marca su sección y ofrece ir
+    reescribiendo(base)     ha aparecido <base>.tmp.<ext>: una herramienta va a REEMPLAZAR ese vídeo
+                            (nucleo/ffmpeg.py:salida_atomica). Quien lo tenga abierto debe soltarlo: en Windows un
+                            archivo abierto no se puede reemplazar (medido: el reproductor lo bloqueaba)
 
 Antes cada pestaña vigilaba y sincronizaba por su cuenta (varios ffprobe por el mismo cambio).
 """
@@ -17,6 +20,17 @@ from nucleo import material
 from nucleo.rutas import SALIDA
 
 from .entorno import en_segundo_plano
+
+
+def _temporales():
+    """Temporales vivos (<base>.tmp.<ext>) en las carpetas de trabajo."""
+    return {f for c in (SALIDA, material.carpeta()) for f in glob.glob(os.path.join(c, "*.tmp.*"))}
+
+
+def base_de_temporal(ruta):
+    """'x/short_A_editado.tmp.mov' -> 'x/short_A_editado' (el vídeo que se está rehaciendo, sin extensión)."""
+    i = ruta.lower().rfind(".tmp.")
+    return ruta[:i] if i >= 0 else None
 
 
 def _novedades_posibles():
@@ -36,6 +50,7 @@ class Vigia(QObject):
     material = Signal(dict)
     carpetas = Signal()
     novedad = Signal(str, str)
+    reescribiendo = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -47,6 +62,7 @@ class Vigia(QObject):
         self._sincronizando = False
         self._otra_vez = False
         self._conocidas = dict(_novedades_posibles())     # lo que ya había al abrir no es "nuevo"
+        self._temporales = _temporales()
         self._creciendo = {}                               # vídeos que se están escribiendo: ruta -> último tamaño
         self._estable = QTimer(self, interval=2500, timeout=self._comprobar_crecimiento)
         self.ultimo = {"material": []}
@@ -55,6 +71,10 @@ class Vigia(QObject):
         self.sincronizar()
 
     def _cambio(self):
+        temporales = _temporales()
+        for t in sorted(temporales - self._temporales):     # antes que nada: soltar lo que se va a reemplazar
+            self.reescribiendo.emit(base_de_temporal(t))
+        self._temporales = temporales
         self.carpetas.emit()
         ahora = _novedades_posibles()
         for ruta, tipo in ahora.items():

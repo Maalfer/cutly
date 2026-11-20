@@ -6,7 +6,7 @@ import unittest
 import numpy as np
 
 import util  # noqa: F401  (rutas)
-from nucleo import audio, formato, series, subtitulos, transcripcion
+from nucleo import audio, ffmpeg, formato, series, subtitulos, transcripcion
 from nucleo.archivos import escribir_json
 from nucleo.archivos import leer_texto as leer
 
@@ -44,6 +44,62 @@ class Audio(unittest.TestCase):
         f = audio.filtro_normalizar(m, -14)
         self.assertIn("linear=true", f)
         self.assertIn("I=-14:TP=-1", f)
+
+
+class SalidaAtomica(unittest.TestCase):
+    """El vídeo final o está completo o no existe, y nunca quedan temporales sueltos (pasó: un reemplazo bloqueado
+    dejó .tmp.mp4 y .tmp.mov de cientos de MB)."""
+
+    def setUp(self):
+        self.d = tempfile.mkdtemp()
+        self.dest = os.path.join(self.d, "short_X_editado.mp4")
+        with open(self.dest, "w") as f:
+            f.write("viejo")
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.d, ignore_errors=True)
+
+    def escribir(self, codigo=0):
+        import sys
+        return [sys.executable, "-c", f"import sys; open(sys.argv[1], 'w').write('nuevo'); sys.exit({codigo})"]
+
+    def test_bien_reemplaza_y_sin_temporal(self):
+        ffmpeg.salida_atomica(self.escribir(), self.dest, check=True)
+        self.assertEqual(open(self.dest).read(), "nuevo")
+        self.assertEqual(ffmpeg.temporales_de(self.dest), [])
+
+    def test_fallo_deja_el_viejo_y_sin_temporal(self):
+        import subprocess
+        with self.assertRaises(subprocess.CalledProcessError):
+            ffmpeg.salida_atomica(self.escribir(1), self.dest, check=True)
+        self.assertEqual(open(self.dest).read(), "viejo")
+        self.assertEqual(ffmpeg.temporales_de(self.dest), [])
+
+    def test_destino_bloqueado_avisa_y_sin_temporal(self):
+        from unittest import mock
+
+        def bloqueado(origen, destino, **_kw):
+            raise ffmpeg.ArchivoBloqueado("abierto")
+        with mock.patch.object(ffmpeg, "reemplazar", bloqueado), self.assertRaises(ffmpeg.ArchivoBloqueado):
+            ffmpeg.salida_atomica(self.escribir(), self.dest, check=True)
+        self.assertEqual(open(self.dest).read(), "viejo")
+        self.assertEqual(ffmpeg.temporales_de(self.dest), [])
+
+    def test_reemplazar_reintenta_mientras_esta_bloqueado(self):
+        from unittest import mock
+        tmp = ffmpeg.ruta_temporal(self.dest)
+        open(tmp, "w").write("nuevo")
+        real, fallos = os.replace, [PermissionError(13, "abierto")] * 2
+        with mock.patch.object(os, "replace", lambda a, b: real(a, b) if not fallos else (_ for _ in ()).throw(fallos.pop())):
+            ffmpeg.reemplazar(tmp, self.dest, espera=5, cada=0.01)
+        self.assertEqual(open(self.dest).read(), "nuevo")
+        with mock.patch.object(os, "replace", side_effect=PermissionError(13, "abierto")),                 self.assertRaises(ffmpeg.ArchivoBloqueado):
+            ffmpeg.reemplazar(tmp, self.dest, espera=0.05, cada=0.01)
+
+    def test_nombres_de_temporales(self):
+        self.assertEqual(ffmpeg.ruta_temporal("a/b.mp4"), "a/b.tmp.mp4")
+        self.assertEqual(ffmpeg.ruta_temporal("a/b.mp4", ".mov"), "a/b.tmp.mov")
 
 
 class Series(unittest.TestCase):

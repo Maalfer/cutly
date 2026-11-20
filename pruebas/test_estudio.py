@@ -82,8 +82,12 @@ class Pty(unittest.TestCase):
             p.salida.connect(llega)
             p.terminado.connect(lambda _c: QCoreApplication.instance().quit())
             p.iniciar(90, 25)
-            QTimer.singleShot(15000, QCoreApplication.instance().quit)
+            # tope de 15 s con un QTimer que se PARA al acabar: un singleShot pendiente cerraría el bucle de
+            # eventos de otra prueba posterior (pasó: la de la Ranura terminaba en 0 s)
+            guarda = QTimer(singleShot=True, interval=15000, timeout=QCoreApplication.instance().quit)
+            guarda.start()
             QCoreApplication.instance().exec()
+            guarda.stop()
             p.cerrar()
         salida = "".join(buf)
         self.assertIn("hola ñandú", salida)
@@ -234,6 +238,74 @@ class Vigia(unittest.TestCase):
                 v.deleteLater()
         self.assertIn(("subtitulos", "s.subtitulos.json"), vistos)
         self.assertIn(("resultado", "short_X_editado.mp4"), vistos)
+
+    def test_avisa_de_que_un_video_se_va_a_reemplazar(self):
+        from unittest import mock
+        from nucleo import rutas
+        import estudio.servicios as servicios
+        a = app()
+        with tempfile.TemporaryDirectory() as d:
+            crudo, salida = os.path.join(d, "crudo"), os.path.join(d, "salida")
+            with mock.patch.object(rutas, "CRUDO", crudo), mock.patch.object(servicios, "SALIDA", salida):
+                v = servicios.Vigia()
+                bases = []
+                v.reescribiendo.connect(bases.append)
+                open(os.path.join(salida, "short_X_editado.tmp.mov"), "wb").close()
+                QTimer.singleShot(2000, a.quit)
+                a.exec()
+                v.deleteLater()
+        self.assertEqual([os.path.basename(b) for b in bases], ["short_X_editado"])
+
+
+@unittest.skipUnless(HAY_QT, "PySide6 no instalado")
+class ReproductorSueltaLoQueSeRehace(unittest.TestCase):
+    """El fallo real (Windows): Resultados tenía abierto el Short y fusionar_cara_pantalla.py no podía reemplazarlo
+    ("Acceso denegado"). Con el vídeo abierto y REPRODUCIÉNDOSE, una herramienta lo rehace: el reemplazo debe
+    funcionar y el reproductor volver a abrirlo solo."""
+
+    def test_rehacer_un_video_abierto(self):
+        from nucleo.ffmpeg import localizar, reemplazar, ruta_temporal
+        import subprocess
+        if not localizar("ffmpeg"):
+            self.skipTest("sin ffmpeg")
+        from PySide6.QtMultimedia import QMediaPlayer
+        from estudio.paneles import reproductor as rep_mod
+        a = app()
+        with tempfile.TemporaryDirectory() as d:
+            v = os.path.join(d, "short_X_editado.mp4")
+            subprocess.run([localizar("ffmpeg"), "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc=s=160x120:r=30",
+                            "-t", "2", "-pix_fmt", "yuv420p", v], check=True)
+            r = rep_mod.Reproductor()
+            r.cargar(v)
+            res = {}
+
+            def rehacer():
+                tmp = ruta_temporal(v)
+                import shutil
+                shutil.copy(v, tmp)
+                r.soltar_si(os.path.splitext(v)[0])              # lo que hace la ventana al avisar el vigía
+                try:
+                    reemplazar(tmp, v, espera=3, cada=0.1)
+                    res["reemplazado"] = True
+                except PermissionError:
+                    res["reemplazado"] = False
+                    os.remove(tmp)
+                QTimer.singleShot(4000, comprobar)
+
+            def comprobar():
+                res["recargado"] = r.player.source().toLocalFile() != ""
+                r.player.setSource(rep_mod.QUrl())
+                a.quit()
+
+            QTimer.singleShot(1500, lambda: (r.player.play(), QTimer.singleShot(500, rehacer)))
+            guarda = QTimer(singleShot=True, interval=15000, timeout=a.quit)   # se para al acabar: un singleShot
+            guarda.start()                                                      # pendiente cerraría otra prueba
+            a.exec()
+            guarda.stop()
+            r.deleteLater()
+            del QMediaPlayer
+        self.assertTrue(res.get("reemplazado"), "el reproductor no soltó el vídeo")
+        self.assertTrue(res.get("recargado"), "el reproductor no volvió a abrir el vídeo rehecho")
 
 
 class EstadoDeClaude(unittest.TestCase):

@@ -18,7 +18,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))
 from nucleo import audio, formato, medios, series  # noqa: E402
-from nucleo.ffmpeg import FFMPEG  # noqa: E402
+from nucleo.ffmpeg import FFMPEG, temporales_de  # noqa: E402
 
 PADTOP = formato.BANDA_CARA
 
@@ -34,6 +34,17 @@ def main():
     def chk(ok, nombre, detalle):
         res.append(ok)
         print(f"[{'OK   ' if ok else 'FALLA'}] {nombre}: {detalle}")
+
+    # ¿es de verdad el vídeo recién montado? Con un temporal al lado, se está rehaciendo o el último montaje falló
+    # (pasó: se verificó el Short VIEJO porque el nuevo no pudo reemplazarlo y el error se perdió en un "| grep").
+    import time
+    hace = time.time() - os.path.getmtime(v)
+    print(f"vídeo: {v} (escrito a las {time.strftime('%H:%M:%S', time.localtime(os.path.getmtime(v)))}, "
+          f"hace {hace / 60:.0f} min)")
+    tmp = temporales_de(v)
+    chk(not tmp, "montaje terminado", "sin temporales al lado" if not tmp else
+        f"hay {', '.join(os.path.basename(t) for t in tmp)}: se está rehaciendo o el último montaje FALLÓ, así que "
+        f"esto mediría la versión anterior. Mira el error del montaje y repítelo")
 
     p = medios.info(v)
     vs = [s for s in p["streams"] if s["codec_type"] == "video"][0]

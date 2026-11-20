@@ -147,8 +147,16 @@ un tramo por trozo de voz, con lo que se ve debajo.
   real, con `"apretar": false`.
 
 ```bash
-python editor/shorts/fusionar_cara_pantalla.py editor/crudo/fusion_plan.json
+python editor/shorts/fusionar_cara_pantalla.py editor/crudo/fusion_plan.json &&
+  python editor/shorts/verificar_short.py editor/videos-editados/short_<Titulo>_editado.mp4 --sin-subtitulos
 ```
+Encadena con `&&` y **sin filtrar el montaje con `| grep`/`| tail`** (o con `set -o pipefail`): si el montaje
+falla, el verificador mediría el Short ANTERIOR y diría "cumple" (pasó). El verificador además falla si al lado
+del vídeo queda un `<Titulo>_editado.tmp.*` (montaje en curso o fallido). Reconstruir sobre un Short que cutly
+estudio tiene abierto es seguro: la app lo suelta al ver aparecer el temporal y lo vuelve a abrir al terminar;
+si otro programa lo tiene abierto, el montaje espera 15 s y falla diciendo qué cerrar. **No cambies el nombre de
+salida para esquivarlo** (dejaría dos Shorts del mismo vídeo en Resultados).
+
 Un único render desde los originales (sin recodificar dos veces). Tiempos redondeados a fotogramas de 1/60 s para
 que audio y vídeo de cada tramo duren exactamente lo mismo (sin deriva). Micro-fundido de 15 ms solo donde el audio
 salta. Imprime la tabla final (tramo → instante en el Short) para la verificación.
