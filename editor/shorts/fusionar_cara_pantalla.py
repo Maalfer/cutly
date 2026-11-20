@@ -15,7 +15,7 @@ plan.json:
 {
   "cara": "editor/crudo/cara.mp4", "pantalla": "editor/crudo/pantalla.mp4",
   "salida": "editor/videos-editados/short_X_editado.mp4",
-  "padtop": 648, "cara_alto": 758, "cara_y": 20,
+  "padtop": 760, "cara_alto": 814, "cara_y": 0,
   "tramos": [ {"a0":0, "a1":7, "abajo":"pant", "p0":0, "p1":22.5}, {"a0":69.15,"a1":75.13,"abajo":"cara"}, ... ]
 }
 Estilo del usuario aplicado por defecto (medido comparando con su re-edición, editor/shorts/METODOLOGIA-FUSION-CARA.md):
@@ -87,6 +87,9 @@ def main():
     ap.add_argument("plan")
     plan = archivos.leer_json(ap.parse_args().plan)
     padtop, cara_alto, cara_y = plan["padtop"], plan["cara_alto"], plan.get("cara_y", 0)
+    # primera fila con imagen en el vídeo de PANTALLA. Si es menor que padtop (pantalla hecha con una banda más
+    # baja, p. ej. la antigua de 648), la pantalla baja y se recorta lo que sobre por abajo.
+    pantalla_y = plan.get("pantalla_y", padtop)
     bajo = H - padtop
     ap = plan.get("apretar", {"pausa_max": 0.25, "margen_antes": 0.04, "margen_despues": 0.06})
     tramos = plan["tramos"]
@@ -106,10 +109,10 @@ def main():
             k = d / (p1 - p0)
             t["_vel"] = 1 / k
             fil.append(f"[1:v]trim=start={p0:.6f}:end={p1:.6f},setpts=PTS-STARTPTS,setpts=PTS*{k:.6f},fps={FPS},"
-                       f"crop={W}:{bajo}:0:{padtop},tpad=stop_mode=clone:stop_duration=1,trim=end_frame={nfr},"
+                       f"crop={W}:{bajo}:0:{pantalla_y},tpad=stop_mode=clone:stop_duration=1,trim=end_frame={nfr},"
                        f"setpts=PTS-STARTPTS[b{i}]")
         else:
-            alto = H - cara_alto
+            alto = min(H - cara_alto, bajo)
             fil.append(f"[0:v]trim=start={a0:.6f}:end={a1:.6f},setpts=PTS-STARTPTS,crop={W}:{alto}:0:{cara_alto},"
                        f"pad={W}:{bajo}:0:0:black[b{i}]")
         fil.append(f"[f{i}][b{i}]vstack=2,fps={FPS},trim=end_frame={nfr},setpts=PTS-STARTPTS,format=yuv420p[v{i}]")

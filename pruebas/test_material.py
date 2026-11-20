@@ -197,7 +197,7 @@ class RepartoFusion(Carpeta):
 @unittest.skipUnless(FF, "hace falta ffmpeg")
 class ShortManual(Carpeta):
     def test_plan_json_monta_el_short(self):
-        """construir_short.py ya no se edita: monta desde un plan (y la banda de la cara mide 648)."""
+        """construir_short.py ya no se edita: monta desde un plan (y la banda de la cara mide formato.BANDA_CARA)."""
         os.makedirs(self.crudo)
         fuente = video(os.path.join(self.crudo, "g.mp4"), 1920, 1080, segundos=2, voz=False)
         salida = os.path.join(self.d.name, "short_Prueba_editado.mp4")
@@ -205,7 +205,7 @@ class ShortManual(Carpeta):
         from nucleo import archivos
         archivos.escribir_json(plan, {"salida": salida, "fuentes": {"g": fuente}, "vbitrate": "2M",
                                       "segmentos": [{"src": "g", "start": 0, "end": 1.5, "cx": 500, "cy": 50,
-                                                     "cw": 816, "ch": 961}]})
+                                                     "cw": 896, "ch": 962}]})
         r = subprocess.run([sys.executable, os.path.join(REPO, "editor", "shorts", "construir_short.py"), plan],
                            capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr[-400:])

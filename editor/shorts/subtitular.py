@@ -17,7 +17,8 @@ entra cada bloque y cada palabra) son nucleo/subtitulos.py.
 
 Estilo (medido píxel a píxel en el ideal):
   - caja negra opaca de 107 px de alto, esquinas de radio 16, margen lateral de 20 px, centrada en x=540;
-    vertical de 619 a 725 (centro 672), justo sobre la unión entre la cara (0-647) y la pantalla;
+    vertical sobre la unión cara/pantalla: 29 px encima de la cara y 78 sobre la pantalla (formato.SUBT_Y0; con la
+    banda de 760, filas 731-837);
   - Inter Bold 52 px; palabra ya dicha en BLANCO (255), palabra por decir en GRIS (80);
   - bloques de 1-5 palabras y como mucho ~24 caracteres; se corta tras . ? ! ; cada bloque ~1 s en pantalla.
 Se dibuja con Pillow (no con drawtext/libass de ffmpeg: en el build de Windows se cuelgan por fontconfig).
@@ -38,7 +39,7 @@ from nucleo.rutas import COMUN, FUENTES  # noqa: E402
 FUENTE = os.path.join(FUENTES, "Inter.ttf")
 W = formato.ANCHO
 ESTILO = {
-    "tam": 52, "peso": 700, "caja_y0": 619, "caja_alto": 107, "radio": 16, "margen": 20,
+    "tam": 52, "peso": 700, "caja_y0": formato.SUBT_Y0, "caja_alto": 107, "radio": 16, "margen": 20,
     "blanco": (255, 255, 255, 255), "gris": (80, 80, 80, 255), "caja": (0, 0, 0, 255),
     "max_chars": 24, "max_palabras": 5, "max_dur": 1.6, "hueco_corte": 0.45, "fps": formato.FPS,
 }

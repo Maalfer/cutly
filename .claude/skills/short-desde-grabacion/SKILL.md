@@ -14,10 +14,10 @@ archivo, es el título). Si no hay argumentos: el material con papel `grabacion`
 Sigue **`editor/shorts/METODOLOGIA-SHORTS.md`** (fuente de verdad):
 
 1. Mide cada fuente (`ffprobe`) y mira fotogramas cada pocos segundos para decidir los planos: qué tramo, qué
-   recorte (816x961 llena el marco; una ventana de terminal va ENTERA en letterbox), paneos para lo ancho.
+   recorte (896x962 llena el marco; una ventana de terminal va ENTERA en letterbox), paneos para lo ancho.
 2. Escribe `editor/crudo/short_plan.json` (plantilla: `editor/shorts/plantillas/short_manual.ejemplo.json`) y
    `python editor/shorts/construir_short.py editor/crudo/short_plan.json`.
-3. Verifica la banda (constante en 648) y cada unión con un fotograma; entrada APPEND en
+3. Verifica la banda (constante en 760) y cada unión con un fotograma; entrada APPEND en
    `editor/videos-editados/_cortes.log`.
 4. El resultado es el Short MUDO: dile al usuario que grabe su cara y su voz y que los suelte en la sección
    "Cara + pantalla" (`/fusionar-cara-pantalla`).

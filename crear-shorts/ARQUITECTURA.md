@@ -24,7 +24,7 @@ crear-shorts/                                 editor/
 
 **Último paso: la cara y la voz.** El Short sale mudo y con el hueco negro. El usuario graba aparte su cara
 narrando (vídeo vertical con su voz) y el agente lo FUSIONA: quita sus tomas repetidas, mete la cara en la
-banda de 648 px y re-temporiza la pantalla para que cada frase caiga sobre su momento
+banda de 760 px y re-temporiza la pantalla para que cada frase caiga sobre su momento
 (`editor/shorts/METODOLOGIA-FUSION-CARA.md`):
 
 ```

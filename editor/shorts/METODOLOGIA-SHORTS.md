@@ -46,7 +46,8 @@ mismo en todos y cada uno de los fotogramas del vídeo**, o la cara "baila" entr
 - Se define una constante `padtop` (altura en px de la banda negra superior) y **todos** los
   segmentos usan el mismo valor, sin excepción (ni las imágenes, ni los planos letterbox).
 - Proporción tomada de `referencia.mp4`: la cámara ocupa el **tercio superior** →
-  `padtop = 648` para un lienzo de 1920 de alto (648/1920 ≈ 0.3375, = 432/1280 de la maqueta).
+  `padtop = 760` para un lienzo de 1920 de alto (`formato.BANDA_CARA`). Fue 648 (= 432/1280 de la maqueta) hasta el
+  2026-11-20; se subió a 760 para dar holgura a la cara (los subtítulos casi tapaban la boca).
 - **Verifícalo midiendo**, no a ojo. Mide cuántas filas negras hay desde arriba en varios
   fotogramas de distintos planos; deben dar el mismo número:
   ```bash
@@ -59,7 +60,7 @@ mismo en todos y cada uno de los fotogramas del vídeo**, o la cara "baila" entr
   print('topblack=',b)"
   ```
   **Error real cometido y corregido:** una imagen (el ransomware) se centró con `padtop=860`
-  mientras el resto iba a 648 → la banda de la cara cambiaba de tamaño. Regla: `padtop` es
+  mientras el resto iba a la banda → la banda de la cara cambiaba de tamaño. Regla: `padtop` es
   una constante global, nunca se centra un plano moviendo su borde superior.
 
 ---
@@ -68,10 +69,10 @@ mismo en todos y cada uno de los fotogramas del vídeo**, o la cara "baila" entr
 
 ```
 0 ─────────────────────────┐  ┐
-   BANDA NEGRA (la cara)    │  │ padtop = 648 px  ← CONSTANTE en todo el vídeo
-648 ────────────────────────┤  ┘
+   BANDA NEGRA (la cara)    │  │ padtop = 760 px  ← CONSTANTE en todo el vídeo
+760 ────────────────────────┤  ┘
    CONTENIDO (el recorte    │
-   de la grabación, escalado│  1272 px de alto
+   de la grabación, escalado│  1160 px de alto
    a 1080 de ancho)         │
 1920 ───────────────────────┘
         1080 px de ancho
@@ -83,7 +84,7 @@ Cada segmento se construye así (cadena de filtros ffmpeg, por segmento):
 trim=start=S:end=E, setpts=PTS-STARTPTS,
 crop=CW:CH:CX:CY,                       # recorte de la zona interesante de la fuente
 scale=1080:DH:flags=lanczos, setsar=1,  # DH = round(CH*1080/CW)  (mantiene proporción)
-pad=1080:1920:0:648:black,              # mete el recorte bajo la banda de la cara
+pad=1080:1920:0:760:black,              # mete el recorte bajo la banda de la cara
 fps=60, format=yuv420p
 ```
 
@@ -91,14 +92,14 @@ y al final se concatenan todos: `[v0][v1]…concat=n=N:v=1:a=0[outv]`.
 
 ### Dos maneras de encuadrar un plano
 
-1. **Rellenar el marco.** Recorte con proporción **816×961** (≈ 0.85, igual que
-   `1080×1272`): al escalar llena de 648 a 1920 sin bordes. Es el aspecto "nativo de short".
+1. **Rellenar el marco.** Recorte con proporción **896×962** (≈ 0.93, igual que
+   `1080×1160`): al escalar llena de 760 a 1920 sin bordes. Es el aspecto "nativo de short".
    Se usa para páginas, imágenes o un punto concreto, eligiendo `CX,CY` sobre la zona que importa.
 2. **Encajar entero (letterbox).** Si el contenido es apaisado (una imagen, un comando muy
-   ancho) y recortarlo a 816 de ancho perdería información, se escala a 1080 de ancho con su
-   alto natural (`DH < 1272`) y queda negro debajo. La banda de arriba **sigue en 648**.
+   ancho) y recortarlo a 896 de ancho perdería información, se escala a 1080 de ancho con su
+   alto natural (`DH < 1160`) y queda negro debajo. La banda de arriba **sigue en 760**.
 
-> Consejo: (1) llena mejor el móvil, pero solo si SABES que todo lo importante cabe en 816 px. Una
+> Consejo: (1) llena mejor el móvil, pero solo si SABES que todo lo importante cabe en 896 px. Una
 > **ventana de terminal va SIEMPRE en (2), entera** (el texto puede llegar al borde; medido: "22/tcp" salía
 > como "cp"), con la fuente del terminal a 24 pt para que se lea: es lo que hace `short_desde_toma.py`.
 
@@ -107,21 +108,21 @@ y al final se concatenan todos: `[v0][v1]…concat=n=N:v=1:a=0[outv]`.
 ## 3. Técnica estrella: PANEO para mostrar algo ancho a tamaño completo
 
 **Problema real:** un comando de terminal largo
-(`curl https://microchoft/activate…`) no cabe en un recorte vertical de 816 px de ancho. Si
+(`curl https://microchoft/activate…`) no cabe en un recorte vertical de 896 px de ancho. Si
 lo metes en letterbox se ve **pequeño**; si lo recortas, se **corta**.
 
-**Solución que encantó al usuario:** recorte a **tamaño completo** (816×961, como el resto)
+**Solución que encantó al usuario:** recorte a **tamaño completo** (896×962, como el resto)
 pero **desplazando horizontalmente el recorte en el tiempo** (un paneo) para que la línea
 entera desfile por el encuadre, grande y legible, de principio a fin.
 
 En ffmpeg el `x` del `crop` admite expresión con `t` (segundos del segmento, empieza en 0):
 
 ```
-crop=w=816:h=961:x='CX0 + ((CX1-CX0)/DUR)*t':y=CY
+crop=w=896:h=962:x='CX0 + ((CX1-CX0)/DUR)*t':y=CY
 ```
 
 - `CX0` = posición inicial (muestra el principio de la línea), `CX1` = final (muestra el final).
-- Linealiza: a `t=DUR` el recorte llega a `CX1`. Mantén `CX1 + 816 ≤ ancho_fuente` y `CX0 ≥ 0`.
+- Linealiza: a `t=DUR` el recorte llega a `CX1`. Mantén `CX1 + 896 ≤ ancho_fuente` y `CX0 ≥ 0`.
 - **Importante de sintaxis:** si usas expresión en `x`, nombra TODAS las opciones del crop
   (`w=…:h=…:x='…':y=…`), si no ffmpeg da `No option name near '…'`.
 - Hazlo **lento**. Un paneo de ~290 px a lo largo de ~4-6 s es suave y cinematográfico.
@@ -190,7 +191,7 @@ ausente/truncado, es transitorio (mira la Papelera): nunca lo recrees desde cero
 ## 8. Checklist rápido de un short
 
 - [ ] `padtop` constante (medido) en todos los planos, incluidas imágenes.
-- [ ] Terminales en letterbox de la ventana entera; recorte 816×961 solo si todo lo importante cabe.
+- [ ] Terminales en letterbox de la ventana entera; recorte 896×962 solo si todo lo importante cabe.
 - [ ] Contenido ancho (comandos largos) → paneo lento a tamaño completo, no empequeñecido.
 - [ ] Ritmo holgado (pecar de lento); límites de trim verificados con fotograma.
 - [ ] Montaje en una pasada desde los originales; pista de audio muda para la voz en off.

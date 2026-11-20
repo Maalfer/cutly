@@ -87,7 +87,7 @@ v.place_id(listener, 960, 39, 960, 973)       # mitad derecha
    completo con `focus_rect(RECT_COMPLETO, ...)` antes de teclear. Repasa el guion entero pensando "¿qué
    región está activa en este instante?" — no asumas que se resetea sola.
    **`waitfor()` es el culpable más fácil de olvidar**: deja el foco en el PUNTO donde encontró el texto
-   (recorte fijo 816×961, sin `w,h`), no en la ventana completa. Si DESPUÉS de un `waitfor()` vas a teclear
+   (recorte fijo 896×962, sin `w,h`), no en la ventana completa. Si DESPUÉS de un `waitfor()` vas a teclear
    otra vez antes del siguiente `mark`/`clear_and_focus`, pon un `focus_rect(RECT_COMPLETO, ...)` explícito
    entre medias — si no, la línea larga se sale del recorte estrecho y en el vídeo parece que la cámara se
    desplaza mientras se escribe (reincidencia medida: `DEMO-SSHOLE` primero, `DEMO-MASSCAN` después, mismo

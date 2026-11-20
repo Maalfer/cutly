@@ -10,7 +10,7 @@ Para afinar después cada corte a 10 ms: python editor/comun/energia.py CARA.mp4
 `informe` mide, sin mirar nada a ojo:
   1. CARA: alto real de la banda de la cara (filas con imagen antes del negro) y tramos donde la parte de abajo de
      la grabación de cara NO está en negro (el usuario enseña su propia pantalla: se conserva en el montaje).
-  2. PANTALLA: alto de la banda negra superior (padtop, debe ser 648) y eventos: cambios grandes (Enter, salida
+  2. PANTALLA: alto de la banda negra superior (padtop: la banda, 760; las pantallas antiguas traen 648 -> pantalla_y) y eventos: cambios grandes (Enter, salida
      de un comando, cambio de plano) y tramos quietos (> 2 s).
   3. VOZ: bloques de voz por energía (la verdad física: Whisper inventa texto en silencios y se salta frases).
   4. Con --trans (de transcribir.py): el texto de cada bloque y AVISOS de tomas repetidas (dos bloques que empiezan
@@ -72,11 +72,20 @@ def informe(a):
     pb = banda_superior(a.pantalla)
     pads = [int(np.argmin(negra)) for _, negra in pb if negra[0]]
     padtop = min(pads) if pads else None
-    p(f"\n## 2. Pantalla\n- Primera fila con imagen: **{padtop} px** (mínimo de {len(pads)} instantes). Debe ser ≥ 648: "
-      "la banda de short_desde_toma es 648 y el borde oscuro de la ventana puede sumar unos px. Si sale < 648, "
-      "la cara taparía contenido: no sigas sin revisarlo.")
-    if padtop and padtop >= formato.BANDA_CARA:
-        padtop = formato.BANDA_CARA
+    banda = formato.BANDA_CARA
+    p(f"\n## 2. Pantalla\n- Primera fila con imagen: **{padtop} px** (mínimo de {len(pads)} instantes). La banda de la "
+      f"cara mide {banda} (short_desde_toma la deja así; el borde oscuro de la ventana puede sumar unos px).")
+    if padtop and padtop >= banda - 4:
+        padtop = min(padtop, banda)
+        p(f"- En el plan: `\"padtop\": {banda}` (sin `pantalla_y`).")
+    elif padtop:
+        # Pantalla hecha con una banda más baja (la antigua era 648): se baja hasta la banda y se recorta por abajo.
+        corte = banda - padtop
+        fondo = medios.fotogramas_gris(a.pantalla, 2, (formato.ANCHO, corte, 0, formato.ALTO - corte), (54, corte))
+        lleno = float((fondo > 60).mean(axis=(1, 2)).max()) if len(fondo) else 0.0
+        p(f"- Pantalla con banda ANTIGUA ({padtop} < {banda}): en el plan `\"padtop\": {banda}, \"pantalla_y\": {padtop}`. "
+          f"La pantalla baja {corte} px y se pierden sus {corte} filas de abajo: como mucho un {lleno * 100:.1f} % de "
+          f"píxeles con contenido en ellas{' (vacías: no se pierde nada)' if lleno < 0.01 else ' → REVISA qué se corta'}.")
     if padtop:
         f = medios.fotogramas_gris(a.pantalla, 10, (formato.ANCHO, formato.ALTO - padtop, 0, padtop), (216, 254)).astype(np.int16)
         cambio = (np.abs(np.diff(f, axis=0)) > 40).sum(axis=(1, 2))
@@ -86,7 +95,7 @@ def informe(a):
           ", ".join(f"{s + 0.1:.1f}" + (f"-{e + 0.1:.1f}" if e - s > 0.15 else "") for s, e in grandes))
         p("- Tramos quietos ≥ 2 s: " + ", ".join(f"{s + 0.1:.1f}-{e + 0.1:.1f}" for s, e in quietos))
         p("- Para saber QUÉ pasa en cada tramo: hoja de contacto cada 1-3 s (sin drawtext, ver PORTABILIDAD.md):\n"
-          "  `ffmpeg -ss T -t 30 -i PANTALLA -vf \"fps=1,crop=1080:700:0:648,scale=270:-1,tile=6x5\" -frames:v 1 hoja.png`")
+          "  `ffmpeg -ss T -t 30 -i PANTALLA -vf \"fps=1,crop=1080:700:0:760,scale=270:-1,tile=6x5\" -frames:v 1 hoja.png`")
     # 3. VOZ
     au = medios.audio_mono(a.cara)
     paso = 0.1

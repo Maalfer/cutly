@@ -5,7 +5,7 @@
 > si no vienen como argumentos: `python editor/comun/material.py ruta cara|pantalla`). Abajo, `cara.mp4` y
 > `pantalla.mp4` son nombres de ejemplo:
 > - **pantalla** (p. ej. `crudo/pantalla.mp4`): el Short mudo ya construido (normalmente con `short_desde_toma.py`),
->   con la banda negra de 648 px arriba;
+>   con la banda negra de 760 px arriba (las pantallas antiguas, de 648: ver `pantalla_y`);
 > - **cara** (p. ej. `crudo/cara.mp4`): el usuario grabado arriba hablando, **con su voz**, y el resto en negro.
 >   A veces, en algún tramo, la parte de abajo enseña su propia pantalla (p. ej. su PowerShell).
 >
@@ -23,8 +23,8 @@
 3. **Insertos de su pantalla** debajo de la cara (ejemplo: PowerShell con `python -c "print('A'*300)"`): **el usuario
    los quiere en el vídeo**, son un añadido que lo mejora. En ese tramo se ve la parte de abajo de la grabación de
    cara en vez de la pantalla de la VM.
-4. **La cara no mide 648 px**: en su grabación ocupaba 758 px. Se recorta (sin escalar, para no deformarla) para
-   que la banda siga midiendo EXACTAMENTE 648.
+4. **La cara no mide lo mismo que la banda (760 px)**: en sus grabaciones ocupa 758-814 px. Se recorta (sin escalar,
+   para no deformarla) para que la banda mida EXACTAMENTE 760. Si mide menos de 760, no cabe: avísale.
 5. **La pantalla es muda** y la voz está en el vídeo de cara.
 
 ## Principio: la VOZ manda, la pantalla se adapta
@@ -75,7 +75,7 @@ python editor/shorts/analizar_fusion.py informe editor/crudo/cara.mp4 editor/cru
 ```
 El informe da:
 - alto real de la banda de la cara y **tramos con su pantalla debajo** (insertos que se conservan);
-- banda de la pantalla (≥ 648) y sus **eventos**: cambios grandes (Enter, salida, cambio de plano) y tramos quietos;
+- banda de la pantalla (y si es antigua, de 648, el `pantalla_y` para el plan) y sus **eventos**: cambios grandes (Enter, salida, cambio de plano) y tramos quietos;
 - **bloques de voz por energía** con su texto. La energía es la verdad: Whisper inventa "Gracias" en los silencios
   y a veces se traga un falso arranque;
 - **avisos**: tomas repetidas (vale la última), segunda mitad repetida (empalmar), ruidos cortos (chasquidos).
@@ -120,7 +120,7 @@ un tramo por trozo de voz, con lo que se ve debajo.
 ```json
 {"cara": "editor/crudo/cara.mp4", "pantalla": "editor/crudo/pantalla.mp4",
  "salida": "editor/videos-editados/short_<Titulo-Con-Gancho>_editado.mp4",
- "padtop": 648, "cara_alto": 758, "cara_y": 20,
+ "padtop": 760, "cara_alto": 814, "cara_y": 0,
  "tramos": [
   {"a0": 0.75,  "a1": 5.6,   "abajo": "pant", "p0": 0.0,  "p1": 22.5, "nota": "gancho; tecleo acelerado"},
   {"a0": 69.15, "a1": 75.133,"abajo": "cara", "nota": "su PowerShell"},
@@ -129,9 +129,12 @@ un tramo por trozo de voz, con lo que se ve debajo.
 ```
 - `a0/a1`: trozo de la grabación de cara (voz + cara). `abajo: "pant"` + `p0/p1`: tramo de pantalla que se
   re-temporiza a la duración del trozo. `abajo: "cara"`: se ve la parte de abajo de la grabación de cara (inserto).
-- `cara_alto`: alto medido de la cara; `cara_y`: desde qué fila se recortan los 648 px. Elígelo mirando fotogramas
+- `cara_alto`: alto medido de la cara; `cara_y`: desde qué fila se recortan los 760 px. Elígelo mirando fotogramas
   de varios instantes: el pelo no debe tocar el borde; sobra quitar sudadera abajo antes que cabeza arriba (en el
-  caso real, `cara_y=20`: 20 px de fondo arriba y 90 de sudadera abajo).
+  caso real de masscan, `cara_alto=814`, `cara_y=0`: el pelo nunca toca el borde).
+- `pantalla_y` (opcional): primera fila con imagen del vídeo de PANTALLA si se hizo con la banda antigua de 648.
+  La pantalla baja hasta la banda y pierde sus filas de abajo; `analizar_fusion.py` dice el valor y si hay algo en
+  esas filas (en masscan solo dos transiciones de zoom que el Short no usa).
 - Dos tramos seguidos con `a1 == a0` del siguiente = audio continuo (solo cambia lo de abajo, sin fundido).
 - Opciones con su valor por defecto (el estilo del usuario; solo hace falta escribirlas para cambiarlas):
   `"apretar": {"pausa_max": 0.25, "margen_antes": 0.04, "margen_despues": 0.06}` (o `false` para no apretar),

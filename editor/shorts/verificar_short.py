@@ -63,10 +63,10 @@ def main():
     chk(malos == 0, "banda de la cara", f"{len(cuerpo)} fotogramas; con fila negra en {PADTOP - 10}-{PADTOP - 1}: {malos} "
         f"(la cara debe llenar exactamente 0-{PADTOP - 1})")
 
-    # subtítulos: la caja negra (filas 619-725, centrada) presente mientras se habla. Se mira la franja 621-646, que
-    # es caja sin letras (las letras van de ~652 a ~700): sin subtítulos ahí se ve la cara, nunca negro puro.
+    # subtítulos: la caja negra (filas SUBT_Y0 .. +106, centrada) presente mientras se habla. Se mira la franja de
+    # SUBT_Y0+2 a la unión, que es caja sin letras: sin subtítulos ahí se ve la cara, nunca negro puro.
     if not args.sin_subtitulos:
-        raw = subprocess.run([FFMPEG, "-v", "error", "-i", v, "-vf", "fps=5,crop=40:26:520:621", "-f", "rawvideo",
+        raw = subprocess.run([FFMPEG, "-v", "error", "-i", v, "-vf", f"fps=5,crop=40:26:520:{formato.SUBT_Y0 + 2}", "-f", "rawvideo",
                               "-pix_fmt", "rgb24", "-"], capture_output=True, check=True).stdout
         s = np.frombuffer(raw, np.uint8).reshape(-1, 26 * 40 * 3)
         con = float((s[:-3].max(axis=1) <= 10).mean())

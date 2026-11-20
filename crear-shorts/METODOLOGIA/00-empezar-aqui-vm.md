@@ -78,7 +78,7 @@ python ../editor/shorts/short_desde_toma.py idor-01 --titulo Titulo-Con-Gancho  
 
 ## 3b. De la toma al Short, automático
 `editor/shorts/short_desde_toma.py TOMA` lee `editor/crudo/TOMA.mp4` + `TOMA.steps.jsonl` y construye
-`editor/videos-editados/short_<Titulo>_editado.mp4` (1080×1920@60, **audio mudo**, banda negra superior de **648 px FIJA** para tu
+`editor/videos-editados/short_<Titulo>_editado.mp4` (1080×1920@60, **audio mudo**, banda negra superior de **760 px FIJA** para tu
 cara, verificada midiendo píxeles). Cada acto (`mark`) se parte en planos de ≤ 8 s que siguen el foco; el foco sale solo del
 ratón, de `typeurl` y de `waitfor` (dónde apareció el texto esperado), o a mano con `focus X Y`. Anota además `_cortes.log`.
 Después tú pones tu cara y la voz. `demo_idor.py` hace todo el ciclo (ejecutar → grabar → Short).

@@ -56,14 +56,14 @@ def focus(x, y, why="", w=None, h=None):
 
     Con `w,h` (REGIÓN, p. ej. el rectángulo exacto de una ventana de terminal) la edición usa LETTERBOX de
     esa región completa — nunca recorta. SIN `w,h` (un punto suelto) usa un recorte centrado de tamaño fijo
-    (816×961), que SÍ puede dejar fuera el borde de una ventana más ancha.
+    (896×962), que SÍ puede dejar fuera el borde de una ventana más ancha.
 
     REGLA: para cualquier terminal/texto que pueda ocupar TODO el ancho de su ventana, pasa SIEMPRE `w,h`
     (la geometría con la que la colocaste, p. ej. `place_id`) justo tras darle el foco y ANTES de teclear.
     El ratón no se mueve mientras se teclea, así que un `focus` sin región (basado en un punto fijo) no
     sabe que el texto puede llegar hasta el borde derecho — cortaba comandos largos (medido: sshole-run7,
     "22/tcp" salía como "cp" y "172.17.0.2" como "2.17.0.2"). Reserva el punto suelto para un énfasis
-    puntual (un clic, un resultado corto) donde SÍ sabes que todo lo importante cabe en 816×961."""
+    puntual (un clic, un resultado corto) donde SÍ sabes que todo lo importante cabe en 896×962."""
     args = [int(x), int(y)]
     if w and h:
         args += [int(w), int(h)]

@@ -16,7 +16,7 @@ momento. Termina con una llamada a comentar y un fundido a negro.
 ## 2. Cómo se llega a él (cadena completa)
 ```
 1. Demo en la VM (crear-shorts/)                 → toma .mp4 + .steps.jsonl
-2. short_desde_toma.py                            → Short MUDO 1080x1920 con hueco negro de 648 px arriba
+2. short_desde_toma.py                            → Short MUDO 1080x1920 con hueco negro de 760 px arriba
 3. El usuario se graba narrando mirándolo         → cara.mp4 (cara arriba + su voz; con errores y repeticiones)
 4. transcribir.py → analizar_fusion.py → plan     → decidir tomas y emparejar frases con pantalla
 5. fusionar_cara_pantalla.py                      → Short montado (aprieta pausas, -14 LUFS, fundido)
@@ -31,7 +31,7 @@ Procedimiento detallado de los pasos 4 y 5: `editor/shorts/METODOLOGIA-FUSION-CA
 |---|---|---|
 | Formato | 1080×1920, 60 fps, H.264 + AAC 48 kHz | ✔ |
 | Duración | lo justo para contar la técnica; referencia ~73 s, nunca de más de ~90 s | 73,2 s |
-| Banda de la cara | filas 0-647 con la cara en TODOS los fotogramas; la pantalla empieza en la 648 | 0 fallos |
+| Banda de la cara | filas 0-759 con la cara en TODOS los fotogramas; la pantalla empieza en la 760 (era 648 hasta el 2026-11-20: el usuario pidió más holgura, los subtítulos casi le tapaban la boca) | 0 fallos |
 | Arranque | voz en los primeros ≤ 120 ms: el gancho empieza en la primera sílaba | 40 ms |
 | Pausas | ninguna de > 400 ms; normalmente ≤ 250 ms | máx 170 ms |
 | Final | ≤ 450 ms desde la última palabra hasta el final, con fundido a negro de ~0,25 s | 90 ms |
@@ -67,7 +67,7 @@ es del usuario (no se reescribe ni se resume); el trabajo es dejarla limpia y qu
   gancho); salidas que se comentan, ×0,8-×1,2.
 
 **Imagen**
-- Cara: recorte de 648 px de alto de su grabación, sin escalar. Se quita sudadera antes que cabeza (`cara_y`).
+- Cara: recorte de 760 px de alto de su grabación, sin escalar. Se quita sudadera antes que cabeza (`cara_y`).
 - Pantalla: terminal en letterbox completo, con la fuente a 24 pt (legible en el móvil); ningún texto cortado.
 - Sincronía: cada momento clave aparece cuando se nombra ("22", "como puede ser esta", "comando id", "4444",
   "ejecuto este comando" = Enter, "ya estamos dentro").
@@ -81,13 +81,13 @@ es del usuario (no se reescribe ni se resume); el trabajo es dejarla limpia y qu
 ## 6. Subtítulos (estilo del `ideal.mp4` del usuario, medido)
 
 El usuario hizo su ideal con subtítulos automáticos de un editor (parece CapCut). Se midieron píxel a píxel y fotograma
-a fotograma, y `editor/shorts/subtitular.py` los reproduce: la caja sale en la misma posición al píxel (filas 619-725) y con
+a fotograma, y `editor/shorts/subtitular.py` los reproduce: la caja sale en la misma posición RELATIVA a la unión cara/pantalla (en el ideal, filas 619-725 con la banda de 648; ahora 731-837) y con
 la misma letra, el mismo color y el mismo comportamiento.
 
 | Elemento | Valor medido en el ideal |
 |---|---|
 | Caja | negra opaca (0,0,0), 107 px de alto, radio 16, margen lateral 20 px, ancho según el texto, centrada en x=540 |
-| Posición | filas 619-725 (centro 672): **sobre la unión cara/pantalla** (28 px sobre la cara, 78 sobre la pantalla) |
+| Posición | **sobre la unión cara/pantalla**: 29 px sobre la cara y 78 sobre la pantalla. Con la banda de 760: filas 731-837 (`formato.SUBT_Y0`) |
 | Letra | Inter Bold ~52 px (la más parecida de 6 candidatas comparadas); en el repo: `editor/comun/fuentes/Inter.ttf` (OFL) |
 | Karaoke | palabra ya dicha en BLANCO (255), palabra por decir en GRIS (80); cambia al empezar a decirla (±50 ms) |
 | Bloques | 1-5 palabras, ≤ ~24 caracteres, una sola línea; corte tras . ? !; ~1 s en pantalla (0,6-1,9 s) |

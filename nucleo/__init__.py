@@ -12,7 +12,7 @@ Un módulo por responsabilidad; ninguno sabe nada de una línea concreta:
     medios      leer vídeo/audio: probe, duración, audio mono, fotogramas en gris
     audio       energía cada 10 ms (rms + alta frecuencia), máscara de voz, sonoridad (LUFS)
     series      tramos consecutivos de una máscara muestreada (voz, cambios de imagen...)
-    formato     el lienzo del Short: 1080x1920 @ 60, banda de la cara de 648 px, recorte 816x961
+    formato     el lienzo del Short: 1080x1920 @ 60, banda de la cara de 760 px, recorte 896x962
     toma        el contrato entre la Fase 1 y la Fase 2: <toma>.steps.jsonl y <toma>.mapa.md
     material    el material aportado (editor/crudo/) y el papel de cada archivo: material.json
     cortes      el registro de cortes videos-editados/_cortes.log (solo APPEND)

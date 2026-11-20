@@ -90,7 +90,7 @@ def main():
         v.ssh("xdotool key Return")
         verificar(v.waitfor("192.168.1", 8), "no se ve la IP de la interfaz puente")
         time.sleep(3)                                                  # pausa de lectura
-        # waitfor() deja el foco en el PUNTO donde encontró el texto (recorte de 816x961, sin w/h): si se
+        # waitfor() deja el foco en el PUNTO donde encontró el texto (recorte de 896x962, sin w/h): si se
         # teclea el siguiente comando con ese foco todavía puesto, una línea larga se sale del recorte y
         # parece que la cámara "se desplaza" al escribir (medido aquí; mismo fallo que sshole-run7, ver
         # METODOLOGIA/10 §3.4 y el docstring de vm/registro.py:focus). Hay que volver al rect completo

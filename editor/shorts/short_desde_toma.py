@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 short_desde_toma.py — Convierte una TOMA grabada por los agentes en un SHORT vertical 1080x1920@60 con la banda
-negra superior FIJA (padtop=648) para la cara del usuario, de forma totalmente automática.
+negra superior FIJA (padtop=760, formato.BANDA_CARA) para la cara del usuario, de forma totalmente automática.
 
-    python editor/shorts/short_desde_toma.py NOMBRE_TOMA [--titulo Titulo-Con-Gancho] [--max-plano 8] [--padtop 648]
+    python editor/shorts/short_desde_toma.py NOMBRE_TOMA [--titulo Titulo-Con-Gancho] [--max-plano 8] [--padtop 760]
                                            [--plan plan.json]
 
 Entrada (la deja `vm_control.py take end` en editor/crudo/):
@@ -20,9 +20,9 @@ Cómo decide el encuadre (metodología: editor/shorts/METODOLOGIA-SHORTS.md):
         COMPLETA, estática — nunca recorta. Es el modo por defecto y el único correcto para texto que
         puede llegar al borde de su ventana (el ratón no se mueve mientras se teclea, así que un recorte
         centrado en un punto no sabe hasta dónde llega el texto — medido: "22/tcp" salía como "cp").
-      · SIN REGIÓN (un punto suelto, p. ej. un clic): recorte fijo 816×961 que SIGUE ese punto; si el
+      · SIN REGIÓN (un punto suelto, p. ej. un clic): recorte fijo 896×962 que SIGUE ese punto; si el
         plano cruza dos puntos, hace un PANEO horizontal suave entre ellos. Resérvalo para énfasis puntual
-        donde SEPAS que todo lo importante cabe en 816×961 — nunca para una ventana de terminal entera.
+        donde SEPAS que todo lo importante cabe en 896×962 — nunca para una ventana de terminal entera.
   - La banda negra superior mide EXACTAMENTE padtop en todos los fotogramas y se VERIFICA midiendo píxeles.
   - --plan permite fijar los planos a mano: [{"start":s,"end":e,"cx0":x,"cx1":x,"cy":y}, ...] para el modo
     recorte, o [{"start":s,"end":e,"rx":x,"ry":y,"rw":w,"rh":h}, ...] para letterbox de una región fija.
@@ -38,7 +38,7 @@ from nucleo import archivos, cortes, formato, medios, toma  # noqa: E402
 from nucleo.ffmpeg import FFMPEG, salida_atomica  # noqa: E402
 from nucleo.rutas import SALIDA  # noqa: E402
 
-CW, CH = formato.RECORTE_W, formato.RECORTE_H          # recorte "nativo de short": proporción 1080x1272
+CW, CH = formato.RECORTE_W, formato.RECORTE_H          # recorte "nativo de short": proporción 1080xALTO_PANTALLA
 CANVAS_W, CANVAS_H, FPS = formato.ANCHO, formato.ALTO, formato.FPS
 URLBAR_FOCUS = (408, 135)    # mirar mientras se teclea una URL: x=408 -> recorte desde el borde izquierdo (URL + inicio de la página)
 
@@ -118,7 +118,7 @@ def construir(src, planos, ancho, alto, padtop, titulo):
     os.makedirs(SALIDA, exist_ok=True)
     out = os.path.join(SALIDA, f"short_{titulo}_editado.mp4")
     avail_h = CANVAS_H - padtop
-    dh_fijo = round(CH * CANVAS_W / CW)                      # 1272: modo recorte+paneo (punto suelto)
+    dh_fijo = round(CH * CANVAS_W / CW)                      # 1160: modo recorte+paneo (punto suelto)
     assert dh_fijo <= avail_h, "padtop + contenido (modo recorte) no cabe en el lienzo"
     partes, total = [], 0.0
     for i, p in enumerate(planos):

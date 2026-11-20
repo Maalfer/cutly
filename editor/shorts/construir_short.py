@@ -27,7 +27,7 @@ from nucleo import archivos, formato  # noqa: E402
 from nucleo.ffmpeg import FFMPEG, FFPROBE, salida_atomica  # noqa: E402
 from nucleo.rutas import REPO  # noqa: E402
 
-PADTOP = formato.BANDA_CARA      # banda negra superior (la cara): 648. CONSTANTE en todos los planos.
+PADTOP = formato.BANDA_CARA      # banda negra superior (la cara): 760. CONSTANTE en todos los planos.
 CANVAS_W = formato.ANCHO
 CANVAS_H = formato.ALTO
 FPS = formato.FPS
@@ -69,7 +69,7 @@ def construir(plan):
         dh = round(ch * dw / cw)               # alto escalado manteniendo proporcion
         if dh > CANVAS_H - PADTOP:
             sys.exit(f"segmento {n}: {cw}x{ch} escalado a 1080 mide {dh} px de alto y no cabe bajo la banda "
-                     f"({CANVAS_H - PADTOP} px): usa una proporcion cw:ch >= 816:961")
+                     f"({CANVAS_H - PADTOP} px): usa una proporcion cw:ch >= {formato.RECORTE_W}:{formato.RECORTE_H}")
         pad = f"pad={CANVAS_W}:{CANVAS_H}:0:{PADTOP}:black"
         if "img_dur" in seg:
             si = f"[{img_seg_input[n]}:v]"

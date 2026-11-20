@@ -9,7 +9,7 @@ Tú actúas y te mueves; el usuario solo graba. Entrada humana siempre (tecleo y
 - La herramienta es `crear-shorts/herramientas/vm_control.py` (multiplataforma: Windows, macOS, Linux).
 - Edición posterior: índice en `editor/CLAUDE.md` (Shorts en `editor/shorts/`, directos 16:9 en `editor/directos/`). Si el usuario pasa el Short de pantalla + un
   vídeo con su cara y voz para juntarlos: `editor/shorts/METODOLOGIA-FUSION-CARA.md`. El Short sale solo con
-  `editor/shorts/short_desde_toma.py` (banda negra superior FIJA de 648 px para la cara del usuario). La toma se graba con
+  `editor/shorts/short_desde_toma.py` (banda negra superior FIJA de 760 px para la cara del usuario). La toma se graba con
   VirtualBox en el anfitrión (`rec start`), no con OBS ni dentro de la VM. La toma deja
   `editor/crudo/<toma>.mp4`, `.steps.jsonl` y `.mapa.md` para decidir los cortes.
 

@@ -73,7 +73,7 @@ cutly/
 ├── nucleo/                           ← LIBRERÍA COMÚN (Python, sin CLI): la usan las dos fases
 │   ├── rutas.py · ffmpeg.py · medios.py  ←   dónde está cada cosa, ffmpeg en cualquier SO, leer vídeo/audio
 │   ├── audio.py · series.py          ←   energía a 10 ms, máscara de voz, LUFS; tramos de una máscara
-│   ├── formato.py                    ←   el lienzo del Short (1080x1920@60, banda de la cara 648)
+│   ├── formato.py                    ←   el lienzo del Short (1080x1920@60, banda de la cara 760)
 │   ├── toma.py                       ←   CONTRATO Fase 1 → Fase 2 (.steps.jsonl / .mapa.md)
 │   ├── material.py · candidatos.py   ←   el material arrastrado y su papel · los fragmentos propuestos de un directo
 │   ├── transcripcion.py · subtitulos.py  ← Whisper medido; texto y tiempos de los subtítulos
