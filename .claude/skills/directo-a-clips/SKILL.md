@@ -22,5 +22,7 @@ Por defecto, al recibir un directo nuevo y sin pedir permiso para estos dos paso
    todavía.
 
 Cuando elija: afina cada corte (`editor/comun/energia.py`, `editor/comun/detectar_silencio.sh`), construye con
-`editor/directos/construir_clip.sh`, verifica cada empalme (`editor/comun/verificar_corte.sh`) y añade la entrada
-APPEND a `editor/videos-editados/_cortes.log`.
+`editor/directos/construir_clip.sh`, normaliza el audio a -14 LUFS (`editor/directos/normalizar_audio.py`,
+OBLIGATORIO, CLAUDE.md §5.1), decide y aplica el zoom estratégico a cámara si corresponde
+(`editor/directos/aplicar_zoom.py`, CLAUDE.md §5.5), verifica cada empalme (`editor/comun/verificar_corte.sh`) y
+añade la entrada APPEND a `editor/videos-editados/_cortes.log`.

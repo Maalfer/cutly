@@ -226,6 +226,22 @@ por defecto es SIEMPRE, en este orden, sin pedir permiso para los dos primeros p
   depender solo del criterio genérico de "explicación técnica autocontenible", que no distingue
   este tipo de contenido (con gancho de actualidad) de un walkthrough cualquiera.
 
+- **Caso real de qué NO elegir como candidato, y de por qué la pasada de silencios (sección 6) no es
+  opcional**: auditoría del 2026-11-20 sobre `video-mio.mp4` (clip hecho con el pipeline antes de que
+  existieran varias de estas reglas, usado como ejemplo del estilo viejo a dejar de repetir). En 250,7s:
+  prácticamente un solo plano sin cortes internos (1-1,7 cortes/min, frente a las referencias que le gustan
+  al usuario), un hueco de **4,62s de silencio sin cortar** (muy por encima de la tolerancia de ~2,5s de la
+  sección 6), y el contenido elegido era una charla de chat genérica (preguntas de audiencia sobre cómo
+  empezar en ciberseguridad, sin ninguna demo ni explicación autocontenible) sin gancho inicial — exactamente
+  lo que la sección 2 ya pide evitar ("charla intrascendente"). Ninguna regla nueva salió de esto (ya estaban
+  escritas); sirve como recordatorio de que estas pasadas deben aplicarse siempre, no solo cuando algo ya ha
+  fallado — y de auditoría salió sí la regla nueva de la sección 5.1 (normalización de audio), que no existía.
+- **Antes de dar un clip nuevo por terminado, compara su bitrate/resolución contra el directo fuente con
+  `ffprobe`** (la regla de "Errores de proceso" de más arriba ya lo pide) y anota ambos valores en la entrada
+  del `_cortes.log` del clip — si no se registra, una auditoría futura no puede saber si un clip quedó
+  degradado sin volver a adivinarlo todo desde cero (pasó con `video-mio.mp4`: sin el directo fuente a mano no
+  se pudo saber si sus 626 kbps a 720p eran el bitrate nativo del directo o una reencodificación agresiva).
+
 ## Flujo de trabajo completo
 
 ### 0. Descargar el directo (solo si el usuario da un enlace en vez de un archivo ya puesto)
@@ -442,6 +458,81 @@ render del mismo `OUT` sin confirmar que el anterior terminó o pararlo explíci
 `TaskStop`** — dos procesos ffmpeg escribiendo al mismo path en paralelo compiten por CPU y
 dejan el primero en un archivo incompleto (`moov atom not found`) al renombrarlo a mitad de
 escritura. Si tienes dudas, comprueba que no queda ningún proceso ffmpeg escribiendo ese archivo antes de lanzar otro.
+
+### 5.1. Normalización de audio a −14 LUFS (OBLIGATORIO, no opcional — nuevo 2026-11-20)
+
+Justo después de `construir_clip.sh` (y antes de la verificación final de la sección 8), normaliza SIEMPRE el
+audio del clip con `editor/directos/normalizar_audio.py`:
+
+```bash
+python editor/directos/normalizar_audio.py editor/videos-editados/<clip>_editado.mp4
+```
+
+(normaliza en el sitio por defecto; el vídeo no se toca, `-c:v copy`). Objetivo −14 LUFS (±1), techo −1 dBTP —
+el mismo estándar que ya rige para los Shorts (`SHORT-IDEAL.md`).
+
+**Por qué es obligatorio y no un "si acuerdas":** auditoría del 2026-11-20 sobre un clip hecho con el pipeline
+ANTES de que existiera este paso (`video-mio.mp4`, fuera del repo, solo de referencia) midió **−25,6 LUFS** —
+11,6 LU por debajo del objetivo, sin que nadie lo hubiera bajado a mano: el audio de un directo de Twitch sale
+sistemáticamente bajo si no se normaliza, no es una rareza puntual. A diferencia del resto de esta
+metodología (que ya estaba escrita pero simplemente no se aplicó en ese vídeo antiguo), **esta regla no
+existía todavía** — por eso se añade aquí como paso estándar del flujo, no como nota de "si el usuario lo
+pide".
+
+### 5.5. Zoom estratégico a cámara (nuevo, decisión del usuario 2026-11-20)
+
+El usuario pidió explícitamente que los clips finales no sean siempre plano fijo: quiere que, en los momentos
+que mejor encajen, se haga un zoom digital a su cara (recortando la región de la cámara dentro del propio frame
+ya compuesto por OBS y escalándola a pantalla completa), volviendo al plano completo el resto del tiempo —
+**la mayoría del clip debe verse en plano completo; el zoom es la excepción puntual, no la norma.**
+
+**De dónde sale esta regla:** se analizaron dos vídeos de referencia que al usuario le gustan por su estilo de
+montaje ("ESTADOS UNIDOS PARALIZA TODOS SUS VUELOS por un fallo tecnológico", "La caída de Microsoft 365
+explicada"): formato "pantalla completa + cámara en una esquina fija", corte seco en el 100 % de los cambios
+de plano muestreados (ninguna transición, ningún texto añadido en edición, ningún b-roll de stock), plano
+medio de ~5-7 s, voz en torno a −14/−15 LUFS. Esos vídeos NO usan zoom a cámara — el zoom es una idea propia
+del usuario, añadida sobre esa misma sobriedad de corte (entra y sale con corte seco, sin transición animada,
+igual que el resto del montaje de este repo).
+
+**Importante: aquí la cámara y la pantalla YA vienen mezcladas en un único vídeo por la escena de OBS del
+usuario al streamear** (no hay pistas separadas) — por eso el "zoom a cámara" es un recorte+escalado digital
+sobre la región donde esté su webcam dentro de ese frame ya compuesto, NO una recomposición de capas. El
+usuario confirmó que su webcam es HD/1080p o mejor (zoom nítido, sin pixelado), normalmente en la esquina
+inferior derecha — pero la posición y el tamaño exactos pueden variar de un directo a otro según cómo tuviera
+montada la escena ese día: **mide la posición en CADA directo nuevo, nunca reutilices las coordenadas de uno
+anterior sin comprobarlas.**
+
+1. **Medir el rectángulo de la cámara** (una vez por directo, no por clip): extrae un fotograma de un momento
+   donde se vea la cámara con claridad (`ffmpeg -ss T -i directo.mp4 -frames:v 1 frame.png`, como la sección
+   "Ver fotogramas del vídeo" más abajo) y léelo para estimar a ojo el rectángulo `X,Y,W,H`. Verifica con un
+   segundo fotograma en otro minuto del mismo directo que la posición no cambia (si el usuario cambió de
+   escena a mitad de directo, mide cada tramo por separado).
+2. **Decidir en qué momentos del clip hacer zoom** (criterio editorial, no automático): al analizar el
+   fragmento elegido (secciones 2-4), señala como candidato a zoom cualquier instante donde la cara del
+   usuario sea lo más informativo de ver — una reacción genuina (sorpresa, risa, "no me lo puedo creer") justo
+   tras un resultado (el exploit funciona, consigue root...), un remate dirigido directamente a la
+   audiencia/cámara (un chiste, una opinión, una llamada a la acción), o el gancho inicial del clip si empieza
+   mirando a cámara en vez de a la pantalla. **Nunca** zoom mientras haya en pantalla contenido técnico
+   imprescindible de ver en ese instante (un comando que se teclea, una salida que hay que leer, un resultado
+   que se está mostrando) — el plano completo manda siempre que la pantalla aporte algo al espectador en ese
+   segundo. Sé comedido: 1-3 zooms por clip de unos pocos segundos cada uno es razonable; no conviertas el
+   clip en un vlog a cámara.
+3. **Aplicar el zoom sobre el clip ya construido** (después de `construir_clip.sh`, antes de la verificación
+   final de la sección 8), con tiempos relativos al CLIP ya cortado (no al directo original):
+
+   ```bash
+   python editor/directos/aplicar_zoom.py editor/videos-editados/<clip>_editado.mp4 editor/videos-editados/<clip>_editado.mp4 \
+     --camara X,Y,W,H --zoom INICIO,FIN [--zoom INICIO,FIN ...] --titulo <Titulo>
+   ```
+
+   (usa un nombre de salida distinto si quieres conservar también la versión sin zoom para comparar). El audio
+   no se toca (se copia intacto, `-c:a copy`): el zoom es solo un cambio de encuadre, nunca un corte de
+   contenido. Queda registrado en `_cortes.log` igual que cualquier otro paso (APPEND).
+
+**Primera vez que se aplica esto a un clip real: pide al usuario su opinión sobre el resultado** (frecuencia,
+duración de cada zoom, si el corte seco al entrar/salir del zoom se nota demasiado brusco) antes de darlo por
+estándar para el resto de clips — es una técnica nueva, sin un ideal medido todavía como sí lo tiene el resto
+de esta metodología.
 
 ### 6. Pasada de micro-silencios y muletillas DENTRO de cada tramo mantenido
 

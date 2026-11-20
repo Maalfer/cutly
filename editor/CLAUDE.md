@@ -44,7 +44,9 @@ editor/
 │   └── plantillas/               plan de fusión de ejemplo
 ├── directos/    clips 16:9 de un directo
 │   ├── CLAUDE.md                 metodología completa (transcribir, elegir, cortar, verificar)
-│   └── construir_clip.sh         trim + concat + micro-fundidos
+│   ├── construir_clip.sh         trim + concat + micro-fundidos
+│   ├── normalizar_audio.py       normaliza a -14 LUFS, obligatorio tras construir (CLAUDE.md §5.1)
+│   └── aplicar_zoom.py           zoom estratégico a cámara sobre el clip ya construido (CLAUDE.md §5.5)
 ├── crudo/            el material (LOCAL, no se versiona): lo llena la interfaz al arrastrar; material.json
 └── videos-editados/  resultados + _cortes.log (LOCAL; el log solo se AÑADE, nunca se recrea)
 ```
