@@ -139,12 +139,14 @@ un tramo por trozo de voz, con lo que se ve debajo.
   Apretar divide cada tramo por sus pausas medidas en el audio de la cara (rms > −38 dB o alta frecuencia > −42 dB,
   para no comerse una "s" final) y elimina los tramos sin voz. La pantalla de cada trozo sale del mismo mapeo del
   tramo, así que lo que se nombra sigue cayendo sobre su momento.
-- `"apretar": false` **en un tramo** lo deja con los bordes `a0/a1` tal cual (sin apretar). Para cuando la máscara
-  se come una sílaba final floja: la trata como chasquido si son ráfagas de < 60 ms partidas por frames bajo el
-  umbral. Caso real (Short de masscan): la "-ta" de "ochenta" (rms −28 a −40, hf −56) y la "s" de "levantados"
-  desaparecían y Whisper leía "puerto ochen…"/"levantado". Síntoma: la re-transcripción del resultado pierde el
-  final de una palabra. Arreglo: tramo propio que empiece justo antes de la voz (≤ 0,1 s) y acabe tras la energía
-  real, con `"apretar": false`.
+- **Palabras flojas (histéresis):** la máscara de voz (`nucleo/audio.mascara_voz`) extiende cada racha de voz fuerte
+  mientras siga habiendo voz débil (rms > −50 dB o hf > −55 dB) y quita los chasquidos después. Sin eso se comía
+  palabras dichas flojas y el usuario lo notó: "todos los equipos ~~que estén~~ conectados" (−34 a −48 dB), la "s"
+  de "Si quieres seguir…", la "-ta" de "ochenta". **Verifica comparando palabra a palabra** el texto original de
+  cada tramo con la transcripción del resultado (no a ojo: así se escapó "que estén"); toda palabra del plan que
+  falte es un corte malo.
+- `"apretar": false` **en un tramo**: último recurso, deja sus bordes `a0/a1` tal cual (sin apretar) si aun así la
+  máscara se come algo.
 
 ```bash
 python editor/shorts/fusionar_cara_pantalla.py editor/crudo/fusion_plan.json &&

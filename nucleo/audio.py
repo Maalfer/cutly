@@ -22,15 +22,28 @@ def energia(a, muestras=160):
     return rms, hf
 
 
-def mascara_voz(rms, hf, umbral_rms=-38.0, umbral_hf=-42.0, min_tramas=6):
-    """Voz por ventana: rms > umbral_rms o hf > umbral_hf (para no perder sibilantes). Quita rachas de voz de menos de
-    `min_tramas` ventanas (con 10 ms: < 60 ms = chasquidos, golpes). Umbrales absolutos medidos en la grabación de cara
-    del usuario (micro de escritorio, sin normalizar)."""
+def mascara_voz(rms, hf, umbral_rms=-38.0, umbral_hf=-42.0, min_tramas=6, debil_rms=-50.0, debil_hf=-55.0):
+    """Voz por ventana, con histéresis:
+    1. voz FUERTE: rms > umbral_rms o hf > umbral_hf (para no perder sibilantes);
+    2. cada racha fuerte se EXTIENDE hacia los dos lados mientras haya voz DÉBIL (rms > debil_rms o hf > debil_hf);
+    3. se quitan las rachas (ya extendidas) de menos de `min_tramas` ventanas (con 10 ms: < 60 ms = chasquidos).
+    Sin el paso 2 se perdían palabras dichas flojas, que la máscara tomaba por pausa y `apretar` quitaba: "que estén"
+    (−34 a −44 dB) en "los equipos que estén conectados", la "s" inicial de "Si quieres…", la "-ta" de "ochenta". El
+    umbral débil queda ~20 dB sobre el ruido de fondo (≈ −70 dB) y solo crece desde voz fuerte contigua, así que el
+    ruido suelto no cuenta como voz. Umbrales absolutos medidos en la grabación de cara del usuario (micro de
+    escritorio, sin normalizar)."""
     v = (rms > umbral_rms) | (hf > umbral_hf)
     n = len(v)
-    i = 0
-    while i < n:
-        if v[i]:
+    debil = (rms > debil_rms) | (hf > debil_hf)
+    for k in range(1, n):                     # hacia delante: la cola floja de cada racha
+        if not v[k] and v[k - 1] and debil[k]:
+            v[k] = True
+    for k in range(n - 2, -1, -1):            # hacia atrás: el arranque flojo
+        if not v[k] and v[k + 1] and debil[k]:
+            v[k] = True
+    i = 0                                     # chasquidos: DESPUÉS de extender (una sílaba floja suelta, p. ej. el
+    while i < n:                              # "que" de "que estén", es una racha fuerte corta que solo se ve
+        if v[i]:                              # entera con su parte débil)
             j = i
             while j < n and v[j]:
                 j += 1

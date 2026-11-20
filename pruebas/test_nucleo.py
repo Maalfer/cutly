@@ -33,6 +33,20 @@ class Audio(unittest.TestCase):
         self.assertFalse(v[10:13].any())
         self.assertTrue(v[50:80].all())
 
+    def test_mascara_no_se_come_palabras_flojas(self):
+        # caso real: "equipos | que estén | conectados", con "que estén" entre -34 y -48 dB y rachas fuertes de
+        # menos de 60 ms: sin histéresis era "pausa" y apretar la quitaba.
+        rms = np.full(120, -70.0)
+        hf = np.full(120, -80.0)
+        rms[0:30] = -20                                   # "equipos"
+        rms[30:58] = -46                                  # "que estén": voz débil...
+        rms[40:44] = -34                                  # ...con un pico fuerte de solo 40 ms
+        rms[60:100] = -20                                 # "conectados" (hueco de 20 ms antes)
+        v = audio.mascara_voz(rms, hf)
+        self.assertTrue(v[0:58].all())
+        self.assertTrue(v[60:100].all())
+        self.assertFalse(v[100:].any())                   # el ruido de fondo no se pega
+
     def test_mascara_respeta_sibilante_por_alta_frecuencia(self):
         rms = np.full(20, -60.0)
         hf = np.full(20, -80.0)

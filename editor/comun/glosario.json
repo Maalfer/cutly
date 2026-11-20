@@ -12,6 +12,9 @@
   ["\\bip\\b", "IP"],
   ["\\bnmap\\b", "nmap"],
   ["\\bsshpass\\b", "sshpass"],
-  ["\\bpowershell\\b", "PowerShell"]
+  ["\\bpowershell\\b", "PowerShell"],
+  ["\\bmass ?scan\\b", "Masscan"],
+  ["\\b(read|real|red|re) ?limit\\b", "rate limit"],
+  ["\\bcon un (cad|cap|gat|kat)\\b", "con un cat"]
  ]
 }
