@@ -52,6 +52,10 @@ def apretar(tramos, voz, pausa_max, m_antes, m_despues):
     out = []
     for t in tramos:
         a0, a1 = t["a0"], t["a1"]
+        if t.get("apretar") is False:
+            # Bordes afinados a mano (p. ej. una sílaba final floja que la máscara toma por chasquido): tal cual.
+            out.append(dict(t))
+            continue
         idx = [k for k in range(int(a0 * 100), int(a1 * 100)) if k < len(voz) and voz[k]]
         if not idx:
             print(f"  (tramo sin voz eliminado: {a0:.2f}-{a1:.2f}s {t.get('nota', '')})")

@@ -139,6 +139,12 @@ un tramo por trozo de voz, con lo que se ve debajo.
   Apretar divide cada tramo por sus pausas medidas en el audio de la cara (rms > −38 dB o alta frecuencia > −42 dB,
   para no comerse una "s" final) y elimina los tramos sin voz. La pantalla de cada trozo sale del mismo mapeo del
   tramo, así que lo que se nombra sigue cayendo sobre su momento.
+- `"apretar": false` **en un tramo** lo deja con los bordes `a0/a1` tal cual (sin apretar). Para cuando la máscara
+  se come una sílaba final floja: la trata como chasquido si son ráfagas de < 60 ms partidas por frames bajo el
+  umbral. Caso real (Short de masscan): la "-ta" de "ochenta" (rms −28 a −40, hf −56) y la "s" de "levantados"
+  desaparecían y Whisper leía "puerto ochen…"/"levantado". Síntoma: la re-transcripción del resultado pierde el
+  final de una palabra. Arreglo: tramo propio que empiece justo antes de la voz (≤ 0,1 s) y acabe tras la energía
+  real, con `"apretar": false`.
 
 ```bash
 python editor/shorts/fusionar_cara_pantalla.py editor/crudo/fusion_plan.json
