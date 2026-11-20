@@ -73,7 +73,7 @@ class Grabacion(unittest.TestCase):
         self.assertEqual(len(d), 3)                                   # resolución, fps y calidad
 
     def test_configuracion_buena(self):
-        cfg = {"res": "1920x976", "fps": "30", "kbps": "10000"}
+        cfg = {"res": "1920x976", "fps": "30", "kbps": "25000"}
         self.assertEqual(grabacion.diferencias(cfg, (1920, 976)), [])
 
 
@@ -91,7 +91,7 @@ def datos(**cambios):
          "resumen": info.resumen(info.parsear_maquina(SHOWVMINFO), info.parsear_propiedades(PROPIEDADES.replace(
              "'lightdm'", "'kali'"))), "resolucion": (1920, 976), "canal_ok": True, "canal": "ssh",
          "invitado_faltan": [], "x11": True}
-    d["resumen"]["grabacion"].update(res="1920x976", fps="30", kbps="10000")
+    d["resumen"]["grabacion"].update(res="1920x976", fps="30", kbps="25000")
     d.update(cambios)
     return d
 

@@ -10,7 +10,7 @@ Lo que VirtualBox impone (medido) y cómo se resuelve:
     la resolución REAL (medida en la captura): si no, intenta corregirla y, si VirtualBox no deja, para con la
     solución en vez de grabar una toma que no sirve.
   - Valores de VirtualBox por defecto: 1024x768 a 25 fps y 512 kbps, en <carpeta de la VM>/<vm>-screen0.webm:
-    inservibles para un Short. Se usan 30 fps, 10 Mbps y un fichero fijo en editor/crudo/.
+    inservibles para un Short. Se usan 30 fps, 25 Mbps y un fichero fijo en editor/crudo/.
   - VirtualBox añade "-screen0" al nombre del fichero; se busca con comodín al parar.
 """
 import glob
@@ -28,7 +28,11 @@ from .conexion import scp_from, ssh
 from .registro import _log, _save_state, _state
 
 FPS = 30
-KBPS = 10000                 # 10 Mbps en VP8: suficiente para texto de terminal nítido tras recodificar a H.264
+# 10 Mbps dejaba el texto del terminal algo borroso (bloques de VP8 en los bordes de la letra, pedido
+# del usuario tras ver una toma: "deben verse lo mejor posible y nada borroso"). 25 Mbps para contenido de
+# texto de alto contraste a 1920x1012@30fps; el .webm es solo intermedio (se borra tras recodificar a
+# H.264 más abajo), así que el único coste es disco/tiempo de recodificado, no el Short final.
+KBPS = 25000
 RES_DEFECTO = (1920, 1012)   # si VirtualBox no recuerda la resolución del invitado
 
 

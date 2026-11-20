@@ -1,6 +1,8 @@
 """Configuración de la VM (variables de entorno) y la salida de error común.
 
-VM_NAME (kali) · VM_KEY (~/.ssh/cutly_vm) · VM_SSH_PORT (2222) · VM_USER (kali) · VBOXMANAGE (ruta) ·
+VM_NAME (kali) · VM_KEY (~/.ssh/cutly_vm) · VM_HOST (127.0.0.1, el reenvío NAT; con la VM en modo puente,
+pon la IP real del invitado en tu LAN) · VM_SSH_PORT (2222; con VM_HOST puesto a la IP real, normalmente 22) ·
+VM_USER (kali) · VBOXMANAGE (ruta) ·
 VM_OCR=tesseract (fuerza Tesseract) · VM_CANAL=auto|ssh|guestcontrol (canal con el invitado, vm/canales/) ·
 VM_GUEST_PASSFILE / VM_GUEST_PASS (solo si los das tú: bootstrap y canal guestcontrol; nunca se adivinan)
 """
@@ -10,6 +12,7 @@ import tempfile
 
 VM = os.environ.get("VM_NAME", "kali")
 KEY = os.environ.get("VM_KEY", os.path.expanduser("~/.ssh/cutly_vm"))
+HOST = os.environ.get("VM_HOST", "127.0.0.1")
 PORT = os.environ.get("VM_SSH_PORT", "2222")
 USER = os.environ.get("VM_USER", "kali")
 TMP = tempfile.gettempdir()

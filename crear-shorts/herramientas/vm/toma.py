@@ -33,7 +33,11 @@ def build_map(name):
     ev = contrato.cargar_eventos(contrato.ruta(name, "steps.jsonl"))
     t_of = lambda e: e.get("t_video", e["t_wall"] - ev[0]["t_wall"])
     marks = [e for e in ev if e["op"] == "mark"]
-    end = t_of(ev[-1])
+    # el último evento suele ser take_end, que no tiene t_video (es DESPUÉS de copiar el vídeo ya parado): si se
+    # usara su t_wall caería el tiempo de copia dentro del último acto, alargándolo de más (medido: ~30s de más
+    # en sudo-nopasswd-20261120-1219). El final real del vídeo es el del último evento que SÍ tiene t_video.
+    con_video = [e for e in ev if "t_video" in e]
+    end = t_of(con_video[-1]) if con_video else t_of(ev[-1])
     rows = ["| # | Momento | Desde (s) | Hasta (s) | Dura | Pasos |", "|---|---|---|---|---|---|"]
     for i, m in enumerate(marks):
         a = t_of(m)

@@ -46,6 +46,9 @@ la última de tipo "terminal" o "GUI" más reciente, por ser la más depurada).
 |---|---|---|---|---|
 | `DEMO-IDOR/` | GUI (navegador + Burp) | IDOR (Insecure Direct Object Reference) | sí | referencia |
 | `DEMO-SSHOLE/` | Terminal | CVE ficticio "sshole": bypass SSH por contraseña larga en musl `crypt()` + reverse shell | sí | referencia, dada por buena por el usuario |
+| `DEMO-MASSCAN/` | Terminal | `masscan` contra la propia red doméstica del usuario (WiFi real, VM en modo puente): mostrar la red, barrido ICMP (todos los hosts), filtro de puerto 80, guardar resultado | sí | referencia, dada por buena por el usuario (2ª toma: terminal a medio ancho + foco repuesto tras cada `waitfor`, ver METODOLOGIA/10) |
+| `DEMO-CHMOD-CHOWN/` | Terminal | Permisos en Linux de verdad: `chmod` con letras y números, `chown`, por qué importan | sí | referencia, dada por buena por el usuario |
+| `DEMO-SUDO-NOPASSWD/` | Terminal | `sudo` mal configurado (NOPASSWD en `apt`) + GTFOBins (Pre-Invoke hook) → shell de root | sí | tomada, pendiente de revisión del usuario |
 
 Antes de empezar una demo de un tema que te suene parecido a una ya hecha, mira esta tabla — puede que
 solo haga falta adaptar una existente en vez de partir de cero.

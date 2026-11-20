@@ -1,18 +1,19 @@
-"""Canal SSH (el de siempre, medido): 127.0.0.1:VM_SSH_PORT -> 22 del invitado con la clave dedicada VM_KEY.
-Necesita el montaje de `vm_control.py bootstrap` (regla NAT + clave). Rápido (una conexión por llamada).
+"""Canal SSH (el de siempre, medido): VM_HOST:VM_SSH_PORT -> 22 del invitado con la clave dedicada VM_KEY.
+Por defecto VM_HOST=127.0.0.1 (el reenvío NAT de `vm_control.py bootstrap`); con la VM en modo puente, pon
+VM_HOST a la IP real del invitado en tu LAN (y normalmente VM_SSH_PORT=22). Rápido (una conexión por llamada).
 
 El script viaja por stdin en BYTES con \\n (en Windows, text=True lo convertiría a \\r\\n y bash fallaría).
 """
 import os
 import subprocess
 
-from ..config import KEY, PORT, USER
+from ..config import HOST, KEY, PORT, USER
 from .base import ENTORNO, Canal, CanalTimeout, normalizar
 
 
 def _ssh_cmd(extra=None):
     return ["ssh", "-i", KEY, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
-            "-o", "StrictHostKeyChecking=accept-new", "-p", PORT, f"{USER}@127.0.0.1"] + (extra or [])
+            "-o", "StrictHostKeyChecking=accept-new", "-p", PORT, f"{USER}@{HOST}"] + (extra or [])
 
 
 def _scp(origen, destino):
@@ -38,13 +39,13 @@ class CanalSSH(Canal):
         return r.returncode, r.stdout, r.stderr
 
     def traer(self, remoto, local):
-        return _scp(f"{USER}@127.0.0.1:{remoto}", local)
+        return _scp(f"{USER}@{HOST}:{remoto}", local)
 
     def enviar(self, local, remoto):
-        return _scp(local, f"{USER}@127.0.0.1:{remoto}")
+        return _scp(local, f"{USER}@{HOST}:{remoto}")
 
     def describir(self):
-        return f"ssh ({USER}@127.0.0.1:{PORT})"
+        return f"ssh ({USER}@{HOST}:{PORT})"
 
 
 def clasificar(stderr):
@@ -61,7 +62,7 @@ def clasificar(stderr):
                 "VM_GUEST_PASSFILE + bootstrap")
     if "timed out" in e:
         return "el invitado no contesta a tiempo (arrancando o colgado)", "espera y repite; mira `vm_control.py shot`"
-    return "desconocida: " + stderr.strip()[:160], "ssh -v -i <clave> -p <puerto> <usuario>@127.0.0.1"
+    return "desconocida: " + stderr.strip()[:160], f"ssh -v -i <clave> -p {PORT} {USER}@{HOST}"
 
 
 def diagnosticar():

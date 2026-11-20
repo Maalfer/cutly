@@ -1,8 +1,10 @@
 # 10 — Plantilla para una demo de terminal "perfecta a la primera"
 
-> Destilado de 10 iteraciones reales (`DEMO-SSHOLE/demo_sshole.py`, CVE ficticio "sshole") hasta que el
-> usuario dio el Short por bueno. Síguelo **desde el principio** en la próxima demo para no repetir el
-> mismo camino de prueba y error. Es la plantilla; copia `demo_sshole.py` como punto de partida real.
+> Destilado de iteraciones reales (`DEMO-SSHOLE/demo_sshole.py` primero, `DEMO-MASSCAN/demo_masscan.py`
+> después) hasta que el usuario dio el Short por bueno. Síguelo **desde el principio** en la próxima demo
+> para no repetir el mismo camino de prueba y error. Es la plantilla; copia siempre la demo de tipo
+> "terminal" MÁS RECIENTE del catálogo (`crear-shorts/README.md` §Catálogo de demos) como punto de partida
+> real — es la que ya lleva todas las lecciones de abajo aplicadas, no `demo_sshole.py` a ciegas.
 
 ## 0. Antes de escribir una sola línea de guion
 
@@ -64,6 +66,14 @@ v.place_id(listener, 960, 39, 960, 973)       # mitad derecha
    comando nuevo cabe, y se rompe en cuanto alguno es más largo de lo previsto. La fuente grande agranda
    TODO (nmap, comandos cortos, resultados largos) sin ese riesgo: lo que no cabe en una línea pasa a la
    siguiente, nunca se sale de la ventana.
+2b. **"Se ve pequeño" tiene una SEGUNDA causa, independiente de la fuente: el ANCHO de la ventana.**
+   `short_desde_toma.py` letterboxea la región `rw×rh` encajándola en 1080×1272 (`fit_contain`); con una
+   terminal a **pantalla completa** (1920×973, proporción ~2:1) el resultado solo llena 1080×547 — un 43%
+   del alto disponible, "ventana pequeña" desde el primer plano aunque la fuente ya esté a 24pt (medido en
+   `DEMO-MASSCAN`, primera toma). Con **medio ancho** (960×973, la misma proporción que ya usan los dos
+   terminales de `DEMO-SSHOLE` lado a lado) el resultado llena 1080×1095, el 86%. Para UNA sola terminal
+   (sin segunda ventana al lado), cólocala igual a medio ancho, **centrada** (`x=(1920-960)//2=480`), no a
+   pantalla completa — el texto sigue sin cortarse (regla 2: la fuente grande agranda todo).
 3. **Que un comando importante no quede "enterrado"** bajo el resultado del paso anterior (p. ej. un
    `nmap` largo encima): `Ctrl+L` (limpia pantalla, instantáneo, no cuenta como tecleo) + `focus_rect`
    justo ANTES de teclear ese comando — sale solo, arriba del todo.
@@ -76,6 +86,12 @@ v.place_id(listener, 960, 39, 960, 973)       # mitad derecha
    quedó fijada por el paso anterior y el siguiente comando es más ancho, vuelve explícitamente al rect
    completo con `focus_rect(RECT_COMPLETO, ...)` antes de teclear. Repasa el guion entero pensando "¿qué
    región está activa en este instante?" — no asumas que se resetea sola.
+   **`waitfor()` es el culpable más fácil de olvidar**: deja el foco en el PUNTO donde encontró el texto
+   (recorte fijo 816×961, sin `w,h`), no en la ventana completa. Si DESPUÉS de un `waitfor()` vas a teclear
+   otra vez antes del siguiente `mark`/`clear_and_focus`, pon un `focus_rect(RECT_COMPLETO, ...)` explícito
+   entre medias — si no, la línea larga se sale del recorte estrecho y en el vídeo parece que la cámara se
+   desplaza mientras se escribe (reincidencia medida: `DEMO-SSHOLE` primero, `DEMO-MASSCAN` después, mismo
+   fallo — repásalo SIEMPRE que un acto tenga más de un `type_in` entre dos `mark`).
 5. **Marca el foco también ANTES del primer `mark()`**, justo tras `rec_start()`: si no, los primeros
    segundos del vídeo usan el recorte por defecto (punto + 816 px) en vez de la región correcta.
 
@@ -93,11 +109,16 @@ v.place_id(listener, 960, 39, 960, 973)       # mitad derecha
 
 ## 5. Checklist final antes de dar un Short por bueno
 
-- [ ] Fuente del terminal ya a 24pt (o mayor) antes de la primera toma.
+- [ ] Fuente del terminal ya a 24pt (o mayor) antes de la primera toma — compruébalo con una captura de
+  prueba, no de memoria ni porque ya lo hiciste en otra demo (es por VM, no global).
 - [ ] Cada terminal controlada por ID, no por título.
+- [ ] Cada terminal a **medio ancho** (960×973), nunca a pantalla completa, incluso si solo hay una (§3.2b):
+  pantalla completa letterboxea al 43% del alto del Short; medio ancho, al 86%.
 - [ ] Cada bloque de tecleo tiene su `focus_rect`/`clear_and_focus` explícito justo antes — repasado
   mentalmente de principio a fin, sin huecos ni regiones "heredadas" por error.
-- [ ] Ningún comando largo teclea sobre una región estrecha.
+- [ ] Ningún comando largo teclea sobre una región estrecha: en particular, todo `type_in` que venga
+  DESPUÉS de un `waitfor()` dentro del mismo acto tiene su propio `focus_rect(RECT_COMPLETO, ...)` antes
+  (§3.4) — no solo los que abren un acto nuevo.
 - [ ] Momentos clave con pausa de lectura generosa, no la mínima que "funciona".
 - [ ] Vídeo y Short verificados con capturas reales (varios instantes), no solo con los contadores de
   `short_desde_toma.py` (duración/banda OK no garantiza que el encuadre sea el correcto).
