@@ -139,7 +139,7 @@ un tramo por trozo de voz, con lo que se ve debajo.
   Apretar divide cada tramo por sus pausas medidas en el audio de la cara (rms > −38 dB o alta frecuencia > −42 dB,
   para no comerse una "s" final) y elimina los tramos sin voz. La pantalla de cada trozo sale del mismo mapeo del
   tramo, así que lo que se nombra sigue cayendo sobre su momento.
-- **Palabras flojas (histéresis):** la máscara de voz (`nucleo/audio.mascara_voz`) extiende cada racha de voz fuerte
+- **Palabras flojas (histéresis):** la máscara de voz (`mascara_voz` en `nucleo/audio.py`) extiende cada racha de voz fuerte
   mientras siga habiendo voz débil (rms > −50 dB o hf > −55 dB) y quita los chasquidos después. Sin eso se comía
   palabras dichas flojas y el usuario lo notó: "todos los equipos ~~que estén~~ conectados" (−34 a −48 dB), la "s"
   de "Si quieres seguir…", la "-ta" de "ochenta". **Verifica comparando palabra a palabra** el texto original de
