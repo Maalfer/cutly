@@ -27,6 +27,7 @@ editor/
 │   ├── material.py               el material aportado y el papel de cada archivo (material.json)
 │   ├── verificar_corte.sh        re-transcribe una ventana alrededor de un empalme
 │   ├── detectar_silencio.sh      silencios alrededor de un instante
+│   ├── partir_para_movil.py      parte un vídeo SIN recodificar para mandarlo al chat (≤ 30 MiB por trozo)
 │   ├── asegurar_mejor_modelo.sh  modelo de whisper.cpp (si usas whisper.cpp en vez de faster-whisper)
 │   ├── BENCHMARK-WHISPER.md      qué modelo usar y por qué (medido)
 │   ├── glosario.json             términos técnicos mal escritos por Whisper -> bien escritos
@@ -37,7 +38,7 @@ editor/
 │   ├── METODOLOGIA-SHORTS.md     Short mudo a mano (sin registro de pasos)
 │   ├── short_desde_toma.py       toma de la Fase 1 -> Short mudo (automático)
 │   ├── construir_short.py        Short mudo desde grabaciones sueltas, según un plan JSON
-│   ├── analizar_fusion.py        mide cara/pantalla/voz y avisa de tomas repetidas
+│   ├── analizar_fusion.py        mide cara/pantalla/voz, hojas de contacto, comprueba palabras y sincronía
 │   ├── fusionar_cara_pantalla.py cara + voz + pantalla según un plan -> Short montado
 │   ├── subtitular.py             subtítulos karaoke (preparar -> revisar -> quemar)
 │   ├── verificar_short.py        comprueba el Short final contra SHORT-IDEAL.md

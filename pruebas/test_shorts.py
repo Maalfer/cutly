@@ -12,6 +12,7 @@ from nucleo.archivos import escribir_texto, leer_json
 
 fusion = cargar("editor/shorts/fusionar_cara_pantalla.py")
 sdt = cargar("editor/shorts/short_desde_toma.py")
+analizar = cargar("editor/shorts/analizar_fusion.py")
 
 
 class Apretar(unittest.TestCase):
@@ -40,6 +41,39 @@ class Apretar(unittest.TestCase):
     def test_pausa_corta_no_parte(self):
         t = [{"a0": 0.0, "a1": 3.0, "abajo": "cara"}]
         self.assertEqual(len(fusion.apretar(t, self.voz([(0.5, 1.0), (1.2, 2.0)]), 0.25, 0.04, 0.06)), 1)
+
+
+class ComprobarPalabras(unittest.TestCase):
+    """analizar_fusion.py comprobar: una palabra del plan que falta en el Short es un corte malo (caso real: "que
+    estén"); las variantes de Whisper ("read limit" / "ReLimit") no."""
+
+    def escribir(self, d, nombre, palabras):
+        ruta = os.path.join(d, nombre)
+        with open(ruta, "w", encoding="utf-8") as f:
+            json.dump({"segmentos": [{"start": 0, "end": 99, "text": "", "words": palabras}]}, f)
+        return ruta
+
+    def lanzar(self, resultado):
+        class A:
+            pass
+        with tempfile.TemporaryDirectory() as d:
+            cara = [[0.0, 0.3, "todos"], [0.3, 0.5, "los"], [0.5, 0.9, "equipos"], [0.9, 1.0, "que"],
+                    [1.0, 1.2, "estén"], [1.2, 1.7, "conectados"], [5.0, 5.4, "un"], [5.4, 5.8, "read"],
+                    [5.8, 6.2, "limit"], [9.0, 9.5, "fuera"]]
+            a = A()
+            a.trans = self.escribir(d, "cara.json", cara)
+            a.resultado = self.escribir(d, "res.json", [[i, i + 0.1, w] for i, w in enumerate(resultado)])
+            a.plan = os.path.join(d, "plan.json")
+            with open(a.plan, "w", encoding="utf-8") as f:
+                json.dump({"cara": "x.mp4", "salida": "y.mp4", "tramos": [{"a0": 0, "a1": 2}, {"a0": 5, "a1": 7}]}, f)
+            analizar.comprobar(a)
+
+    def test_variantes_de_whisper_no_fallan(self):
+        self.lanzar(["Todos", "los", "equipos", "que", "estén", "conectados.", "un", "ReLimit"])
+
+    def test_palabra_comida_falla(self):
+        with self.assertRaises(SystemExit):
+            self.lanzar(["Todos", "los", "equipos", "conectados", "un", "read", "limit"])
 
 
 class ShortDesdeToma(unittest.TestCase):

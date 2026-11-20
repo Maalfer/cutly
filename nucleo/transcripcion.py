@@ -76,9 +76,11 @@ def srt_time(t):
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 
-def escribir(base, segmentos, modelo, dispositivo):
-    """BASE.json + BASE.srt + BASE.txt (la línea N del .txt es el segmento N del .srt)."""
-    escribir_json(base + ".json", {"modelo": modelo, "dispositivo": dispositivo, "segmentos": segmentos})
+def escribir(base, segmentos, modelo, dispositivo, subtitulos=False):
+    """BASE.json + BASE.srt + BASE.txt (la línea N del .txt es el segmento N del .srt). `subtitulos` queda anotado en el
+    JSON: subtitular.py solo reutiliza una transcripción hecha en modo subtítulos (la normal sale sin puntuar)."""
+    escribir_json(base + ".json", {"modelo": modelo, "dispositivo": dispositivo, "subtitulos": bool(subtitulos),
+                                   "segmentos": segmentos})
     with open(base + ".srt", "w", encoding="utf-8") as f:
         for i, s in enumerate(segmentos, 1):
             f.write(f"{i}\n{srt_time(s['start'])} --> {srt_time(s['end'])}\n{s['text']}\n\n")

@@ -51,6 +51,11 @@ def preparar(a):
     trans = a.trans
     if not trans:
         trans = base + "_transcripcion.json"
+        # Solo vale una transcripción hecha en modo --subtitulos: una normal (p. ej. de verificar empalmes) sale sin
+        # puntuar y con frases pegadas ("página web Lo hago"). Error real del 2026-11-20.
+        if os.path.exists(trans) and not archivos.leer_json(trans).get("subtitulos"):
+            print(f"{trans} no está en modo subtítulos: se transcribe de nuevo con --subtitulos")
+            os.remove(trans)
         if not os.path.exists(trans):
             subprocess.run([sys.executable, "-I", os.path.join(COMUN, "transcribir.py"), a.video,
                             "--subtitulos", "--salida", base + "_transcripcion"], check=True)

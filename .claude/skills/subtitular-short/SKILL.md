@@ -17,3 +17,7 @@ Vídeo: $ARGUMENTS (si no se da: el material con papel `short` —`python editor
    subtítulo quemado no se corrige.
 4. `python editor/shorts/subtitular.py quemar <video>` -> `<video>_subtitulado.mp4`.
 5. `python editor/shorts/verificar_short.py <video>_subtitulado.mp4` debe decir "cumple la especificación".
+
+`preparar` rehace la transcripción si la que hay junto al vídeo no es de modo subtítulos (sale sin puntuar). Si el
+usuario quiere verlo en el móvil (Remote Control, máx. 30 MiB, nunca una copia comprimida):
+`python editor/comun/partir_para_movil.py <video>_subtitulado.mp4` y manda los trozos con SendUserFile.

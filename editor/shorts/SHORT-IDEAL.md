@@ -132,4 +132,8 @@ python editor/shorts/subtitular.py quemar editor/videos-editados/short_<Titulo>_
 | Volumen a mano | saturación | `lufs` en el plan (−14 por defecto) |
 | Subtítulos del editor automático sin revisar | "desde otro servidor" en vez de "dentro del servidor" | `subtitular.py preparar` + revisión del JSON |
 | Transcribir los subtítulos en modo normal (con VAD) | sin puntos y con mayúsculas a mitad de frase | `transcribir.py --subtitulos` (lo usa `subtitular.py`) |
+| Cara recortada a 648 px con la caja de subtítulos en la unión | los subtítulos casi le tapaban la boca | banda de 760 (`formato.BANDA_CARA`); la caja sigue a la unión |
+| Umbral único de voz (−38 dB) al apretar pausas | se comió "que estén" y la "s" de "Si quieres…", palabras dichas flojas | histéresis en `mascara_voz` + `analizar_fusion.py comprobar` (no a ojo) |
+| `subtitular.py preparar` con una transcripción normal al lado (la de verificar) | subtítulos sin puntuar, frases pegadas | solo reutiliza las de modo subtítulos; verificar escribe `_verificacion.json` |
+| Cambiar el nombre de salida porque cutly estudio tenía el vídeo abierto | dos Shorts del mismo vídeo en Resultados | mismo nombre siempre; ver METODOLOGIA-FUSION-CARA.md §5 |
 | Retirar un bloque 30 ms antes de que entre el siguiente | la caja parpadeaba 2-3 fotogramas en cada cambio de bloque | el siguiente entra en el mismo fotograma en que sale el anterior (corregido en `subtitular.py`; medido: 0 huecos) |

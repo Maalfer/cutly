@@ -12,7 +12,12 @@
 > **Encargo:** juntarlos para que la cara quede en el hueco negro y el Short quede "perfecto".
 >
 > Validado el 2026-11-19 con el Short de SSH (`short_Entrar-Por-SSH-Sin-Saber-La-Contrasena_editado.mp4`): el
-> usuario lo dio por muy bueno. Detalle de cada corte en `videos-editados/_cortes.log`.
+> usuario lo dio por muy bueno. **Y el 2026-11-20 con el de masscan** (`short_Escanea-Toda-Tu-Red-En-Segundos_…`):
+> "ha quedado perfecto, es así justo como quiero que se hagan este tipo de vídeos siempre" (banda de la cara de 760,
+> subtítulos, sin palabras comidas). Detalle de cada corte en `videos-editados/_cortes.log`.
+>
+> **Lo que se entrega siempre:** el Short montado (`short_<Titulo>_editado.mp4`) Y subtitulado
+> (`…_editado_subtitulado.mp4`, el que se publica). La fusión no acaba sin subtítulos (§6).
 
 ## La realidad de este material (no es un error, es así siempre)
 
@@ -80,8 +85,13 @@ El informe da:
   y a veces se traga un falso arranque;
 - **avisos**: tomas repetidas (vale la última), segunda mitad repetida (empalmar), ruidos cortos (chasquidos).
 
-Completa el mapa de pantalla con hojas de contacto cada 1-3 s en las zonas clave (qué comando hay en pantalla en
-cada tramo). Así se llegó a esta tabla en el caso real:
+Completa el mapa de pantalla con hojas de contacto (qué comando hay en pantalla en cada momento):
+```bash
+python editor/shorts/analizar_fusion.py hojas editor/crudo/pantalla.mp4 [--desde 40 --hasta 75] [--cada 1]
+#   -> editor/crudo/hojas/hoja_<T>.png, 6x5 fotogramas; casilla fila r, columna c = T + (6r + c) * cada
+```
+Primero una pasada entera con `--cada 3` para ver la estructura y después `--cada 1` en las zonas clave (Enter,
+resultados). Así se llegó a esta tabla en el caso real:
 
 | Pantalla (s) | Qué pasa |
 |---|---|
@@ -166,12 +176,16 @@ Un único render desde los originales (sin recodificar dos veces). Tiempos redon
 que audio y vídeo de cada tramo duren exactamente lo mismo (sin deriva). Micro-fundido de 15 ms solo donde el audio
 salta. Imprime la tabla final (tramo → instante en el Short) para la verificación.
 
-### 6. Subtítulos
+### 6. Subtítulos (siempre: es lo que se publica)
+Sigue con `/subtitular-short` sin preguntar si se quieren:
 ```bash
 python editor/shorts/subtitular.py preparar editor/videos-editados/short_<Titulo>_editado.mp4   # revisa el JSON
 python editor/shorts/subtitular.py quemar   editor/videos-editados/short_<Titulo>_editado.mp4
 ```
 Estilo y reglas: `editor/shorts/SHORT-IDEAL.md` §6. El entregable es `short_<Titulo>_editado_subtitulado.mp4`.
+`preparar` necesita una transcripción en modo `--subtitulos` (puntuada); si junto al vídeo hay una normal, la rehace
+(error real: reutilizó la de verificar y salieron frases pegadas, "una página web Lo hago"). Por eso la verificación
+del paso 7 transcribe a `<video>_verificacion.json`, nunca a `_transcripcion.json`.
 
 ### 7. Verificar (obligatorio, con algo que pueda fallar)
 Primero, la especificación medible del Short ideal (formato, banda de la cara, subtítulos, fundido, arranque,
@@ -181,16 +195,46 @@ python editor/shorts/verificar_short.py editor/videos-editados/short_<Titulo>_ed
 python editor/shorts/verificar_short.py editor/videos-editados/short_<Titulo>_editado_subtitulado.mp4         # entregable
 ```
 Después, lo que el verificador no puede saber por sí solo:
+```bash
+python editor/shorts/analizar_fusion.py comprobar editor/crudo/fusion_plan.json
+#   palabra a palabra: el texto de la cara dentro de los tramos del plan frente al Short montado. Sale con error y
+#   [FALTA] si un corte se come una palabra; "variante de Whisper" (ReLimit/read limit) y "de más" no son errores.
+python editor/shorts/analizar_fusion.py fotogramas editor/videos-editados/short_<Titulo>_editado.mp4        IP masscan completo 80 cuatro cat contenido 61s
+#   un fotograma cuando se DICE cada palabra (en orden; "61s" = segundo 61) -> <video>_sincronia.png
+```
 - [ ] **Duración** del resultado = la que imprime el script (vídeo y audio iguales).
-- [ ] **Cada empalme de voz**: re-transcribe ±3,5 s alrededor de cada corte del vídeo FINAL. Ni palabras cortadas
-      ni repetidas ni tomas fallidas.
-- [ ] **Cada punto de sincronía**: un fotograma en el instante en que se nombra cada momento clave. Lo que se dice
-      debe estar en pantalla.
-- [ ] **Ninguna palabra comida** por apretar: compara la transcripción del resultado con la del plan (un
-      conector quitado a propósito sí; una palabra de contenido, nunca).
+- [ ] **`comprobar` sin [FALTA]** (ni palabras cortadas ni comidas por apretar). Además, lee el texto entero del
+      Short: ni palabras repetidas ni tomas fallidas.
+- [ ] **Cada punto de sincronía** en `_sincronia.png`: lo que se dice debe estar en pantalla.
 - [ ] Entrada APPEND en `videos-editados/_cortes.log` con todos los tramos (voz, pantalla, velocidad, qué se descartó).
 
-## Resultado del caso real (referencia)
+### 8. Variante sin la llamada final (si la pide)
+A veces el usuario quiere, además, una copia SIN la llamada final ("Si quieres seguir aprendiendo… comenta la
+palabra…"). Las dos versiones conviven; no sustituyas la completa:
+1. Copia el plan a `editor/crudo/fusion_plan_sin_llamada.json` sin el tramo de la llamada y con salida
+   `short_<Titulo>-Sin-Llamada_editado.mp4`. Monta y verifica (`--sin-subtitulos`): los trozos salen idénticos a
+   los de la completa y acaba en la última palabra de antes de la llamada, con su fundido.
+2. Subtítulos: copia `short_<Titulo>_editado.subtitulos.json` (ya revisado) como
+   `short_<Titulo>-Sin-Llamada_editado.subtitulos.json` quedándote con los bloques cuyo `fin` ≤ la duración
+   nueva, y `subtitular.py quemar`. No hace falta transcribir ni revisar otra vez.
+3. Verifica el subtitulado y re-transcribe los últimos segundos: ningún resto de la llamada.
+
+### 9. Enseñárselo en el móvil
+Si el usuario está fuera (Remote Control) y pide el vídeo por el chat: el límite es de 30 MiB y **no quiere copias
+comprimidas**. Pártelo sin recodificar y manda los trozos con SendUserFile:
+```bash
+python editor/comun/partir_para_movil.py editor/videos-editados/short_<Titulo>_editado_subtitulado.mp4
+```
+
+## Resultado de los casos reales (referencia)
+
+**masscan (2026-11-20, "perfecto")**: cara 167,4 s + pantalla 134,3 s (hecha con la banda antigua de 648 →
+`pantalla_y: 648`) → 63,1 s con llamada / 56,6 s sin ella; 17 tramos → 23 trozos. Fuera: dos tomas del gancho, un
+ruido, 20 s de mover el cursor por un comando y los silencios. Primera entrega con dos fallos que vio el usuario:
+se comía "que estén" y la "s" de "Si quieres…" (→ histéresis en la máscara + `comprobar`) y los subtítulos le
+quedaban casi en la boca (→ banda de 760).
+
+**SSH (2026-11-19)**:
 - Cara 202,3 s + pantalla 179,5 s → primera versión del agente de 90,5 s (13 tramos). El usuario la re-editó a
   73,4 s solo con cortes; con el estilo medido el script da 73,2 s y el mismo texto.
 - Quitadas: 2 tomas fallidas, una segunda mitad repetida, un "Tal." en falso, un chasquido y ~70 s de silencios

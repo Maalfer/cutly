@@ -36,7 +36,7 @@ def main():
     segs, dev = transcripcion.transcribir(
         medios.audio_mono(a.entrada), a.modelo, a.idioma, a.dispositivo, a.subtitulos,
         al_segmento=lambda s: print(f"[{s['start']:8.2f}-{s['end']:8.2f}] {s['text']}", flush=True))
-    transcripcion.escribir(base, segs, a.modelo, dev)
+    transcripcion.escribir(base, segs, a.modelo, dev, a.subtitulos)
     print(f"escrito: {base}.json / .srt / .txt  (modelo {a.modelo}, {dev})")
 
 

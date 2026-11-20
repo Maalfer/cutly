@@ -7,6 +7,7 @@
       "Bash(python editor/comun/energia.py *)",
       "Bash(bash editor/comun/verificar_corte.sh *)",
       "Bash(bash editor/comun/detectar_silencio.sh *)",
+      "Bash(python editor/comun/partir_para_movil.py *)",
       "Bash(python editor/shorts/analizar_fusion.py *)",
       "Bash(python editor/shorts/fusionar_cara_pantalla.py *)",
       "Bash(python editor/shorts/construir_short.py *)",
