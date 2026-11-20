@@ -4,7 +4,7 @@
     python -m estudio --continuar     # retoma la última conversación (claude --continue)
     python -m estudio --comando powershell    # otro programa en el terminal (p. ej. para probar)
 
-Requisitos: pip install -r estudio/requisitos.txt · Claude Code instalado y con sesión iniciada (`claude` en el PATH).
+Requisitos: pip install -r requirements.txt · Claude Code instalado y con sesión iniciada (`claude` en el PATH).
 """
 import argparse
 import os

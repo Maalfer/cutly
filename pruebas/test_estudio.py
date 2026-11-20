@@ -25,7 +25,7 @@ def app():
     return QApplication.instance() or QApplication([])
 
 
-@unittest.skipUnless(HAY_QT, "PySide6 no instalado (pip install -r estudio/requisitos.txt)")
+@unittest.skipUnless(HAY_QT, "PySide6 no instalado (pip install -r requirements.txt)")
 class Flujos(unittest.TestCase):
     def test_cada_skill_es_un_boton(self):
         from estudio.flujos import ROTULOS, SKILLS, flujos

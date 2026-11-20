@@ -24,7 +24,7 @@ winget install Oracle.VirtualBox                     # si no lo tienes
 winget install Python.Python.3.13
 winget install UB-Mannheim.TesseractOCR              # OCR (Windows no tiene Vision)
 winget install Gyan.FFmpeg                           # Fase 2 y miniaturas
-pip install pillow opencv-python                     # opcionales: OCR por región y clickimg
+pip install -r requirements.txt                      # estudio + pillow/opencv-python/faster-whisper
 # OpenSSH cliente: viene con Windows 10/11 (Configuración > Aplicaciones > Funciones opcionales)
 ```
 Abre una terminal **nueva** tras instalar para que el PATH se refresque.
@@ -59,7 +59,7 @@ instrucciones de Burp/Java para x86 son las estándar. La regla NAT `ssh,tcp,127
 ```bash
 brew install --cask virtualbox        # (Apple Silicon: VirtualBox 7.1+ con invitado ARM64)
 brew install python tesseract ffmpeg
-pip3 install pillow opencv-python     # opcionales
+pip3 install -r requirements.txt      # estudio + pillow/opencv-python/faster-whisper
 ```
 `VBoxManage` queda en el PATH. OCR opcional con Vision: compila `crear-shorts/herramientas/ocr.swift` y apunta
 `VM_OCR_CMD` al binario; `vm_control.py` lo prefiere a Tesseract (`VM_OCR=tesseract` lo desactiva). Vision lee botones
@@ -69,7 +69,7 @@ de interfaz que Tesseract no encuentra. `VM_OCR_CMD` sirve igual en cualquier SO
 ## 3. Anfitrión Linux
 ```bash
 sudo apt install virtualbox openssh-client python3 python3-pip tesseract-ocr ffmpeg   # (dnf/pacman equivalentes)
-pip3 install pillow opencv-python
+pip3 install -r requirements.txt      # estudio + pillow/opencv-python/faster-whisper
 ```
 `VBoxManage` queda en el PATH. Si el anfitrión es Wayland no importa: lo que debe ser **X11 es el invitado**.
 
@@ -93,9 +93,10 @@ cmake -B build -DGGML_CUDA=1 && cmake --build build -j --config Release
 El binario puede llamarse `whisper-cli` o `main`. **Modelo: `ggml-large-v3-turbo.bin`** (medido igual o más
 preciso que `large-v3` en nuestro audio, al doble de velocidad: `editor/comun/BENCHMARK-WHISPER.md`).
 
-**Subtítulos:** `pip install pillow` (los dibuja `editor/shorts/subtitular.py`; no usa drawtext/libass de ffmpeg).
+**Subtítulos:** los dibuja `editor/shorts/subtitular.py` con Pillow (no usa drawtext/libass de ffmpeg);
+ya viene en `requirements.txt`.
 
-**Transcripción sin compilar nada (la usada en Windows):** `pip install faster-whisper` y
+**Transcripción sin compilar nada (la usada en Windows):** `faster-whisper` (en `requirements.txt`) y
 `python editor/comun/transcribir.py VIDEO` (turbo + VAD + timestamps por palabra). Notas de Windows:
 - faster-whisper solo usa GPU **NVIDIA** (CUDA). Con una AMD (esta máquina: RX 590) va por CPU en int8, a ~1,7×
   tiempo real con turbo. Para usar una GPU AMD hay que ir a whisper.cpp compilado con `-DGGML_VULKAN=1` (sin medir aún).

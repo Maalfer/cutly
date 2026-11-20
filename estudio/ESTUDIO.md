@@ -18,7 +18,7 @@ carpetas: **se suelta en la sección de lo que quieres hacer**.
 ## Arrancar
 
 ```bash
-pip install -r estudio/requisitos.txt        # PySide6 + pseudo-terminal (pywinpty en Windows, ptyprocess en el resto)
+pip install -r requirements.txt              # todo: estudio + los flujos de vídeo/VM (un solo paso)
 python -m estudio                            # sesión nueva de Claude Code en el repo
 python -m estudio --continuar                # retoma la última conversación (claude --continue)
 ```

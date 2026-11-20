@@ -1,0 +1,20 @@
+# cutly — todas las dependencias Python del repo (la app `estudio` + los flujos de
+# vídeo/VM a los que llama por subproceso). Instalación completa en un solo paso:
+#   pip install -r requirements.txt
+# Herramientas que no son paquetes Python (ffmpeg, VirtualBox, Tesseract, ssh) van en
+# PORTABILIDAD.md, con la instalación por sistema operativo.
+
+# estudio/ — interfaz de escritorio (PySide6) con Claude Code dentro
+PySide6>=6.6
+pywinpty>=2.0; sys_platform == "win32"
+ptyprocess>=0.7; sys_platform != "win32"
+numpy
+
+# editor/ — Fase 2: subtítulos quemados (subtitular.py) y verificación del Short ideal
+pillow
+
+# crear-shorts/ — Fase 1: control de la VM (clics por plantilla en vm/entrada.py)
+opencv-python
+
+# editor/ — Fase 2: transcripción Whisper sin compilar nada (transcribir.py)
+faster-whisper

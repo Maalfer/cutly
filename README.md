@@ -17,7 +17,7 @@ limpios de relleno.
 ## ▶️ Cómo se usa hoy
 
 ```bash
-pip install -r estudio/requisitos.txt
+pip install -r requirements.txt
 python -m estudio
 ```
 
