@@ -26,6 +26,18 @@ def duracion(path):
                                  path], capture_output=True, text=True, check=True).stdout.strip())
 
 
+def legible(path):
+    """True si ffprobe puede leer su duración: comprobación rápida de que el archivo ya se puede reproducir
+    (p. ej. NO vale para un .mp4 que todavía se está escribiendo, "moov atom not found"). Un reproductor nativo
+    (QMediaPlayer) puede colgarse con un vídeo a medio escribir; ffprobe en cambio solo falla, sin arriesgar
+    el proceso — úsalo de guardián antes de cargar un vídeo que pueda no estar terminado todavía."""
+    try:
+        duracion(path)
+        return True
+    except Exception:
+        return False
+
+
 def audio_mono(path, hz=16000):
     """Audio mono como array float32 en [-1, 1] (decodificado por ffmpeg: evita el PyAV de faster-whisper, que falla
     en algunas instalaciones de Windows)."""

@@ -83,11 +83,19 @@ escala() { awk -v v="$1" -v f="$2" 'BEGIN { u = substr(v, length(v)); n = (u ~ /
 MAXRATE=$(escala "$VBITRATE" 1.1)
 BUFSIZE=$(escala "$VBITRATE" 2)
 
+# a $OUT directo no: un corte a medias (memoria, Ctrl+C...) dejaria un .mp4 roto con el nombre bueno.
+# Se escribe en un temporal y solo se renombra al final si ffmpeg termino bien (set -e ya corta antes del mv
+# si falla); el trap limpia el temporal en cualquier salida que no sea la del mv de exito.
+TMP="${OUT%.*}.tmp.${OUT##*.}"
+trap 'rm -f "$TMP"' EXIT
+
 echo "--- construyendo $OUT con $N segmentos (bitrate video: $VBITRATE, audio: $ABITRATE) ---" >&2
 ffmpeg -y -i "$SRC" -filter_complex "$FILTERS" \
   -map "[outv]" -map "[outa]" \
   -c:v libx264 -preset medium -b:v "$VBITRATE" -maxrate "$MAXRATE" -bufsize "$BUFSIZE" \
-  -c:a aac -b:a "$ABITRATE" "$OUT"
+  -c:a aac -b:a "$ABITRATE" "$TMP"
+mv -f "$TMP" "$OUT"
+trap - EXIT
 
 echo "--- duracion final ---" >&2
 ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$OUT"

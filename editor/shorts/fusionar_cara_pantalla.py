@@ -31,7 +31,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))
 from nucleo import archivos, audio, formato, medios  # noqa: E402
-from nucleo.ffmpeg import FFMPEG  # noqa: E402
+from nucleo.ffmpeg import FFMPEG, salida_atomica  # noqa: E402
 
 FPS = formato.FPS
 W, H = formato.ANCHO, formato.ALTO
@@ -130,23 +130,26 @@ def main():
         fil.append("[ca]anull[outa]")
     os.makedirs(os.path.dirname(plan["salida"]), exist_ok=True)
     lufs = plan.get("lufs", -14)
-    # con normalización: primero un intermedio con audio PCM (sin pérdida) y luego el AAC final ya normalizado
-    tmp = os.path.splitext(plan["salida"])[0] + ".tmp.mov" if lufs else plan["salida"]
+    # con normalización: primero un intermedio con audio PCM (sin pérdida) y luego el AAC final ya normalizado.
+    # El intermedio NO es el entregable (ya lleva ".tmp." y se borra al final); el entregable final, en los
+    # dos casos, se escribe con salida_atomica: un corte a medias (memoria, Ctrl+C...) nunca deja el .mp4
+    # final roto con el nombre bueno.
+    intermedio = os.path.splitext(plan["salida"])[0] + ".tmp.mov"
     cmd = [FFMPEG, "-v", "error", "-y", "-i", plan["cara"], "-i", plan["pantalla"],
            "-filter_complex", ";".join(fil), "-map", "[outv]", "-map", "[outa]",
            "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-c:a", "pcm_s16le" if lufs else "aac", "-ar", "48000"]
     if not lufs:
         cmd += ["-b:a", "192k", "-movflags", "+faststart"]
-    subprocess.run(cmd + [tmp], check=True)
-    if lufs:
+        salida_atomica(cmd, plan["salida"], check=True)
+    else:
+        subprocess.run(cmd + [intermedio], check=True)
         # volumen del usuario: ~-14 LUFS (lo subió +5 dB a mano). Normalización LINEAL en dos pasadas (misma
         # ganancia en todo el vídeo, sin compresión) con techo de -1 dBTP para no saturar como el ajuste a mano.
-        src = tmp
-        m = audio.medir_sonoridad(src, f"loudnorm=I={lufs}:TP=-1:LRA=11:print_format=json")
+        m = audio.medir_sonoridad(intermedio, f"loudnorm=I={lufs}:TP=-1:LRA=11:print_format=json")
         an = audio.filtro_normalizar(m, lufs)
-        subprocess.run([FFMPEG, "-v", "error", "-y", "-i", src, "-c:v", "copy", "-af", an, "-ar", "48000",
-                        "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", plan["salida"]], check=True)
-        os.remove(src)
+        salida_atomica([FFMPEG, "-v", "error", "-y", "-i", intermedio, "-c:v", "copy", "-af", an, "-ar", "48000",
+                        "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"], plan["salida"], check=True)
+        os.remove(intermedio)
         print(f"volumen: {m['input_i']} LUFS -> {lufs} LUFS (techo -1 dBTP)")
     tot = 0
     for i, t in enumerate(tramos):

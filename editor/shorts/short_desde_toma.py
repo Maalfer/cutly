@@ -35,7 +35,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))
 from nucleo import archivos, cortes, formato, medios, toma  # noqa: E402
-from nucleo.ffmpeg import FFMPEG  # noqa: E402
+from nucleo.ffmpeg import FFMPEG, salida_atomica  # noqa: E402
 from nucleo.rutas import SALIDA  # noqa: E402
 
 CW, CH = formato.RECORTE_W, formato.RECORTE_H          # recorte "nativo de short": proporción 1080x1272
@@ -149,8 +149,9 @@ def construir(src, planos, ancho, alto, padtop, titulo):
     cmd = [FFMPEG, "-v", "error", "-y", "-i", src, "-f", "lavfi", "-t", f"{total:.3f}", "-i",
            "anullsrc=r=48000:cl=stereo", "-filter_complex", ";".join(partes + [concat]),
            "-map", "[outv]", "-map", "1:a", "-c:v", "libx264", "-preset", "slow", "-b:v", "8M", "-maxrate", "9M",
-           "-bufsize", "16M", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-shortest", out]
-    r = subprocess.run(cmd, capture_output=True, text=True)
+           "-bufsize", "16M", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", "-shortest"]
+    # a <out> directo no: un corte a medias (memoria, Ctrl+C...) dejaría un .mp4 roto con el nombre bueno
+    r = salida_atomica(cmd, out, capture_output=True, text=True)
     if r.returncode:
         sys.exit("ffmpeg falló:\n" + r.stderr[-1500:])
     return out, total

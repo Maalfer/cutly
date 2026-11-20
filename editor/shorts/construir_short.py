@@ -24,7 +24,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")))
 from nucleo import archivos, formato  # noqa: E402
-from nucleo.ffmpeg import FFMPEG, FFPROBE  # noqa: E402
+from nucleo.ffmpeg import FFMPEG, FFPROBE, salida_atomica  # noqa: E402
 from nucleo.rutas import REPO  # noqa: E402
 
 PADTOP = formato.BANDA_CARA      # banda negra superior (la cara): 648. CONSTANTE en todos los planos.
@@ -100,10 +100,11 @@ def construir(plan):
     cmd += ["-filter_complex", F, "-map", "[outv]", "-map", f"{audio_idx}:a",
             "-r", str(FPS), "-c:v", "libx264", "-preset", "slow",
             "-b:v", VBITRATE, "-maxrate", f"{float(VBITRATE[:-1])*1.1:.1f}M", "-bufsize", f"{float(VBITRATE[:-1])*2:.0f}M",
-            "-c:a", "aac", "-b:a", ABITRATE, "-movflags", "+faststart", "-shortest", OUT]
+            "-c:a", "aac", "-b:a", ABITRATE, "-movflags", "+faststart", "-shortest"]
 
     print(f"[construir_short] {len(SEGS)} segmentos, duracion esperada {tot}s -> {OUT}", file=sys.stderr)
-    subprocess.run(cmd, check=True)
+    # a OUT directo no: un corte a medias (memoria, Ctrl+C...) dejaría un .mp4 roto con el nombre bueno
+    salida_atomica(cmd, OUT, check=True)
     d = subprocess.check_output([FFPROBE, "-v", "error", "-show_entries", "format=duration",
                                  "-of", "default=nw=1:nk=1", OUT]).decode().strip()
     print(f"[construir_short] LISTO. Duracion real: {d}s", file=sys.stderr)

@@ -32,7 +32,7 @@ import tempfile
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 sys.path.insert(0, REPO)
 from nucleo import archivos, formato, medios, subtitulos, transcripcion  # noqa: E402
-from nucleo.ffmpeg import FFMPEG  # noqa: E402
+from nucleo.ffmpeg import FFMPEG, salida_atomica  # noqa: E402
 from nucleo.rutas import COMUN, FUENTES  # noqa: E402
 
 FUENTE = os.path.join(FUENTES, "Inter.ttf")
@@ -125,10 +125,11 @@ def quemar(a):
             fh.write(f"file '{png.replace(os.sep, '/')}'\nduration {d:.6f}\n")
         fh.write(f"file '{vacio.replace(os.sep, '/')}'\n")
     salida = a.salida or base + "_subtitulado.mp4"
-    subprocess.run([FFMPEG, "-v", "error", "-y", "-i", a.video, "-f", "concat", "-safe", "0", "-i", lista,
+    # a `salida` directo no: un corte a medias (memoria, Ctrl+C...) dejaría un .mp4 roto con el nombre bueno
+    salida_atomica([FFMPEG, "-v", "error", "-y", "-i", a.video, "-f", "concat", "-safe", "0", "-i", lista,
                     "-filter_complex", f"[1:v]fps={e['fps']},format=rgba[s];[0:v][s]overlay=0:{e['caja_y0']}:"
                     f"eof_action=pass:format=auto,format=yuv420p[v]", "-map", "[v]", "-map", "0:a", "-c:v", "libx264",
-                    "-preset", "slow", "-crf", "16", "-c:a", "copy", "-movflags", "+faststart", salida], check=True)
+                    "-preset", "slow", "-crf", "16", "-c:a", "copy", "-movflags", "+faststart"], salida, check=True)
     shutil.rmtree(tmp, ignore_errors=True)
     print(f"{len(bl)} bloques, {len(estados)} estados -> {salida}")
 
